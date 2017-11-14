@@ -6,119 +6,107 @@ import Html.Events exposing (onInput, onClick)
 import Json.Decode as Decode
 
 
-type Node a
-    = Node String (List (Node a))
+type alias Element =
+    { value : String }
 
 
-type alias Model a =
-    { tree : Node a }
+type Tree
+    = Leaf Element
+    | Alfa Element Tree
+
+
+type Breadcrumb
+    = LeafAlfaCrumb Element
+
+
+type alias Zipper =
+    { tree : Tree, breadcrumbs : List Breadcrumb }
+
+
+type alias Model =
+    { tree : Zipper }
 
 
 type Msg
-    = Add
-    | Change String
+    = GoDown
+    | GoUp
 
 
-initialModel : Model a
+initialModel : Model
 initialModel =
     { tree =
-        Node
-            "/"
-            [ Node
-                "var/"
-                []
-            , Node
-                "home/"
-                [ Node "zoli/" []
-                , Node "alex/" []
-                , Node "viki/" []
-                , Node "roman/" []
-                ]
-            ]
+        { tree =
+            Alfa
+                { value = "/" }
+                (Alfa
+                    { value = "home/" }
+                    (Leaf { value = "zoli/" })
+                )
+        , breadcrumbs = []
+        }
     }
 
 
-getWidth : Int -> Float
-getWidth n =
-    100 / (toFloat n)
+goDown : Zipper -> Zipper
+goDown zip =
+    case zip.tree of
+        Leaf element ->
+            zip
+
+        Alfa element subtree ->
+            { tree = subtree
+            , breadcrumbs = (LeafAlfaCrumb element) :: zip.breadcrumbs
+            }
 
 
-printNode : Node a -> String -> Float -> Html Msg
-printNode (Node str others) level width =
-    div
-        [ style
-            [ ( "width", (toString width) ++ "%" )
-            , ( "float", "left" )
-            , ( "box-sizing", "border-box" )
-            ]
-        ]
-        [ displayOne str
-        , button
-            [ style [ ( "width", "10%" ) ]
-            , onClick Add
-            ]
-            [ text "+" ]
-        , div
-            []
-            (List.map
-                (\val ->
-                    printNode val str (getWidth (List.length others))
-                )
-                others
-            )
-        ]
+goUp : Zipper -> Zipper
+goUp zip =
+    case List.head zip.breadcrumbs of
+        Nothing ->
+            zip
+
+        Just breadcrumb ->
+            case breadcrumb of
+                LeafAlfaCrumb element ->
+                    { tree = Alfa element zip.tree
+                    , breadcrumbs = List.drop 1 zip.breadcrumbs
+                    }
 
 
-nodeToString : Node a -> String
-nodeToString (Node str others) =
-    case others of
-        [] ->
-            str
+printTree : Tree -> Html Msg
+printTree tree =
+    case tree of
+        Leaf element ->
+            div [] [ text element.value ]
 
-        _ ->
-            let
-                otherStrings =
-                    List.map nodeToString others
-
-                answer =
-                    String.join "|" otherStrings
-            in
-                str ++ "(" ++ answer ++ ")"
+        Alfa element child ->
+            div []
+                [ text element.value
+                , printTree child
+                ]
 
 
-displayOne : String -> Html a
-displayOne str =
-    input
-        [ value str
-        , style
-            [ ( "width", "90%" )
-            , ( "box-sizing", "border-box" )
-            ]
-        ]
-        []
-
-
-view : Model a -> Html Msg
+view : Model -> Html Msg
 view model =
     div []
-        [ printNode model.tree "" 100
-        , text (nodeToString model.tree)
+        [ h1 [] [ text "bakalarka" ]
+        , button [ onClick GoUp ] [ text "go up" ]
+        , button [ onClick GoDown ] [ text "go down" ]
+        , printTree model.tree.tree
         ]
 
 
-update : Msg -> Model a -> ( Model a, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        -- todo
-        Add ->
-            ( model, Cmd.none )
+        GoDown ->
+            ( { model | tree = goDown model.tree }, Cmd.none )
 
-        -- todo
-        Change str ->
-            ( model, Cmd.none )
+        GoUp ->
+            ( { model | tree = goUp model.tree }, Cmd.none )
 
 
-subscriptions : Model a -> Sub Msg
+subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
