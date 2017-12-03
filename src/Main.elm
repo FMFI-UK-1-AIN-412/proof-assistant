@@ -34,6 +34,33 @@ type Msg
     | SafeGoDown0
     | SafeGoDown1
     | SafeGoDown2
+    | EditZipper Zipper String
+
+
+editTreeValue : Tree -> String -> Tree
+editTreeValue tree value =
+    case tree of
+        Leaf elem ->
+            Leaf { elem | value = value }
+
+        Alfa elem tree ->
+            Alfa { elem | value = value } tree
+
+        Beta elem trees ->
+            Beta { elem | value = value } trees
+
+
+getElemFromTree : Tree -> Element
+getElemFromTree tree =
+    case tree of
+        Leaf elem ->
+            elem
+
+        Alfa elem _ ->
+            elem
+
+        Beta elem _ ->
+            elem
 
 
 
@@ -180,6 +207,63 @@ showSimpleTree tree =
             "(" ++ element.value ++ "->(" ++ (String.join "|" (List.map showSimpleTree subtrees)) ++ "))"
 
 
+showEditableTree : Zipper -> Html Msg
+showEditableTree zipper =
+    div [ class "tablo" ]
+        [ h2 [] [ text "Edit the tabloid bellow" ]
+        , showEditableTree2 zipper
+        ]
+
+
+showEditableTree2 : Zipper -> Html Msg
+showEditableTree2 zipper =
+    let
+        inpt =
+            input
+                [ onInput (EditZipper zipper)
+                , value (getElemFromTree zipper.tree).value
+                ]
+                []
+    in
+        case zipper.tree of
+            Leaf element ->
+                div [] [ inpt ]
+
+            Alfa element subtree ->
+                let
+                    maybeSub =
+                        goDown zipper 0
+                in
+                    case maybeSub of
+                        Nothing ->
+                            div [] [ inpt ]
+
+                        Just sub ->
+                            div [] [ inpt, showEditableTree2 sub ]
+
+            Beta element subtrees ->
+                let
+                    range =
+                        List.range 0 (List.length subtrees - 1)
+
+                    maybeSubs =
+                        List.map (\i -> goDown zipper i) range
+
+                    inputs =
+                        List.map
+                            (\maybeSub ->
+                                case maybeSub of
+                                    Nothing ->
+                                        div [] []
+
+                                    Just sub ->
+                                        showEditableTree2 sub
+                            )
+                            maybeSubs
+                in
+                    div [] (inpt :: inputs)
+
+
 view : Model -> Html Msg
 view model =
     div []
@@ -192,6 +276,8 @@ view model =
         , button [ onClick SafeGoDown2 ] [ text "safe go down 2" ]
         , hr [] []
         , p [] [ text (showSimpleTree model.zipper.tree) ]
+        , hr [] []
+        , showEditableTree (goRoot model.zipper)
         ]
 
 
@@ -211,6 +297,9 @@ update msg model =
 
                 SafeGoDown2 ->
                     goDownOrNothing model.zipper 2
+
+                EditZipper zipper str ->
+                    { zipper | tree = editTreeValue zipper.tree str }
     in
         ( { model | zipper = newZipper }, Cmd.none )
 
