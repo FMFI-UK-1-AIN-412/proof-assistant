@@ -35,6 +35,7 @@ type Msg
     | SafeGoDown1
     | SafeGoDown2
     | EditZipper Zipper String
+    | RemoveChildren Zipper
 
 
 editTreeValue : Tree -> String -> Tree
@@ -165,6 +166,19 @@ goDownOrNothing zipper index =
             zipper
 
 
+removeChildren : Zipper -> Zipper
+removeChildren zipper =
+    case zipper.tree of
+        Leaf _ ->
+            zipper
+
+        Alfa elem _ ->
+            { zipper | tree = Leaf elem }
+
+        Beta elem _ ->
+            { zipper | tree = Leaf elem }
+
+
 
 ------------------------------------------
 
@@ -220,11 +234,14 @@ showEditableTree2 : Zipper -> Html Msg
 showEditableTree2 zipper =
     let
         inpt =
-            input
-                [ onInput (EditZipper zipper)
-                , value (getElemFromTree zipper.tree).value
+            div []
+                [ input
+                    [ onInput (EditZipper zipper)
+                    , value (getElemFromTree zipper.tree).value
+                    ]
+                    []
+                , button [ onClick (RemoveChildren zipper) ] [ text "x" ]
                 ]
-                []
 
         attributes =
             [ style
@@ -307,6 +324,9 @@ update msg model =
 
                 EditZipper zipper str ->
                     { zipper | tree = editTreeValue zipper.tree str }
+
+                RemoveChildren zipper ->
+                    removeChildren zipper
     in
         ( { model | zipper = newZipper }, Cmd.none )
 
