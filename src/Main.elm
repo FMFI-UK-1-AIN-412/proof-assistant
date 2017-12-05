@@ -209,7 +209,8 @@ showSimpleTree tree =
 
 showEditableTree : Zipper -> Html Msg
 showEditableTree zipper =
-    div [ class "tablo" ]
+    div
+        []
         [ h2 [] [ text "Edit the tabloid bellow" ]
         , showEditableTree2 zipper
         ]
@@ -224,44 +225,50 @@ showEditableTree2 zipper =
                 , value (getElemFromTree zipper.tree).value
                 ]
                 []
-    in
-        case zipper.tree of
-            Leaf element ->
-                div [] [ inpt ]
 
-            Alfa element subtree ->
-                let
-                    maybeSub =
-                        goDown zipper 0
-                in
-                    case maybeSub of
+        attributes =
+            [ style
+                [ ( "margin-left", "20px" )
+                , ( "border-left", "1px dashed #cfcfcf" )
+                ]
+            ]
+
+        rest =
+            case zipper.tree of
+                Leaf _ ->
+                    []
+
+                Alfa _ subtree ->
+                    case goDown zipper 0 of
                         Nothing ->
-                            div [] [ inpt ]
+                            []
 
                         Just sub ->
-                            div [] [ inpt, showEditableTree2 sub ]
+                            [ showEditableTree2 sub ]
 
-            Beta element subtrees ->
-                let
-                    range =
-                        List.range 0 (List.length subtrees - 1)
+                Beta _ subtrees ->
+                    let
+                        range =
+                            List.range 0 (List.length subtrees - 1)
 
-                    maybeSubs =
-                        List.map (\i -> goDown zipper i) range
+                        maybeSubs =
+                            List.map (\i -> goDown zipper i) range
 
-                    inputs =
-                        List.map
-                            (\maybeSub ->
-                                case maybeSub of
-                                    Nothing ->
-                                        div [] []
+                        inputs =
+                            List.map
+                                (\maybeSub ->
+                                    case maybeSub of
+                                        Nothing ->
+                                            div [] []
 
-                                    Just sub ->
-                                        showEditableTree2 sub
-                            )
-                            maybeSubs
-                in
-                    div [] (inpt :: inputs)
+                                        Just sub ->
+                                            showEditableTree2 sub
+                                )
+                                maybeSubs
+                    in
+                        inputs
+    in
+        div attributes (inpt :: rest)
 
 
 view : Model -> Html Msg
