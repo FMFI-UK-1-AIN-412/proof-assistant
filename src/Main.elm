@@ -71,29 +71,23 @@ getElemFromTree tree =
 goUp : Zipper -> Maybe Zipper
 goUp zipper =
     let
-        maybeBreadcrumb =
-            List.head zipper.breadcrumbs
-
         rest =
             List.drop 1 zipper.breadcrumbs
     in
-        case maybeBreadcrumb of
-            Nothing ->
-                Nothing
-
-            Just breadcrumb ->
-                case breadcrumb of
-                    BreadcrumbAlfa element ->
-                        Just
+        List.head zipper.breadcrumbs
+            |> Maybe.map
+                (\breadcrumb ->
+                    case breadcrumb of
+                        BreadcrumbAlfa element ->
                             { tree = Alfa element zipper.tree
                             , breadcrumbs = rest
                             }
 
-                    BreadcrumbBeta element leftTrees rightTrees ->
-                        Just
+                        BreadcrumbBeta element leftTrees rightTrees ->
                             { tree = Beta element (leftTrees ++ [ zipper.tree ] ++ rightTrees)
                             , breadcrumbs = rest
                             }
+                )
 
 
 goRoot : Zipper -> Zipper
@@ -108,12 +102,7 @@ goRoot zipper =
 
 goUpOrNothing : Zipper -> Zipper
 goUpOrNothing zipper =
-    case goUp zipper of
-        Just newZipper ->
-            newZipper
-
-        Nothing ->
-            zipper
+    Maybe.withDefault zipper (goUp zipper)
 
 
 goDown : Zipper -> Int -> Maybe Zipper
@@ -158,12 +147,7 @@ goDown zipper index =
 
 goDownOrNothing : Zipper -> Int -> Zipper
 goDownOrNothing zipper index =
-    case goDown zipper index of
-        Just newZipper ->
-            newZipper
-
-        Nothing ->
-            zipper
+    Maybe.withDefault zipper (goDown zipper index)
 
 
 removeChildren : Zipper -> Zipper
