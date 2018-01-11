@@ -30,12 +30,9 @@ type alias Model =
 
 
 type Msg
-    = SafeGoUp
-    | SafeGoDown0
-    | SafeGoDown1
-    | SafeGoDown2
-    | EditZipper Zipper String
+    = EditZipper Zipper String
     | RemoveChildren Zipper
+    | AddChild Zipper Tree
 
 
 editTreeValue : Tree -> String -> Tree
@@ -163,6 +160,11 @@ removeChildren zipper =
             { zipper | tree = Leaf elem }
 
 
+addChild : Zipper -> Tree -> Zipper
+addChild zipper tree =
+    zipper
+
+
 
 ------------------------------------------
 
@@ -182,6 +184,17 @@ initialModel =
                             [ Leaf { value = "Fine!" }
                             , Leaf { value = "Zle!" }
                             ]
+                        , Alfa
+                            { value = "Afla 1" }
+                            (Alfa
+                                { value = "Afla 2" }
+                                (Alfa
+                                    { value = "Afla 3" }
+                                    (Leaf
+                                        { value = "Leaft!" }
+                                    )
+                                )
+                            )
                         ]
                       )
                     , (Leaf { value = "dari" })
@@ -210,12 +223,15 @@ showEditableTree zipper =
     div
         []
         [ h2 [] [ text "Edit the tabloid bellow" ]
-        , showEditableTree2 zipper
+        , showEditableTree2 zipper []
         ]
 
 
-showEditableTree2 : Zipper -> Html Msg
-showEditableTree2 zipper =
+
+--showEditableTree2 : Zipper ->  Html Msg
+
+
+showEditableTree2 zipper styles =
     let
         inpt =
             div []
@@ -225,14 +241,27 @@ showEditableTree2 zipper =
                     ]
                     []
                 , button [ onClick (RemoveChildren zipper) ] [ text "x" ]
+                , button
+                    [ onClick (AddChild zipper (Alfa { value = "" } zipper.tree))
+                    ]
+                    [ text "A" ]
+                , button [ onClick (RemoveChildren zipper) ] [ text "B" ]
                 ]
 
-        attributes =
-            [ style
-                [ ( "margin-left", "20px" )
-                , ( "border-left", "1px dashed #cfcfcf" )
-                ]
+        base_style =
+            [ ( "padding-top", "5px" )
+
+            --, ( "padding-left", "5px" )
             ]
+
+        no_margin =
+            [ ( "margin-left", "0" ) ] ++ base_style
+
+        some_margin =
+            [ ( "border-left", "1px dashed #cfcfcf" )
+            , ( "margin-left", "20px" )
+            ]
+                ++ base_style
 
         rest =
             case zipper.tree of
@@ -245,7 +274,7 @@ showEditableTree2 zipper =
                             []
 
                         Just sub ->
-                            [ showEditableTree2 sub ]
+                            [ showEditableTree2 sub no_margin ]
 
                 Beta _ subtrees ->
                     let
@@ -263,13 +292,13 @@ showEditableTree2 zipper =
                                             div [] []
 
                                         Just sub ->
-                                            showEditableTree2 sub
+                                            showEditableTree2 sub some_margin
                                 )
                                 maybeSubs
                     in
                         inputs
     in
-        div attributes (inpt :: rest)
+        div [ style styles ] (inpt :: rest)
 
 
 view : Model -> Html Msg
@@ -277,13 +306,6 @@ view model =
     div []
         [ h1 [] [ text "bakalarka" ]
         , p [] [ text (showSimpleTree (goRoot model.zipper).tree) ]
-        , hr [] []
-        , button [ onClick SafeGoUp ] [ text "safe go up" ]
-        , button [ onClick SafeGoDown0 ] [ text "safe go down 0" ]
-        , button [ onClick SafeGoDown1 ] [ text "safe go down 1" ]
-        , button [ onClick SafeGoDown2 ] [ text "safe go down 2" ]
-        , hr [] []
-        , p [] [ text (showSimpleTree model.zipper.tree) ]
         , hr [] []
         , showEditableTree (goRoot model.zipper)
         ]
@@ -294,23 +316,14 @@ update msg model =
     let
         newZipper =
             case msg of
-                SafeGoUp ->
-                    goUpOrNothing model.zipper
-
-                SafeGoDown0 ->
-                    goDownOrNothing model.zipper 0
-
-                SafeGoDown1 ->
-                    goDownOrNothing model.zipper 1
-
-                SafeGoDown2 ->
-                    goDownOrNothing model.zipper 2
-
                 EditZipper zipper str ->
                     { zipper | tree = editTreeValue zipper.tree str }
 
                 RemoveChildren zipper ->
                     removeChildren zipper
+
+                AddChild zipper tree ->
+                    addChild zipper tree
     in
         ( { model | zipper = newZipper }, Cmd.none )
 
