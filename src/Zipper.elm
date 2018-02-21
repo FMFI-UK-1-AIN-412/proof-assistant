@@ -1,4 +1,4 @@
-module Zipper exposing (Zipper(..), add, getValue, createElement, goDown, goUp, goRoot, getChildren)
+module Zipper exposing (Zipper(..), add, getValue, createElement, editValue, goDown, goUp, goRoot, getChildren)
 
 
 type alias Element =
@@ -42,6 +42,19 @@ addToTree tree element =
             Beta old_element (old_trees ++ [ Leaf element ])
 
 
+editTree : Tree -> Element -> Tree
+editTree tree element =
+    case tree of
+        Leaf _ ->
+            Leaf element
+
+        Alfa _ old_tree ->
+            Alfa element old_tree
+
+        Beta _ old_trees ->
+            Beta element [ Leaf element ]
+
+
 type Breadcrumb
     = BreadcrumbAlfa Element
     | BreadcrumbBeta Element (List Tree) (List Tree)
@@ -76,16 +89,14 @@ getValue zipper =
             Just <| (getElementFromTree data.tree).value
 
 
+editValue : Zipper -> Element -> Zipper
+editValue zipper element =
+    case zipper of
+        Empty ->
+            Empty
 
---editTreeValue : Tree -> String -> Tree
---editTreeValue tree value =
---    case tree of
---        Leaf elem ->
---            Leaf { elem | value = value }
---        Alfa elem tree ->
---            Alfa { elem | value = value } tree
---        Beta elem trees ->
---            Beta { elem | value = value } trees
+        Zipper data ->
+            Zipper { data | tree = editTree data.tree element }
 
 
 childrenCount : Zipper -> Int

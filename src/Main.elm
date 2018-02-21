@@ -20,7 +20,7 @@ initialModel =
     { zipper =
         Zipper.Empty
             |> Zipper.add (Zipper.createElement "p -> q")
-            |> Zipper.add (Zipper.createElement "q <-> r")
+            |> Zipper.add (Zipper.createElement "(q -> r) & (r-> q)")
             |> Zipper.goDown 0
             |> Zipper.add (Zipper.createElement "q -> r")
             |> Zipper.goDown 0
@@ -111,21 +111,19 @@ view model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     -- todo: dont ignore the messages
-    ( model, Cmd.none )
+    --( model, Cmd.none )
+    let
+        newZipper =
+            case msg of
+                EditZipper zipper str ->
+                    Zipper.editValue zipper (Zipper.createElement str)
 
-
-
---let
---    newZipper =
---        case msg of
---            EditZipper zipper str ->
---                { zipper | tree = Zipper.editTreeValue zipper.tree str }
---            RemoveChildren zipper ->
---                Zipper.removeChildren zipper
---            AddChild zipper tree ->
---                Zipper.addChild zipper tree
---in
---    ( { model | zipper = newZipper }, Cmd.none )
+        --RemoveChildren zipper ->
+        --    Zipper.removeChildren zipper
+        --AddChild zipper tree ->
+        --    Zipper.addChild zipper tree
+    in
+        ( { model | zipper = newZipper }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
