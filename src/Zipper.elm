@@ -1,13 +1,16 @@
-module Zipper exposing (Zipper(..), add, getValue, createElement, editValue, goDown, goUp, goRoot, getChildren)
+module Zipper exposing (Zipper(..), add, getValue, getError, createElement, editValue, goDown, goUp, goRoot, getChildren)
+
+import Formula
+import Parser exposing (Parser)
 
 
 type alias Element =
-    { value : String }
+    { value : String, formula : Result Parser.Error Formula.Formula }
 
 
 createElement : String -> Element
 createElement string =
-    { value = string }
+    { value = string, formula = Formula.parse string }
 
 
 type Tree
@@ -52,7 +55,7 @@ editTree tree element =
             Alfa element old_tree
 
         Beta _ old_trees ->
-            Beta element [ Leaf element ]
+            Beta element old_trees
 
 
 type Breadcrumb
@@ -77,6 +80,22 @@ add element zipper =
 
         Zipper previousData ->
             Zipper <| ZipperData (addToTree previousData.tree element) previousData.breadcrumbs
+
+
+getError : Zipper -> String
+getError zipper =
+    -- todo: some better error hangling,...
+    case zipper of
+        Empty ->
+            ""
+
+        Zipper data ->
+            case (getElementFromTree data.tree).formula of
+                Ok _ ->
+                    ""
+
+                Err error ->
+                    "Parsing failed: " ++ toString error
 
 
 getValue : Zipper -> Maybe String

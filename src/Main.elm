@@ -19,14 +19,14 @@ initialModel : Model
 initialModel =
     { zipper =
         Zipper.Empty
-            |> Zipper.add (Zipper.createElement "p -> q")
-            |> Zipper.add (Zipper.createElement "(q -> r) & (r-> q)")
+            |> Zipper.add (Zipper.createElement "(p -> q)")
+            |> Zipper.add (Zipper.createElement "((q -> r) & (r-> q))")
             |> Zipper.goDown 0
-            |> Zipper.add (Zipper.createElement "q -> r")
+            |> Zipper.add (Zipper.createElement "(q -> r)")
             |> Zipper.goDown 0
-            |> Zipper.add (Zipper.createElement "r -> q")
+            |> Zipper.add (Zipper.createElement "(r -> q)")
             |> Zipper.goDown 0
-            |> Zipper.add (Zipper.createElement "p -> r")
+            |> Zipper.add (Zipper.createElement "(p -> r)")
             |> Zipper.add (Zipper.createElement "p")
             |> Zipper.goDown 1
             |> Zipper.add (Zipper.createElement "q")
@@ -77,12 +77,10 @@ showEditableTree2 zipper =
                     "ERROR!!!"
 
         mainElement =
-            li [] [ input [ onInput <| EditZipper zipper, value value_text ] [] ]
+            li [] [ input [ onInput <| EditZipper zipper, value value_text ] [], text <| Zipper.getError zipper ]
 
         all =
-            List.map
-                showEditableTree2
-                (Zipper.getChildren zipper)
+            List.map showEditableTree2 (Zipper.getChildren zipper)
 
         rest =
             List.foldr (++) [] (List.drop 1 all)
@@ -110,8 +108,6 @@ view model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    -- todo: dont ignore the messages
-    --( model, Cmd.none )
     let
         newZipper =
             case msg of
