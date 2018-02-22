@@ -82,20 +82,20 @@ add element zipper =
             Zipper <| ZipperData (addToTree previousData.tree element) previousData.breadcrumbs
 
 
-getError : Zipper -> String
+getError : Zipper -> Maybe String
 getError zipper =
     -- todo: some better error hangling,...
     case zipper of
         Empty ->
-            ""
+            Nothing
 
         Zipper data ->
             case (getElementFromTree data.tree).formula of
                 Ok _ ->
-                    ""
+                    Nothing
 
                 Err error ->
-                    "Parsing failed: " ++ toString error
+                    Just <| "Parsing failed: " ++ toString error
 
 
 getValue : Zipper -> Maybe String

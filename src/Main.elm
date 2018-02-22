@@ -5,6 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onClick)
 import Json.Decode as Decode
 import Zipper
+import ErrorHandler
 
 
 type alias Model =
@@ -76,8 +77,16 @@ showEditableTree2 zipper =
                 Nothing ->
                     "ERROR!!!"
 
+        errorNode =
+            case ErrorHandler.handleErrors zipper of
+                ErrorHandler.Ok ->
+                    text ""
+
+                ErrorHandler.Error error ->
+                    div [] [ text error ]
+
         mainElement =
-            li [] [ input [ onInput <| EditZipper zipper, value value_text ] [], text <| Zipper.getError zipper ]
+            li [] [ input [ onInput <| EditZipper zipper, value value_text ] [], errorNode ]
 
         all =
             List.map showEditableTree2 (Zipper.getChildren zipper)
