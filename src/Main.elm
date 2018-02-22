@@ -1,9 +1,6 @@
 module Main exposing (..)
 
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onInput, onClick)
-import Json.Decode as Decode
+import Html
 import Zipper
 import ErrorHandler
 import Bootstrap.Form.InputGroup as InputGroup
@@ -43,19 +40,14 @@ initialModel =
     }
 
 
-showSimpleTree : Zipper.Zipper -> String
-showSimpleTree zipper =
+renderTextProof : Zipper.Zipper -> String
+renderTextProof zipper =
     let
         data =
-            case Zipper.getValue zipper of
-                Just ans ->
-                    ans
-
-                Nothing ->
-                    ""
+            Maybe.withDefault "" (Zipper.getValue zipper)
 
         showChildren =
-            String.join "|" <| List.map showSimpleTree (Zipper.getChildren zipper)
+            String.join "|" <| List.map renderTextProof (Zipper.getChildren zipper)
     in
         if showChildren == "" then
             data
@@ -63,77 +55,63 @@ showSimpleTree zipper =
             "(" ++ data ++ " --> " ++ showChildren ++ ")"
 
 
-showEditableTree : Zipper.Zipper -> Html Msg
-showEditableTree zipper =
-    Form.form []
-        [ ul [] (showEditableTree2 zipper)
-        ]
+renderProof : Zipper.Zipper -> Html.Html Msg
+renderProof zipper =
+    Form.form [] [ Html.ul [] (renderProofHelper zipper) ]
 
 
-renderLine : Zipper.Zipper -> Html Msg
+renderProofHelper : Zipper.Zipper -> List (Html.Html Msg)
+renderProofHelper zipper =
+    let
+        all =
+            List.map renderProofHelper <| Zipper.getChildren zipper
+
+        base =
+            [ renderLine zipper, Html.ul [] (List.foldr (++) [] <| List.drop 1 all) ]
+    in
+        base ++ Maybe.withDefault [] (List.head all)
+
+
+renderLine : Zipper.Zipper -> Html.Html Msg
 renderLine zipper =
     let
         value_text =
-            case Zipper.getValue zipper of
-                Just x ->
-                    x
-
-                Nothing ->
-                    "ERROR!!!"
+            Maybe.withDefault "Unknown Error!" (Zipper.getValue zipper)
 
         ( errorNode, groupStatus, inputStatus ) =
             case ErrorHandler.handleErrors zipper of
                 ErrorHandler.Ok ->
-                    ( text "", Form.groupSuccess, Input.success )
+                    ( Html.text "", Form.groupSuccess, Input.success )
 
                 ErrorHandler.Error error ->
-                    ( Form.validationText [] [ text error ], Form.groupDanger, Input.danger )
+                    ( Form.validationText [] [ Html.text error ], Form.groupDanger, Input.danger )
     in
-        li []
-            [ Form.group [ groupStatus ]
-                [ InputGroup.config
-                    (InputGroup.text [ Input.placeholder "Formula", Input.value value_text, inputStatus, Input.onInput <| EditZipper zipper ])
-                    |> InputGroup.predecessors
-                        [ InputGroup.span [] [ Checkbox.checkbox [] "" ] ]
-                    |> InputGroup.view
-                , errorNode
-                ]
+        Form.group [ groupStatus ]
+            [ InputGroup.config
+                (InputGroup.text
+                    [ Input.placeholder "Formula"
+                    , Input.value value_text
+                    , Input.onInput <| EditZipper zipper
+                    , inputStatus
+                    ]
+                )
+                |> InputGroup.predecessors
+                    [ InputGroup.span [] [ Checkbox.checkbox [] "" ] ]
+                |> InputGroup.view
+            , errorNode
             ]
 
 
-showEditableTree2 : Zipper.Zipper -> List (Html Msg)
-showEditableTree2 zipper =
-    let
-        mainElement =
-            renderLine zipper
-
-        all =
-            List.map showEditableTree2 (Zipper.getChildren zipper)
-
-        rest =
-            List.foldr (++) [] (List.drop 1 all)
-
-        maybeFirst =
-            List.head all
-    in
-        case maybeFirst of
-            Nothing ->
-                [ mainElement, ul [] rest ]
-
-            Just first ->
-                [ mainElement, ul [] rest ] ++ first
-
-
-view : Model -> Html Msg
+view : Model -> Html.Html Msg
 view model =
     Grid.container []
-        [ CDN.stylesheet -- creates an inline style node with the Bootstrap CSS
+        [ CDN.stylesheet
         , Grid.row []
             [ Grid.col []
-                [ h1 [] [ text "Proof assistant" ]
-                , p [] [ text (showSimpleTree <| Zipper.goRoot model.zipper) ]
-                , hr [] []
-                , showEditableTree <| Zipper.goRoot model.zipper
+                [ Html.h1 [] [ Html.text "Proof assistant" ]
+                , Html.p [] [ Html.text (renderTextProof <| Zipper.goRoot model.zipper) ]
+                , Html.hr [] []
+                , renderProof <| Zipper.goRoot model.zipper
                 ]
             ]
         ]
@@ -141,18 +119,9 @@ view model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        newZipper =
-            case msg of
-                EditZipper zipper str ->
-                    Zipper.editValue zipper (Zipper.createElement str)
-
-        --RemoveChildren zipper ->
-        --    Zipper.removeChildren zipper
-        --AddChild zipper tree ->
-        --    Zipper.addChild zipper tree
-    in
-        ( { model | zipper = newZipper }, Cmd.none )
+    case msg of
+        EditZipper zipper str ->
+            ( { zipper = Zipper.editValue zipper (Zipper.createElement str) }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

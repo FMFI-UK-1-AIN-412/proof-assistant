@@ -184,12 +184,6 @@ goRoot zipper =
             zipper
 
 
-
---goUpOrStop : Zipper -> Zipper
---goUpOrStop zipper =
---    Maybe.withDefault zipper (goUp zipper)
-
-
 goDown : Int -> Zipper -> Zipper
 goDown index zipper =
     case zipper of
@@ -233,25 +227,3 @@ goDown index zipper =
 
                             Nothing ->
                                 Empty
-
-
-
---goDownOrStop : Zipper -> Int -> Zipper
---goDownOrStop zipper index =
---    Maybe.withDefault zipper (goDown zipper index)
---removeChildren : Zipper -> Zipper
---removeChildren zipper =
---    case zipper.tree of
---        Leaf _ ->
---            zipper
---        Alfa elem _ ->
---            { zipper | tree = Leaf elem }
---        Beta elem _ ->
---            { zipper | tree = Leaf elem }
-{- todo:
-   empty: Zipper
-   add: zipper -> tree -> zipper
-   remove: zipper -> zipper
-
-
--}

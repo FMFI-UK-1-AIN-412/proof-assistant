@@ -8,7 +8,11 @@ type Status
     | Error String
 
 
-errorHandlers : List (Zipper.Zipper -> Maybe String)
+type alias Handler =
+    Zipper.Zipper -> Maybe String
+
+
+errorHandlers : List Handler
 errorHandlers =
     [ Zipper.getError ]
 
@@ -18,7 +22,7 @@ handleErrors zipper =
     handleErrorsTmp zipper errorHandlers
 
 
-handleErrorsTmp : Zipper.Zipper -> List (Zipper.Zipper -> Maybe String) -> Status
+handleErrorsTmp : Zipper.Zipper -> List Handler -> Status
 handleErrorsTmp zipper errorHandlers =
     case errorHandlers of
         [] ->
