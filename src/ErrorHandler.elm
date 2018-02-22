@@ -14,7 +14,7 @@ type alias Handler =
 
 errorHandlers : List Handler
 errorHandlers =
-    [ Zipper.getError ]
+    [ Zipper.getError, Zipper.getVyplyvanieErrors ]
 
 
 handleErrors : Zipper.Zipper -> Status

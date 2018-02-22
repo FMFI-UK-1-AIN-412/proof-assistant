@@ -1,16 +1,37 @@
-module Zipper exposing (Zipper(..), add, getValue, getError, createElement, editValue, goDown, goUp, goRoot, getChildren)
+module Zipper
+    exposing
+        ( Zipper(..)
+        , add
+        , changePremis
+        , createElement
+        , createPremis
+        , editValue
+        , getChildren
+        , getError
+        , getValue
+        , getVyplyvanieErrors
+        , goDown
+        , goRoot
+        , goUp
+        , isPremis
+        )
 
 import Formula
 import Parser exposing (Parser)
 
 
 type alias Element =
-    { value : String, formula : Result Parser.Error Formula.Formula }
+    { value : String, formula : Result Parser.Error Formula.Formula, isPremis : Bool }
+
+
+createPremis : String -> Element
+createPremis string =
+    { value = string, formula = Formula.parse string, isPremis = True }
 
 
 createElement : String -> Element
 createElement string =
-    { value = string, formula = Formula.parse string }
+    { value = string, formula = Formula.parse string, isPremis = False }
 
 
 type Tree
@@ -30,6 +51,19 @@ getElementFromTree tree =
 
         Beta elem _ ->
             elem
+
+
+setElementInTree : Element -> Tree -> Tree
+setElementInTree element tree =
+    case tree of
+        Leaf _ ->
+            Leaf element
+
+        Alfa _ subtree ->
+            Alfa element subtree
+
+        Beta _ subtrees ->
+            Beta element subtrees
 
 
 addToTree : Tree -> Element -> Tree
@@ -97,6 +131,47 @@ getError zipper =
                     Just <| "Parsing failed: " ++ toString error
 
 
+getVyplyvanNiePremis : Zipper -> Maybe String
+getVyplyvanNiePremis zipper =
+    -- todo: implement
+    Just "This is not a result of the formulas above."
+
+
+getVyplyvanieErrors : Zipper -> Maybe String
+getVyplyvanieErrors zipper =
+    if isPremis zipper then
+        Nothing
+    else
+        getVyplyvanNiePremis zipper
+
+
+isPremis : Zipper -> Bool
+isPremis zipper =
+    case zipper of
+        Empty ->
+            False
+
+        Zipper data ->
+            (getElementFromTree data.tree).isPremis
+
+
+changePremis : Zipper -> Bool -> Zipper
+changePremis zipper premis =
+    case zipper of
+        Empty ->
+            Empty
+
+        Zipper data ->
+            let
+                old_element =
+                    getElementFromTree data.tree
+
+                element =
+                    { old_element | isPremis = premis }
+            in
+            Zipper { data | tree = setElementInTree element data.tree }
+
+
 getValue : Zipper -> Maybe String
 getValue zipper =
     case zipper of
@@ -141,7 +216,7 @@ getChildren zipper =
         range =
             List.range 0 <| childrenCount zipper - 1
     in
-        List.map (\i -> goDown i zipper) range
+    List.map (\i -> goDown i zipper) range
 
 
 goUp : Zipper -> Zipper
@@ -155,23 +230,23 @@ goUp zipper =
                 rest =
                     List.drop 1 data.breadcrumbs
             in
-                case List.head data.breadcrumbs of
-                    Nothing ->
-                        Empty
+            case List.head data.breadcrumbs of
+                Nothing ->
+                    Empty
 
-                    Just breadcrumb ->
-                        case breadcrumb of
-                            BreadcrumbAlfa element ->
-                                Zipper
-                                    { tree = Alfa element data.tree
-                                    , breadcrumbs = rest
-                                    }
+                Just breadcrumb ->
+                    case breadcrumb of
+                        BreadcrumbAlfa element ->
+                            Zipper
+                                { tree = Alfa element data.tree
+                                , breadcrumbs = rest
+                                }
 
-                            BreadcrumbBeta element leftTrees rightTrees ->
-                                Zipper
-                                    { tree = Beta element (leftTrees ++ [ data.tree ] ++ rightTrees)
-                                    , breadcrumbs = rest
-                                    }
+                        BreadcrumbBeta element leftTrees rightTrees ->
+                            Zipper
+                                { tree = Beta element (leftTrees ++ [ data.tree ] ++ rightTrees)
+                                , breadcrumbs = rest
+                                }
 
 
 goRoot : Zipper -> Zipper
@@ -199,7 +274,7 @@ goDown index zipper =
                     if index == 0 then
                         Zipper
                             { tree = tree
-                            , breadcrumbs = (BreadcrumbAlfa elem) :: data.breadcrumbs
+                            , breadcrumbs = BreadcrumbAlfa elem :: data.breadcrumbs
                             }
                     else
                         Empty
@@ -218,12 +293,12 @@ goDown index zipper =
                         breadCrumb =
                             BreadcrumbBeta elem leftTrees rightTrees
                     in
-                        case maybeTree of
-                            Just tree ->
-                                Zipper
-                                    { tree = tree
-                                    , breadcrumbs = breadCrumb :: data.breadcrumbs
-                                    }
+                    case maybeTree of
+                        Just tree ->
+                            Zipper
+                                { tree = tree
+                                , breadcrumbs = breadCrumb :: data.breadcrumbs
+                                }
 
-                            Nothing ->
-                                Empty
+                        Nothing ->
+                            Empty

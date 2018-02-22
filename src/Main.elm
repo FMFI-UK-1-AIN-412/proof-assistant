@@ -1,14 +1,15 @@
 module Main exposing (..)
 
-import Html
-import Zipper
-import ErrorHandler
-import Bootstrap.Form.InputGroup as InputGroup
-import Bootstrap.Form.Input as Input
+import Bootstrap.CDN as CDN
 import Bootstrap.Form as Form
 import Bootstrap.Form.Checkbox as Checkbox
+import Bootstrap.Form.Input as Input
+import Bootstrap.Form.InputGroup as InputGroup
 import Bootstrap.Grid as Grid
-import Bootstrap.CDN as CDN
+import ErrorHandler
+import Html
+import Html.Attributes
+import Zipper
 
 
 type alias Model =
@@ -17,14 +18,15 @@ type alias Model =
 
 type Msg
     = EditZipper Zipper.Zipper String
+    | ToggleIsPremis Zipper.Zipper Bool
 
 
 initialModel : Model
 initialModel =
     { zipper =
         Zipper.Empty
-            |> Zipper.add (Zipper.createElement "(p -> q)")
-            |> Zipper.add (Zipper.createElement "((q -> r) & (r-> q))")
+            |> Zipper.add (Zipper.createPremis "(p -> q)")
+            |> Zipper.add (Zipper.createPremis "((q -> r) & (r-> q))")
             |> Zipper.goDown 0
             |> Zipper.add (Zipper.createElement "(q -> r)")
             |> Zipper.goDown 0
@@ -49,15 +51,15 @@ renderTextProof zipper =
         showChildren =
             String.join "|" <| List.map renderTextProof (Zipper.getChildren zipper)
     in
-        if showChildren == "" then
-            data
-        else
-            "(" ++ data ++ " --> " ++ showChildren ++ ")"
+    if showChildren == "" then
+        data
+    else
+        "(" ++ data ++ " --> " ++ showChildren ++ ")"
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
 renderProof zipper =
-    Form.form [] [ Html.ul [] (renderProofHelper zipper) ]
+    Form.form [] [ Html.ul [ Html.Attributes.style [ ( "padding-left", "0" ) ] ] (renderProofHelper zipper) ]
 
 
 renderProofHelper : Zipper.Zipper -> List (Html.Html Msg)
@@ -69,7 +71,7 @@ renderProofHelper zipper =
         base =
             [ renderLine zipper, Html.ul [] (List.foldr (++) [] <| List.drop 1 all) ]
     in
-        base ++ Maybe.withDefault [] (List.head all)
+    base ++ Maybe.withDefault [] (List.head all)
 
 
 renderLine : Zipper.Zipper -> Html.Html Msg
@@ -86,20 +88,27 @@ renderLine zipper =
                 ErrorHandler.Error error ->
                     ( Form.validationText [] [ Html.text error ], Form.groupDanger, Input.danger )
     in
-        Form.group [ groupStatus ]
-            [ InputGroup.config
-                (InputGroup.text
-                    [ Input.placeholder "Formula"
-                    , Input.value value_text
-                    , Input.onInput <| EditZipper zipper
-                    , inputStatus
+    Form.group [ groupStatus ]
+        [ InputGroup.config
+            (InputGroup.text
+                [ Input.placeholder "Formula"
+                , Input.value value_text
+                , Input.onInput <| EditZipper zipper
+                , inputStatus
+                ]
+            )
+            |> InputGroup.predecessors
+                [ InputGroup.span []
+                    [ Checkbox.checkbox
+                        [ Checkbox.checked <| Zipper.isPremis zipper
+                        , Checkbox.onCheck <| ToggleIsPremis zipper
+                        ]
+                        ""
                     ]
-                )
-                |> InputGroup.predecessors
-                    [ InputGroup.span [] [ Checkbox.checkbox [] "" ] ]
-                |> InputGroup.view
-            , errorNode
-            ]
+                ]
+            |> InputGroup.view
+        , errorNode
+        ]
 
 
 view : Model -> Html.Html Msg
@@ -122,6 +131,9 @@ update msg model =
     case msg of
         EditZipper zipper str ->
             ( { zipper = Zipper.editValue zipper (Zipper.createElement str) }, Cmd.none )
+
+        ToggleIsPremis zipper bool ->
+            ( { zipper = Zipper.changePremis zipper bool }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
