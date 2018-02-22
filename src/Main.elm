@@ -6,6 +6,12 @@ import Html.Events exposing (onInput, onClick)
 import Json.Decode as Decode
 import Zipper
 import ErrorHandler
+import Bootstrap.Form.InputGroup as InputGroup
+import Bootstrap.Form.Input as Input
+import Bootstrap.Form as Form
+import Bootstrap.Form.Checkbox as Checkbox
+import Bootstrap.Grid as Grid
+import Bootstrap.CDN as CDN
 
 
 type alias Model =
@@ -54,20 +60,18 @@ showSimpleTree zipper =
         if showChildren == "" then
             data
         else
-            "(" ++ data ++ "->" ++ showChildren ++ ")"
+            "(" ++ data ++ " --> " ++ showChildren ++ ")"
 
 
 showEditableTree : Zipper.Zipper -> Html Msg
 showEditableTree zipper =
-    div
-        []
-        [ h2 [] [ text "Edit the tabloid bellow" ]
-        , ul [] (showEditableTree2 zipper)
+    Form.form []
+        [ ul [] (showEditableTree2 zipper)
         ]
 
 
-showEditableTree2 : Zipper.Zipper -> List (Html Msg)
-showEditableTree2 zipper =
+renderLine : Zipper.Zipper -> Html Msg
+renderLine zipper =
     let
         value_text =
             case Zipper.getValue zipper of
@@ -77,16 +81,31 @@ showEditableTree2 zipper =
                 Nothing ->
                     "ERROR!!!"
 
-        errorNode =
+        ( errorNode, groupStatus, inputStatus ) =
             case ErrorHandler.handleErrors zipper of
                 ErrorHandler.Ok ->
-                    text ""
+                    ( text "", Form.groupSuccess, Input.success )
 
                 ErrorHandler.Error error ->
-                    div [] [ text error ]
+                    ( Form.validationText [] [ text error ], Form.groupDanger, Input.danger )
+    in
+        li []
+            [ Form.group [ groupStatus ]
+                [ InputGroup.config
+                    (InputGroup.text [ Input.placeholder "Formula", Input.value value_text, inputStatus, Input.onInput <| EditZipper zipper ])
+                    |> InputGroup.predecessors
+                        [ InputGroup.span [] [ Checkbox.checkbox [] "" ] ]
+                    |> InputGroup.view
+                , errorNode
+                ]
+            ]
 
+
+showEditableTree2 : Zipper.Zipper -> List (Html Msg)
+showEditableTree2 zipper =
+    let
         mainElement =
-            li [] [ input [ onInput <| EditZipper zipper, value value_text ] [], errorNode ]
+            renderLine zipper
 
         all =
             List.map showEditableTree2 (Zipper.getChildren zipper)
@@ -107,11 +126,16 @@ showEditableTree2 zipper =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ h1 [] [ text "Proof assistant" ]
-        , p [] [ text (showSimpleTree <| Zipper.goRoot model.zipper) ]
-        , hr [] []
-        , showEditableTree <| Zipper.goRoot model.zipper
+    Grid.container []
+        [ CDN.stylesheet -- creates an inline style node with the Bootstrap CSS
+        , Grid.row []
+            [ Grid.col []
+                [ h1 [] [ text "Proof assistant" ]
+                , p [] [ text (showSimpleTree <| Zipper.goRoot model.zipper) ]
+                , hr [] []
+                , showEditableTree <| Zipper.goRoot model.zipper
+                ]
+            ]
         ]
 
 

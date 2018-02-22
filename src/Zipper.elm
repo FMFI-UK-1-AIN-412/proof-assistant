@@ -84,7 +84,6 @@ add element zipper =
 
 getError : Zipper -> Maybe String
 getError zipper =
-    -- todo: some better error hangling,...
     case zipper of
         Empty ->
             Nothing
