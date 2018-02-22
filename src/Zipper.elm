@@ -3,11 +3,13 @@ module Zipper
         ( Zipper(..)
         , add
         , changePremis
+        , changeShowButtons
         , createElement
         , createPremis
         , editValue
         , getChildren
         , getError
+        , getShowButtons
         , getValue
         , getVyplyvanieErrors
         , goDown
@@ -21,17 +23,21 @@ import Parser exposing (Parser)
 
 
 type alias Element =
-    { value : String, formula : Result Parser.Error Formula.Formula, isPremis : Bool }
+    { value : String
+    , formula : Result Parser.Error Formula.Formula
+    , isPremis : Bool
+    , showButton : Bool
+    }
 
 
 createPremis : String -> Element
 createPremis string =
-    { value = string, formula = Formula.parse string, isPremis = True }
+    { value = string, formula = Formula.parse string, isPremis = True, showButton = False }
 
 
 createElement : String -> Element
 createElement string =
-    { value = string, formula = Formula.parse string, isPremis = False }
+    { value = string, formula = Formula.parse string, isPremis = False, showButton = False }
 
 
 type Tree
@@ -113,7 +119,17 @@ add element zipper =
             Zipper <| ZipperData (Leaf element) []
 
         Zipper previousData ->
-            Zipper <| ZipperData (addToTree previousData.tree element) previousData.breadcrumbs
+            Zipper <| { previousData | tree = addToTree previousData.tree element }
+
+
+getElementFromZipper : Zipper -> Maybe Element
+getElementFromZipper zipper =
+    case zipper of
+        Empty ->
+            Nothing
+
+        Zipper data ->
+            Just <| getElementFromTree data.tree
 
 
 getError : Zipper -> Maybe String
@@ -182,6 +198,33 @@ getValue zipper =
             Just <| (getElementFromTree data.tree).value
 
 
+changeShowButtons : Bool -> Zipper -> Zipper
+changeShowButtons bool zipper =
+    case zipper of
+        Empty ->
+            Empty
+
+        Zipper data ->
+            let
+                old_element =
+                    getElementFromTree data.tree
+
+                element =
+                    { old_element | showButton = bool }
+            in
+            Zipper { data | tree = setElementInTree element data.tree }
+
+
+getShowButtons : Zipper -> Bool
+getShowButtons zipper =
+    case zipper of
+        Empty ->
+            False
+
+        Zipper data ->
+            (getElementFromTree data.tree).showButton
+
+
 editValue : Zipper -> Element -> Zipper
 editValue zipper element =
     case zipper of
@@ -238,14 +281,16 @@ goUp zipper =
                     case breadcrumb of
                         BreadcrumbAlfa element ->
                             Zipper
-                                { tree = Alfa element data.tree
-                                , breadcrumbs = rest
+                                { data
+                                    | tree = Alfa element data.tree
+                                    , breadcrumbs = rest
                                 }
 
                         BreadcrumbBeta element leftTrees rightTrees ->
                             Zipper
-                                { tree = Beta element (leftTrees ++ [ data.tree ] ++ rightTrees)
-                                , breadcrumbs = rest
+                                { data
+                                    | tree = Beta element (leftTrees ++ [ data.tree ] ++ rightTrees)
+                                    , breadcrumbs = rest
                                 }
 
 
@@ -273,8 +318,9 @@ goDown index zipper =
                 Alfa elem tree ->
                     if index == 0 then
                         Zipper
-                            { tree = tree
-                            , breadcrumbs = BreadcrumbAlfa elem :: data.breadcrumbs
+                            { data
+                                | tree = tree
+                                , breadcrumbs = BreadcrumbAlfa elem :: data.breadcrumbs
                             }
                     else
                         Empty
@@ -296,8 +342,9 @@ goDown index zipper =
                     case maybeTree of
                         Just tree ->
                             Zipper
-                                { tree = tree
-                                , breadcrumbs = breadCrumb :: data.breadcrumbs
+                                { data
+                                    | tree = tree
+                                    , breadcrumbs = breadCrumb :: data.breadcrumbs
                                 }
 
                         Nothing ->
