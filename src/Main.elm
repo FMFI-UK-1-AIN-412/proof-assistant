@@ -15,35 +15,30 @@ import Zipper
 
 
 type alias Model =
-    { zipper : Zipper.Zipper, showButtons : Bool }
+    { proof : Zipper.Zipper }
 
 
 type Msg
-    = EditZipper Zipper.Zipper String
-    | ToggleIsPremis Zipper.Zipper Bool
+    = AddToZipper Zipper.Zipper
+    | EditZipper Zipper.Zipper String
     | MouseHovered Zipper.Zipper Bool
-    | AddToZipper Zipper.Zipper
+    | DeleteProofStep Zipper.Zipper
 
 
 initialModel : Model
 initialModel =
-    { zipper =
-        Zipper.Empty
+    { proof =
+        Zipper.create "---"
             |> Zipper.add (Zipper.createPremis "(p -> q)")
+            |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createPremis "((q -> r) & (r-> q))")
-            |> Zipper.goDown 0
+            |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(q -> r)")
-            |> Zipper.goDown 0
+            |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(r -> q)")
-            |> Zipper.goDown 0
+            |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(p -> r)")
-            |> Zipper.add (Zipper.createElement "p")
-            |> Zipper.goDown 1
-            |> Zipper.add (Zipper.createElement "q")
-            |> Zipper.goDown 0
-            |> Zipper.add (Zipper.createElement "r")
             |> Zipper.goRoot
-    , showButtons = False
     }
 
 
@@ -51,15 +46,17 @@ renderTextProof : Zipper.Zipper -> String
 renderTextProof zipper =
     let
         data =
-            Maybe.withDefault "" (Zipper.getValue zipper)
+            Zipper.getValue zipper
 
         showChildren =
-            String.join "|" <| List.map renderTextProof (Zipper.getChildren zipper)
+            case Zipper.goDown zipper of
+                Nothing ->
+                    ""
+
+                Just nextZipper ->
+                    renderTextProof nextZipper
     in
-    if showChildren == "" then
-        data
-    else
-        "(" ++ data ++ " --> " ++ showChildren ++ ")"
+    data ++ " => " ++ showChildren
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
@@ -70,13 +67,18 @@ renderProof zipper =
 renderProofHelper : Zipper.Zipper -> List (Html.Html Msg)
 renderProofHelper zipper =
     let
-        all =
-            List.map renderProofHelper <| Zipper.getChildren zipper
-
         base =
-            [ renderLine zipper, Html.ul [] (List.foldr (++) [] <| List.drop 1 all) ]
+            renderLine zipper
+
+        rest =
+            case Zipper.goDown zipper of
+                Nothing ->
+                    []
+
+                Just nextZipper ->
+                    renderProofHelper nextZipper
     in
-    base ++ Maybe.withDefault [] (List.head all)
+    base :: rest
 
 
 renderButtons : Zipper.Zipper -> Html.Html Msg
@@ -88,7 +90,12 @@ renderButtons zipper =
             , Button.attrs [ Html.Attributes.class "ml-1" ]
             ]
             [ Html.text "+" ]
-        , Button.button [ Button.outlineDanger, Button.attrs [ Html.Attributes.class "ml-1" ] ] [ Html.text "x" ]
+        , Button.button
+            [ Button.onClick <| DeleteProofStep zipper
+            , Button.outlineDanger
+            , Button.attrs [ Html.Attributes.class "ml-1" ]
+            ]
+            [ Html.text "x" ]
         ]
 
 
@@ -96,7 +103,7 @@ renderLine : Zipper.Zipper -> Html.Html Msg
 renderLine zipper =
     let
         value_text =
-            Maybe.withDefault "Unknown Error!" (Zipper.getValue zipper)
+            Zipper.getValue zipper
 
         ( errorNode, groupStatus, inputStatus ) =
             case ErrorHandler.handleErrors zipper of
@@ -115,15 +122,6 @@ renderLine zipper =
                 , inputStatus
                 ]
             )
-            |> InputGroup.predecessors
-                [ InputGroup.span []
-                    [ Checkbox.checkbox
-                        [ Checkbox.checked <| Zipper.isPremis zipper
-                        , Checkbox.onCheck <| ToggleIsPremis zipper
-                        ]
-                        ""
-                    ]
-                ]
             |> InputGroup.successors
                 [ InputGroup.button
                     [ Button.outlineInfo
@@ -147,9 +145,9 @@ view model =
         , Grid.row []
             [ Grid.col []
                 [ Html.h1 [] [ Html.text "Proof assistant" ]
-                , Html.p [] [ Html.text (renderTextProof <| Zipper.goRoot model.zipper) ]
+                , Html.p [] [ Html.text (renderTextProof <| Zipper.goRoot model.proof) ]
                 , Html.hr [] []
-                , renderProof <| Zipper.goRoot model.zipper
+                , renderProof <| Zipper.goRoot model.proof
                 ]
             ]
         ]
@@ -158,17 +156,17 @@ view model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        EditZipper zipper str ->
-            ( { model | zipper = Zipper.editValue zipper (Zipper.createElement str) }, Cmd.none )
-
-        ToggleIsPremis zipper bool ->
-            ( { model | zipper = Zipper.changePremis zipper bool }, Cmd.none )
-
-        MouseHovered zipper bool ->
-            ( { model | zipper = Zipper.changeShowButtons bool zipper }, Cmd.none )
-
         AddToZipper zipper ->
-            ( { model | zipper = Zipper.add (Zipper.createElement "") zipper }, Cmd.none )
+            ( { model | proof = Zipper.add (Zipper.createElement "") zipper }, Cmd.none )
+
+        EditZipper zipper value ->
+            ( { model | proof = Zipper.edit value zipper }, Cmd.none )
+
+        MouseHovered zipper state ->
+            ( { model | proof = Zipper.changeShowButtons state zipper }, Cmd.none )
+
+        DeleteProofStep zipper ->
+            ( { model | proof = Zipper.delete zipper }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

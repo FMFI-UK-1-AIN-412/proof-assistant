@@ -1,60 +1,27 @@
 module Zipper
     exposing
-        ( Zipper(..)
+        ( ProofStep(..)
+        , Zipper
         , add
-        , changePremis
         , changeShowButtons
+        , create
         , createElement
         , createPremis
-        , editValue
-        , getChildren
+        , delete
+        , edit
         , getError
         , getShowButtons
         , getValue
         , getVyplyvanieErrors
         , goDown
+        , goDownOrStop
         , goRoot
         , goUp
-        , isPremis
         )
 
 import Formula
 import Matcher
 import Parser exposing (Parser)
-
-
-getFormulaFromZipper : Zipper -> Maybe Formula.Formula
-getFormulaFromZipper zipper =
-    case getElementFromZipper zipper of
-        Nothing ->
-            Nothing
-
-        Just tree ->
-            case tree.formula of
-                Ok value ->
-                    Just value
-
-                Err _ ->
-                    Nothing
-
-
-getParsedFormulas : Zipper -> List Formula.Formula
-getParsedFormulas zipper =
-    case getElementFromZipper zipper of
-        Nothing ->
-            []
-
-        Just tree ->
-            let
-                rest =
-                    getParsedFormulas <| goUp zipper
-            in
-            case tree.formula of
-                Ok value ->
-                    value :: rest
-
-                Err _ ->
-                    rest
 
 
 type alias Element =
@@ -75,323 +42,213 @@ createElement string =
     { value = string, formula = Formula.parse string, isPremis = False, showButton = False }
 
 
-type Tree
-    = Leaf Element
-    | Alfa Element Tree
-    | Beta Element (List Tree)
-
-
-getElementFromTree : Tree -> Element
-getElementFromTree tree =
-    case tree of
-        Leaf elem ->
-            elem
-
-        Alfa elem _ ->
-            elem
-
-        Beta elem _ ->
-            elem
-
-
-setElementInTree : Element -> Tree -> Tree
-setElementInTree element tree =
-    case tree of
-        Leaf _ ->
-            Leaf element
-
-        Alfa _ subtree ->
-            Alfa element subtree
-
-        Beta _ subtrees ->
-            Beta element subtrees
-
-
-addToTree : Tree -> Element -> Tree
-addToTree tree element =
-    case tree of
-        Leaf old_element ->
-            Alfa old_element (Leaf element)
-
-        Alfa old_element old_tree ->
-            Beta old_element [ old_tree, Leaf element ]
-
-        Beta old_element old_trees ->
-            Beta old_element (old_trees ++ [ Leaf element ])
-
-
-editTree : Tree -> Element -> Tree
-editTree tree element =
-    case tree of
-        Leaf _ ->
-            Leaf element
-
-        Alfa _ old_tree ->
-            Alfa element old_tree
-
-        Beta _ old_trees ->
-            Beta element old_trees
-
-
-type Breadcrumb
-    = BreadcrumbAlfa Element
-    | BreadcrumbBeta Element (List Tree) (List Tree)
-
-
-type Zipper
-    = Empty
-    | Zipper ZipperData
-
-
-type alias ZipperData =
-    { tree : Tree, breadcrumbs : List Breadcrumb }
-
-
-add : Element -> Zipper -> Zipper
-add element zipper =
-    case zipper of
-        Empty ->
-            Zipper <| ZipperData (Leaf element) []
-
-        Zipper previousData ->
-            Zipper <| { previousData | tree = addToTree previousData.tree element }
-
-
-getElementFromZipper : Zipper -> Maybe Element
-getElementFromZipper zipper =
-    case zipper of
-        Empty ->
-            Nothing
-
-        Zipper data ->
-            Just <| getElementFromTree data.tree
-
-
 getError : Zipper -> Maybe String
 getError zipper =
-    case zipper of
-        Empty ->
+    case (getElementFromProof zipper.proof).formula of
+        Ok _ ->
             Nothing
 
-        Zipper data ->
-            case (getElementFromTree data.tree).formula of
-                Ok _ ->
-                    Nothing
-
-                Err error ->
-                    Just <| "Parsing failed: " ++ toString error
+        Err error ->
+            Just <| "Parsing failed: " ++ toString error
 
 
-getVyplyvanNiePremis : Zipper -> Maybe String
-getVyplyvanNiePremis zipper =
-    let
-        maybeFormula =
-            getFormulaFromZipper zipper
-
-        previous =
-            getParsedFormulas zipper
-    in
-    case maybeFormula of
+previousFormulas : Zipper -> List Formula.Formula
+previousFormulas zipper =
+    case goUp zipper of
         Nothing ->
-            Nothing
+            []
 
-        Just formula ->
-            Matcher.isOk formula previous
+        Just newZipper ->
+            previousFormulasTmp newZipper
+
+
+previousFormulasTmp : Zipper -> List Formula.Formula
+previousFormulasTmp zipper =
+    let
+        this =
+            case (getElementFromProof zipper.proof).formula of
+                Ok formula ->
+                    [ formula ]
+
+                Err _ ->
+                    []
+
+        rest =
+            case goUp zipper of
+                Nothing ->
+                    []
+
+                Just newZipper ->
+                    previousFormulasTmp newZipper
+    in
+    this ++ rest
 
 
 getVyplyvanieErrors : Zipper -> Maybe String
 getVyplyvanieErrors zipper =
-    if isPremis zipper then
-        Nothing
-    else
-        getVyplyvanNiePremis zipper
+    case (getElementFromProof zipper.proof).formula of
+        Ok formula ->
+            Matcher.isOk formula (previousFormulas zipper)
+
+        Err str ->
+            Just <| toString str
 
 
-isPremis : Zipper -> Bool
-isPremis zipper =
-    case zipper of
-        Empty ->
-            False
-
-        Zipper data ->
-            (getElementFromTree data.tree).isPremis
-
-
-changePremis : Zipper -> Bool -> Zipper
-changePremis zipper premis =
-    case zipper of
-        Empty ->
-            Empty
-
-        Zipper data ->
-            let
-                old_element =
-                    getElementFromTree data.tree
-
-                element =
-                    { old_element | isPremis = premis }
-            in
-            Zipper { data | tree = setElementInTree element data.tree }
-
-
-getValue : Zipper -> Maybe String
+getValue : Zipper -> String
 getValue zipper =
-    case zipper of
-        Empty ->
-            Nothing
-
-        Zipper data ->
-            Just <| (getElementFromTree data.tree).value
+    (getElementFromProof zipper.proof).value
 
 
 changeShowButtons : Bool -> Zipper -> Zipper
 changeShowButtons bool zipper =
-    case zipper of
-        Empty ->
-            Empty
+    let
+        old_element =
+            getElementFromProof zipper.proof
 
-        Zipper data ->
-            let
-                old_element =
-                    getElementFromTree data.tree
-
-                element =
-                    { old_element | showButton = bool }
-            in
-            Zipper { data | tree = setElementInTree element data.tree }
+        element =
+            { old_element | showButton = bool }
+    in
+    { zipper | proof = setProofElement element zipper.proof }
 
 
 getShowButtons : Zipper -> Bool
 getShowButtons zipper =
-    case zipper of
-        Empty ->
-            False
-
-        Zipper data ->
-            (getElementFromTree data.tree).showButton
+    (getElementFromProof zipper.proof).showButton
 
 
-editValue : Zipper -> Element -> Zipper
-editValue zipper element =
-    case zipper of
-        Empty ->
-            Empty
-
-        Zipper data ->
-            Zipper { data | tree = editTree data.tree element }
+type ProofStep
+    = LastStep Element
+    | NextStep Element ProofStep
 
 
-childrenCount : Zipper -> Int
-childrenCount zipper =
-    case zipper of
-        Empty ->
-            0
+getElementFromProof : ProofStep -> Element
+getElementFromProof proof =
+    case proof of
+        LastStep element ->
+            element
 
-        Zipper data ->
-            case data.tree of
-                Leaf _ ->
-                    0
-
-                Alfa _ _ ->
-                    1
-
-                Beta _ children ->
-                    List.length children
+        NextStep element _ ->
+            element
 
 
-getChildren : Zipper -> List Zipper
-getChildren zipper =
-    let
-        range =
-            List.range 0 <| childrenCount zipper - 1
-    in
-    List.map (\i -> goDown i zipper) range
+type Breadcrumb
+    = NextStepBreadCrumb Element
 
 
-goUp : Zipper -> Zipper
-goUp zipper =
-    case zipper of
-        Empty ->
-            Empty
+type alias Zipper =
+    { proof : ProofStep, breadcrumbs : List Breadcrumb }
 
-        Zipper data ->
+
+create : String -> Zipper
+create value =
+    { proof = LastStep <| createElement value, breadcrumbs = [] }
+
+
+goDown : Zipper -> Maybe Zipper
+goDown zipper =
+    case zipper.proof of
+        LastStep _ ->
+            Nothing
+
+        NextStep element nextStep ->
             let
-                rest =
-                    List.drop 1 data.breadcrumbs
+                breadcrumb =
+                    NextStepBreadCrumb element
+
+                breadcrumbs =
+                    breadcrumb :: zipper.breadcrumbs
             in
-            case List.head data.breadcrumbs of
-                Nothing ->
-                    Empty
+            Just { zipper | proof = nextStep, breadcrumbs = breadcrumbs }
 
-                Just breadcrumb ->
-                    case breadcrumb of
-                        BreadcrumbAlfa element ->
-                            Zipper
-                                { data
-                                    | tree = Alfa element data.tree
-                                    , breadcrumbs = rest
-                                }
 
-                        BreadcrumbBeta element leftTrees rightTrees ->
-                            Zipper
-                                { data
-                                    | tree = Beta element (leftTrees ++ [ data.tree ] ++ rightTrees)
-                                    , breadcrumbs = rest
-                                }
+goDownOrStop : Zipper -> Zipper
+goDownOrStop zipper =
+    Maybe.withDefault zipper (goDown zipper)
+
+
+goUp : Zipper -> Maybe Zipper
+goUp zipper =
+    case zipper.breadcrumbs of
+        [] ->
+            Nothing
+
+        head :: tail ->
+            case head of
+                NextStepBreadCrumb element ->
+                    let
+                        newProof =
+                            NextStep element zipper.proof
+                    in
+                    Just { proof = newProof, breadcrumbs = tail }
 
 
 goRoot : Zipper -> Zipper
 goRoot zipper =
     case goUp zipper of
-        Zipper parent ->
-            goRoot <| Zipper parent
-
-        Empty ->
+        Nothing ->
             zipper
 
+        Just newZipper ->
+            goRoot newZipper
 
-goDown : Int -> Zipper -> Zipper
-goDown index zipper =
-    case zipper of
-        Empty ->
-            Empty
 
-        Zipper data ->
-            case data.tree of
-                Leaf _ ->
-                    Empty
+setProofElement : Element -> ProofStep -> ProofStep
+setProofElement element proof =
+    case proof of
+        LastStep _ ->
+            LastStep element
 
-                Alfa elem tree ->
-                    if index == 0 then
-                        Zipper
-                            { data
-                                | tree = tree
-                                , breadcrumbs = BreadcrumbAlfa elem :: data.breadcrumbs
-                            }
-                    else
-                        Empty
+        NextStep _ nextProof ->
+            NextStep element nextProof
 
-                Beta elem trees ->
-                    let
-                        maybeTree =
-                            List.head (List.drop index trees)
 
-                        leftTrees =
-                            List.take index trees
+editProofValue : String -> ProofStep -> ProofStep
+editProofValue value proof =
+    let
+        element =
+            getElementFromProof proof
 
-                        rightTrees =
-                            List.drop (index + 1) trees
+        newElement =
+            { element | value = value, formula = Formula.parse value }
+    in
+    setProofElement newElement proof
 
-                        breadCrumb =
-                            BreadcrumbBeta elem leftTrees rightTrees
-                    in
-                    case maybeTree of
-                        Just tree ->
-                            Zipper
-                                { data
-                                    | tree = tree
-                                    , breadcrumbs = breadCrumb :: data.breadcrumbs
-                                }
 
-                        Nothing ->
-                            Empty
+addToProof : Element -> ProofStep -> ProofStep
+addToProof element proof =
+    case proof of
+        LastStep previousElement ->
+            NextStep previousElement <| LastStep element
+
+        NextStep previousElement nextProof ->
+            NextStep previousElement <| NextStep element nextProof
+
+
+add : Element -> Zipper -> Zipper
+add element zipper =
+    { zipper | proof = addToProof element zipper.proof }
+
+
+edit : String -> Zipper -> Zipper
+edit value zipper =
+    { zipper | proof = editProofValue value zipper.proof }
+
+
+delete : Zipper -> Zipper
+delete zipper =
+    case goUp zipper of
+        Nothing ->
+            case goDown zipper of
+                Nothing ->
+                    create ""
+
+                Just child ->
+                    { child | breadcrumbs = zipper.breadcrumbs }
+
+        Just parent ->
+            case zipper.proof of
+                LastStep _ ->
+                    { parent | proof = LastStep <| getElementFromProof parent.proof }
+
+                NextStep _ nextProof ->
+                    { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }
