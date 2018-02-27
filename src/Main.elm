@@ -100,10 +100,10 @@ renderLine zipper =
 
         ( errorNode, groupStatus, inputStatus ) =
             case ErrorHandler.handleErrors zipper of
-                ErrorHandler.Ok ->
+                Ok _ ->
                     ( Html.text "", Form.groupSuccess, Input.success )
 
-                ErrorHandler.Error error ->
+                Err error ->
                     ( Form.validationText [] [ Html.text error ], Form.groupDanger, Input.danger )
     in
     Form.group [ groupStatus ]

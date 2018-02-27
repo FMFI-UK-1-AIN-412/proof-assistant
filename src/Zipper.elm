@@ -19,7 +19,42 @@ module Zipper
         )
 
 import Formula
+import Matcher
 import Parser exposing (Parser)
+
+
+getFormulaFromZipper : Zipper -> Maybe Formula.Formula
+getFormulaFromZipper zipper =
+    case getElementFromZipper zipper of
+        Nothing ->
+            Nothing
+
+        Just tree ->
+            case tree.formula of
+                Ok value ->
+                    Just value
+
+                Err _ ->
+                    Nothing
+
+
+getParsedFormulas : Zipper -> List Formula.Formula
+getParsedFormulas zipper =
+    case getElementFromZipper zipper of
+        Nothing ->
+            []
+
+        Just tree ->
+            let
+                rest =
+                    getParsedFormulas <| goUp zipper
+            in
+            case tree.formula of
+                Ok value ->
+                    value :: rest
+
+                Err _ ->
+                    rest
 
 
 type alias Element =
@@ -149,8 +184,19 @@ getError zipper =
 
 getVyplyvanNiePremis : Zipper -> Maybe String
 getVyplyvanNiePremis zipper =
-    -- todo: implement
-    Just "This is not a result of the formulas above."
+    let
+        maybeFormula =
+            getFormulaFromZipper zipper
+
+        previous =
+            getParsedFormulas zipper
+    in
+    case maybeFormula of
+        Nothing ->
+            Nothing
+
+        Just formula ->
+            Matcher.isOk formula previous
 
 
 getVyplyvanieErrors : Zipper -> Maybe String

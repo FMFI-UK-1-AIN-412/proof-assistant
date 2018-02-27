@@ -1,11 +1,6 @@
-module ErrorHandler exposing (Status(..), handleErrors)
+module ErrorHandler exposing (handleErrors)
 
 import Zipper
-
-
-type Status
-    = Ok
-    | Error String
 
 
 type alias Handler =
@@ -17,16 +12,16 @@ errorHandlers =
     [ Zipper.getError, Zipper.getVyplyvanieErrors ]
 
 
-handleErrors : Zipper.Zipper -> Status
+handleErrors : Zipper.Zipper -> Result String String
 handleErrors zipper =
     handleErrorsTmp zipper errorHandlers
 
 
-handleErrorsTmp : Zipper.Zipper -> List Handler -> Status
+handleErrorsTmp : Zipper.Zipper -> List Handler -> Result String String
 handleErrorsTmp zipper errorHandlers =
     case errorHandlers of
         [] ->
-            Ok
+            Ok "OK"
 
         handler :: rest ->
             case handler zipper of
@@ -34,4 +29,4 @@ handleErrorsTmp zipper errorHandlers =
                     handleErrorsTmp zipper rest
 
                 Just error ->
-                    Error error
+                    Err error
