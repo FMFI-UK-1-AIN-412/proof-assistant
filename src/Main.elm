@@ -23,17 +23,19 @@ type Msg
     | EditZipper Zipper.Zipper String
     | MouseHovered Zipper.Zipper Bool
     | DeleteProofStep Zipper.Zipper
+    | MakeContradiction Zipper.Zipper
 
 
 initialModel : Model
 initialModel =
     { proof =
-        Zipper.create "---"
+        Zipper.create "(q -> p)"
             |> Zipper.add (Zipper.createPremis "(p -> q)")
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createPremis "((q -> r) & (r-> q))")
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(q -> r)")
+            |> Zipper.toggleContradiction
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(r -> q)")
             |> Zipper.goDownOrStop
@@ -81,8 +83,8 @@ renderProofHelper zipper =
     base :: rest
 
 
-renderButtons : Zipper.Zipper -> Html.Html Msg
-renderButtons zipper =
+renderButtons : Zipper.Zipper -> String -> Html.Html Msg
+renderButtons zipper contradictionText =
     Html.div []
         [ Button.button
             [ Button.onClick <| AddToZipper zipper
@@ -96,12 +98,35 @@ renderButtons zipper =
             , Button.attrs [ Html.Attributes.class "ml-1" ]
             ]
             [ Html.text "x" ]
+        , Button.button
+            [ Button.onClick <| MakeContradiction zipper
+            , Button.outlineInfo
+            , Button.attrs [ Html.Attributes.class "ml-1" ]
+            ]
+            [ Html.text contradictionText ]
         ]
 
 
 renderLine : Zipper.Zipper -> Html.Html Msg
 renderLine zipper =
     let
+        ( contradictionText, disabled, contradictionBase ) =
+            case zipper.proof of
+                Zipper.LastStep _ ->
+                    ( "Contradict", False, Html.text "" )
+
+                Zipper.NextStep _ _ ->
+                    ( "Contradict", False, Html.text "" )
+
+                Zipper.Contradiction contradiction _ ->
+                    ( "Remove contradict"
+                    , True
+                    , Html.ul []
+                        (Html.h4 [] [ Html.text "Proove the formula above by contradiction" ]
+                            :: renderProofHelper (Zipper.goContradiction zipper)
+                        )
+                    )
+
         value_text =
             Zipper.getValue zipper
 
@@ -113,28 +138,32 @@ renderLine zipper =
                 Err error ->
                     ( Form.validationText [] [ Html.text error ], Form.groupDanger, Input.danger )
     in
-    Form.group [ groupStatus ]
-        [ InputGroup.config
-            (InputGroup.text
-                [ Input.placeholder "Formula"
-                , Input.value value_text
-                , Input.onInput <| EditZipper zipper
-                , inputStatus
-                ]
-            )
-            |> InputGroup.successors
-                [ InputGroup.button
-                    [ Button.outlineInfo
-                    , Button.onClick <| MouseHovered zipper (not (Zipper.getShowButtons zipper))
+    Html.div []
+        [ Form.group [ groupStatus ]
+            [ InputGroup.config
+                (InputGroup.text
+                    [ Input.placeholder "Formula"
+                    , Input.value value_text
+                    , Input.disabled disabled
+                    , Input.onInput <| EditZipper zipper
+                    , inputStatus
                     ]
-                    [ Html.text "?" ]
-                ]
-            |> InputGroup.view
-        , if Zipper.getShowButtons zipper then
-            renderButtons zipper
-          else
-            Html.text ""
-        , errorNode
+                )
+                |> InputGroup.successors
+                    [ InputGroup.button
+                        [ Button.outlineInfo
+                        , Button.onClick <| MouseHovered zipper (not (Zipper.getShowButtons zipper))
+                        ]
+                        [ Html.text "?" ]
+                    ]
+                |> InputGroup.view
+            , if Zipper.getShowButtons zipper then
+                renderButtons zipper contradictionText
+              else
+                Html.text ""
+            , errorNode
+            ]
+        , contradictionBase
         ]
 
 
@@ -147,7 +176,7 @@ view model =
                 [ Html.h1 [] [ Html.text "Proof assistant" ]
                 , Html.p [] [ Html.text (renderTextProof <| Zipper.goRoot model.proof) ]
                 , Html.hr [] []
-                , renderProof <| Zipper.goRoot model.proof
+                , renderProof <| Zipper.goRoot (Debug.log "Model:" model.proof)
                 ]
             ]
         ]
@@ -167,6 +196,9 @@ update msg model =
 
         DeleteProofStep zipper ->
             ( { model | proof = Zipper.delete zipper }, Cmd.none )
+
+        MakeContradiction zipper ->
+            ( { model | proof = Zipper.toggleContradiction zipper }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
