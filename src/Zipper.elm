@@ -9,6 +9,7 @@ module Zipper
         , createPremis
         , delete
         , edit
+        , getEmptyError
         , getError
         , getShowButtons
         , getValue
@@ -52,6 +53,14 @@ getError zipper =
 
         Err error ->
             Just <| "Parsing failed: " ++ toString error
+
+
+getEmptyError : Zipper -> Maybe String
+getEmptyError zipper =
+    if (getElementFromProof zipper.proof).value == "" then
+        Just "Input should not be empty."
+    else
+        Nothing
 
 
 previousFormulas : Zipper -> List Formula.Formula
@@ -121,7 +130,8 @@ getShowButtons zipper =
 type ProofStep
     = LastStep Element
     | NextStep Element ProofStep
-    | Contradiction ProofStep ProofStep
+    | LastStepContradiction Element ProofStep
+    | NextStepContradiction Element ProofStep ProofStep
 
 
 getElementFromProof : ProofStep -> Element
@@ -133,8 +143,11 @@ getElementFromProof proof =
         NextStep element _ ->
             element
 
-        Contradiction contradiction _ ->
-            getElementFromProof contradiction
+        LastStepContradiction element _ ->
+            element
+
+        NextStepContradiction element _ _ ->
+            element
 
 
 toggleContradiction : Zipper -> Zipper
@@ -143,22 +156,25 @@ toggleContradiction zipper =
         newProof =
             case zipper.proof of
                 NextStep element nextStep ->
-                    Contradiction (LastStep element) nextStep
+                    NextStepContradiction element nextStep (LastStep <| createElement "prove here")
 
-                Contradiction contradiction nextStep ->
-                    NextStep (getElementFromProof contradiction) nextStep
+                NextStepContradiction element nextStep contradiction ->
+                    NextStep element nextStep
 
                 LastStep element ->
-                    -- todo: fixme: this should not create a new child
-                    Contradiction (LastStep element) (LastStep <| createElement "")
+                    LastStepContradiction element (LastStep <| createElement "prove here")
+
+                LastStepContradiction element _ ->
+                    LastStep element
     in
     { zipper | proof = newProof }
 
 
 type Breadcrumb
     = NextStepBreadCrumb Element
-    | SkipContradictionBreadCrumb ProofStep
-    | GoContradictionBreadCrumb ProofStep
+    | SkipContradictionBreadCrumb Element ProofStep
+    | GoNextStepContradictionBreadCrumb Element ProofStep
+    | GoLastStepContradictionBreadCrumb Element
 
 
 type alias Zipper =
@@ -186,10 +202,13 @@ goDown zipper =
             in
             Just { zipper | proof = nextStep, breadcrumbs = breadcrumbs }
 
-        Contradiction contradiction nextStep ->
+        LastStepContradiction _ _ ->
+            Nothing
+
+        NextStepContradiction element nextStep contradiction ->
             let
                 breadcrumb =
-                    SkipContradictionBreadCrumb contradiction
+                    SkipContradictionBreadCrumb element contradiction
 
                 breadcrumbs =
                     breadcrumb :: zipper.breadcrumbs
@@ -206,10 +225,20 @@ goContradiction zipper =
         NextStep _ _ ->
             zipper
 
-        Contradiction contradiction nextStep ->
+        LastStepContradiction element contradiction ->
             let
                 breadcrumb =
-                    GoContradictionBreadCrumb nextStep
+                    GoLastStepContradictionBreadCrumb element
+
+                breadcrumbs =
+                    breadcrumb :: zipper.breadcrumbs
+            in
+            { zipper | proof = contradiction, breadcrumbs = breadcrumbs }
+
+        NextStepContradiction element nextStep contradiction ->
+            let
+                breadcrumb =
+                    GoNextStepContradictionBreadCrumb element nextStep
 
                 breadcrumbs =
                     breadcrumb :: zipper.breadcrumbs
@@ -237,17 +266,24 @@ goUp zipper =
                     in
                     Just { proof = newProof, breadcrumbs = tail }
 
-                SkipContradictionBreadCrumb contradiction ->
+                SkipContradictionBreadCrumb element contradiction ->
                     let
                         newProof =
-                            Contradiction contradiction zipper.proof
+                            NextStepContradiction element zipper.proof contradiction
                     in
                     Just { proof = newProof, breadcrumbs = tail }
 
-                GoContradictionBreadCrumb nextStep ->
+                GoLastStepContradictionBreadCrumb element ->
                     let
                         newProof =
-                            Contradiction zipper.proof nextStep
+                            LastStepContradiction element zipper.proof
+                    in
+                    Just { proof = newProof, breadcrumbs = tail }
+
+                GoNextStepContradictionBreadCrumb element nextStep ->
+                    let
+                        newProof =
+                            NextStepContradiction element nextStep zipper.proof
                     in
                     Just { proof = newProof, breadcrumbs = tail }
 
@@ -271,8 +307,11 @@ setProofElement element proof =
         NextStep _ nextProof ->
             NextStep element nextProof
 
-        Contradiction contradiction nextProof ->
-            Contradiction (setProofElement element contradiction) nextProof
+        NextStepContradiction _ nextProof contradiction ->
+            NextStepContradiction element nextProof contradiction
+
+        LastStepContradiction _ contradiction ->
+            LastStepContradiction element contradiction
 
 
 editProofValue : String -> ProofStep -> ProofStep
@@ -296,8 +335,11 @@ addToProof element proof =
         NextStep previousElement nextProof ->
             NextStep previousElement <| NextStep element nextProof
 
-        Contradiction contradiction nextProof ->
-            Contradiction contradiction (NextStep element nextProof)
+        LastStepContradiction previousElement contradiction ->
+            NextStepContradiction previousElement (LastStep element) contradiction
+
+        NextStepContradiction previousElement contradiction nextProof ->
+            NextStepContradiction previousElement (NextStep element nextProof) contradiction
 
 
 add : Element -> Zipper -> Zipper
@@ -329,5 +371,8 @@ delete zipper =
                 NextStep _ nextProof ->
                     { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }
 
-                Contradiction _ nextProof ->
+                LastStepContradiction _ contradiction ->
+                    { parent | proof = LastStep <| getElementFromProof parent.proof }
+
+                NextStepContradiction _ nextProof contradiction ->
                     { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }

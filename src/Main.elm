@@ -118,7 +118,16 @@ renderLine zipper =
                 Zipper.NextStep _ _ ->
                     ( "Contradict", False, Html.text "" )
 
-                Zipper.Contradiction contradiction _ ->
+                Zipper.NextStepContradiction _ _ _ ->
+                    ( "Remove contradict"
+                    , True
+                    , Html.ul []
+                        (Html.h4 [] [ Html.text "Proove the formula above by contradiction" ]
+                            :: renderProofHelper (Zipper.goContradiction zipper)
+                        )
+                    )
+
+                Zipper.LastStepContradiction _ _ ->
                     ( "Remove contradict"
                     , True
                     , Html.ul []
