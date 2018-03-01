@@ -8,50 +8,81 @@ import Zipper
 
 zipper : Zipper.Zipper
 zipper =
-    Zipper.Empty
-        |> Zipper.add (Zipper.createElement "Element")
-        |> Zipper.add (Zipper.createElement "Successor 0")
-        |> Zipper.add (Zipper.createElement "Successor 1")
-        |> Zipper.add (Zipper.createElement "Successor 2")
+    Zipper.create "element_one"
+        |> Zipper.add (Zipper.createElement "element_two")
+        |> Zipper.goDownOrStop
+        |> Zipper.add (Zipper.createElement "element_three")
+        |> Zipper.goRoot
 
 
-testZipperValue : Zipper.Zipper -> Maybe String -> Expectation
+zipperElement2 =
+    Zipper.goDown zipper
+
+
+testZipperValue : Zipper.Zipper -> String -> Expectation
 testZipperValue zipper value =
     Expect.equal value (Zipper.getValue zipper)
 
 
-testSuccessor : Zipper.Zipper -> Int -> Expectation
-testSuccessor zipper index =
-    testZipperValue
-        (Zipper.goDown index zipper)
-        (Just <| "Successor " ++ toString index)
-
-
-testParent : Zipper.Zipper -> Maybe String -> Expectation
-testParent zipper value =
-    testZipperValue
-        (Zipper.goUp zipper)
-        value
-
-
-suite : Test
-suite =
-    describe "Test Zipper module"
-        [ test "Test empty zipper" <|
-            \_ -> testZipperValue Zipper.Empty Nothing
-        , test "Test zipper one element" <|
-            \_ -> testZipperValue zipper (Just "Element")
-        , describe "Test goDown"
-            [ test "Test 0th successor" <| \_ -> testSuccessor zipper 0
-            , test "Test 1st successor" <| \_ -> testSuccessor zipper 1
-            , test "Test 2nd successor" <| \_ -> testSuccessor zipper 2
-            ]
-        , describe "Test goUp"
-            [ test "Test missing parent" <| \_ -> testParent zipper Nothing
-            , test "Test parent value" <| \_ -> testParent (Zipper.goDown 0 zipper) (Just "Element")
-            ]
+testGoDown =
+    describe "Test goDown"
+        [ test "once " <| \_ -> testZipperValue (zipper |> Zipper.goDownOrStop) "element_two"
+        , test "twice" <| \_ -> testZipperValue (zipper |> Zipper.goDownOrStop |> Zipper.goDownOrStop) "element_three"
         ]
 
 
+testDeleteFrom actual expected =
+    Expect.equal (Zipper.goRoot actual) (Zipper.goRoot expected)
 
---todo: test goRoot
+
+testDelete =
+    describe "Test delete"
+        [ test "parent" <|
+            \_ ->
+                testDeleteFrom
+                    (Zipper.delete zipper)
+                    (Zipper.create "element_two" |> Zipper.add (Zipper.createElement "element_three"))
+        , test "step" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper |> Zipper.goDownOrStop |> Zipper.delete)
+                    (Zipper.create "element_one" |> Zipper.add (Zipper.createElement "element_three"))
+        , test "leaf" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper |> Zipper.goDownOrStop |> Zipper.goDownOrStop |> Zipper.delete)
+                    (Zipper.create "element_one" |> Zipper.add (Zipper.createElement "element_two"))
+        , test "delete contradiction node" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper |> Zipper.toggleContradiction |> Zipper.delete)
+                    (Zipper.create "element_two" |> Zipper.add (Zipper.createElement "element_three"))
+        , test "delete the last node inside contradiction" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.edit "something new"
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.edit "prove here"
+                    )
+        , test "delete one node inside contradiction" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.add (Zipper.createElement "manually created node")
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.edit "manually created node"
+                    )
+        ]

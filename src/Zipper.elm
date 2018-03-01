@@ -366,10 +366,36 @@ delete zipper =
         Just parent ->
             case zipper.proof of
                 LastStep _ ->
-                    { parent | proof = LastStep <| getElementFromProof parent.proof }
+                    case parent.proof of
+                        LastStep _ ->
+                            -- this cannot happen
+                            Debug.crash "WTF?" zipper
+
+                        NextStep _ _ ->
+                            { parent | proof = LastStep <| getElementFromProof parent.proof }
+
+                        LastStepContradiction _ _ ->
+                            -- this cannot happen
+                            Debug.crash "WTF?" zipper
+
+                        NextStepContradiction element nextStep contradiction ->
+                            { parent | proof = NextStepContradiction element nextStep (LastStep <| createElement "prove here") }
 
                 NextStep _ nextProof ->
-                    { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }
+                    case parent.proof of
+                        LastStep _ ->
+                            -- this cannot happen
+                            Debug.crash "WTF?" zipper
+
+                        NextStep _ _ ->
+                            { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }
+
+                        LastStepContradiction _ _ ->
+                            -- this cannot happen
+                            Debug.crash "WTF?" zipper
+
+                        NextStepContradiction element nextStep contradiction ->
+                            { parent | proof = NextStepContradiction element nextStep nextProof }
 
                 LastStepContradiction _ contradiction ->
                     { parent | proof = LastStep <| getElementFromProof parent.proof }
