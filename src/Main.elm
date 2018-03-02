@@ -36,7 +36,8 @@ initialModel =
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(q -> r)")
             |> Zipper.toggleContradiction
-            |> Zipper.goDownOrStop
+            |> Zipper.goContradiction
+            |> Zipper.toggleContradiction
             |> Zipper.add (Zipper.createElement "(r -> q)")
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(p -> r)")
@@ -185,7 +186,7 @@ view model =
                 [ Html.h1 [] [ Html.text "Proof assistant" ]
                 , Html.p [] [ Html.text (renderTextProof <| Zipper.goRoot model.proof) ]
                 , Html.hr [] []
-                , renderProof <| Zipper.goRoot (Debug.log "Model:" model.proof)
+                , renderProof <| Zipper.goRoot model.proof
                 ]
             ]
         ]

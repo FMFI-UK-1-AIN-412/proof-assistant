@@ -338,7 +338,7 @@ addToProof element proof =
         LastStepContradiction previousElement contradiction ->
             NextStepContradiction previousElement (LastStep element) contradiction
 
-        NextStepContradiction previousElement contradiction nextProof ->
+        NextStepContradiction previousElement nextProof contradiction ->
             NextStepContradiction previousElement (NextStep element nextProof) contradiction
 
 
@@ -369,14 +369,15 @@ delete zipper =
                     case parent.proof of
                         LastStep _ ->
                             -- this cannot happen
-                            Debug.crash "WTF?" zipper
+                            Debug.crash "WTF1?" zipper
 
                         NextStep _ _ ->
                             { parent | proof = LastStep <| getElementFromProof parent.proof }
 
-                        LastStepContradiction _ _ ->
+                        LastStepContradiction element contradiction ->
                             -- this cannot happen
-                            Debug.crash "WTF?" zipper
+                            Debug.crash "WTF2?"
+                                zipper
 
                         NextStepContradiction element nextStep contradiction ->
                             { parent | proof = NextStepContradiction element nextStep (LastStep <| createElement "prove here") }
@@ -385,20 +386,22 @@ delete zipper =
                     case parent.proof of
                         LastStep _ ->
                             -- this cannot happen
-                            Debug.crash "WTF?" zipper
+                            Debug.crash "WTF3?" zipper
 
                         NextStep _ _ ->
                             { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }
 
                         LastStepContradiction _ _ ->
                             -- this cannot happen
-                            Debug.crash "WTF?" zipper
+                            Debug.crash "WTF4?" zipper
 
                         NextStepContradiction element nextStep contradiction ->
                             { parent | proof = NextStepContradiction element nextStep nextProof }
 
                 LastStepContradiction _ contradiction ->
-                    { parent | proof = LastStep <| getElementFromProof parent.proof }
+                    Debug.log "WTF5"
+                        { parent | proof = LastStep <| getElementFromProof parent.proof }
 
                 NextStepContradiction _ nextProof contradiction ->
-                    { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }
+                    Debug.log "WTF6"
+                        { parent | proof = NextStep (getElementFromProof parent.proof) nextProof }

@@ -85,4 +85,21 @@ testDelete =
                         |> Zipper.goContradiction
                         |> Zipper.edit "manually created node"
                     )
+        , test "delete one node inside contradiction inside contradiction" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.edit "something new"
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.edit "something even newer"
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleContradiction
+                        |> Zipper.goContradiction
+                        |> Zipper.edit "something new"
+                    )
         ]
