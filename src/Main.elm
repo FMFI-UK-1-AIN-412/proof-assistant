@@ -30,9 +30,9 @@ initialModel : Model
 initialModel =
     { proof =
         Zipper.create "(q -> p)"
-            |> Zipper.add (Zipper.createPremis "(p -> q)")
+            |> Zipper.add (Zipper.createElement "(p -> q)")
             |> Zipper.goDownOrStop
-            |> Zipper.add (Zipper.createPremis "((q -> r) & (r-> q))")
+            |> Zipper.add (Zipper.createElement "((q -> r) & (r-> q))")
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(q -> r)")
             |> Zipper.toggleContradiction
@@ -41,6 +41,9 @@ initialModel =
             |> Zipper.add (Zipper.createElement "(r -> q)")
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(p -> r)")
+            |> Zipper.goUpOrStop
+            |> Zipper.goUpOrStop
+            |> Zipper.add (Zipper.createElement "tm")
             |> Zipper.goRoot
     }
 
@@ -112,23 +115,11 @@ renderLine : Zipper.Zipper -> Html.Html Msg
 renderLine zipper =
     let
         ( contradictionText, disabled, contradictionBase ) =
-            case zipper.proof of
-                Zipper.LastStep _ ->
+            case Zipper.getProofTypeFromSteps zipper.steps of
+                Zipper.Normal _ ->
                     ( "Contradict", False, Html.text "" )
 
-                Zipper.NextStep _ _ ->
-                    ( "Contradict", False, Html.text "" )
-
-                Zipper.NextStepContradiction _ _ _ ->
-                    ( "Remove contradict"
-                    , True
-                    , Html.ul []
-                        (Html.h4 [] [ Html.text "Proove the formula above by contradiction" ]
-                            :: renderProofHelper (Zipper.goContradiction zipper)
-                        )
-                    )
-
-                Zipper.LastStepContradiction _ _ ->
+                Zipper.Contradiction _ _ ->
                     ( "Remove contradict"
                     , True
                     , Html.ul []
