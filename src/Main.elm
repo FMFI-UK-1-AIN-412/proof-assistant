@@ -42,7 +42,7 @@ initialModel =
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(p -> r)")
             |> Zipper.goUpOrStop
-            |> Zipper.goUpOrStop
+            |> Zipper.goOutContradictionOrStop
             |> Zipper.add (Zipper.createElement "tm")
             |> Zipper.goRoot
     }

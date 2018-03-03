@@ -19,6 +19,7 @@ module Zipper
         , goContradictionOrStop
         , goDown
         , goDownOrStop
+        , goOutContradictionOrStop
         , goRoot
         , goUp
         , goUpOrStop
@@ -72,6 +73,7 @@ getEmptyError zipper =
 
 previousFormulas : Zipper -> List Formula.Formula
 previousFormulas zipper =
+    -- todo: aj v hlavnej vetve
     case goUp zipper of
         Nothing ->
             []
@@ -82,6 +84,7 @@ previousFormulas zipper =
 
 previousFormulasTmp : Zipper -> List Formula.Formula
 previousFormulasTmp zipper =
+    -- todo: aj v hlavnej vetve
     let
         this =
             case (getElementFromSteps zipper.steps).formula of
@@ -270,6 +273,24 @@ goUp zipper =
                         , breadcrumbs = tail
                         }
 
+                LastContradictionBreadCrumb _ ->
+                    Nothing
+
+                NextContradictionBreadCrumb _ _ ->
+                    Nothing
+
+
+goOutContradiction : Zipper -> Maybe Zipper
+goOutContradiction zipper =
+    case zipper.breadcrumbs of
+        [] ->
+            Nothing
+
+        head :: tail ->
+            case head of
+                NextStepBreadCrumb _ ->
+                    Nothing
+
                 LastContradictionBreadCrumb element ->
                     Just
                         { steps = Last <| Contradiction element zipper.steps
@@ -283,11 +304,21 @@ goUp zipper =
                         }
 
 
+goOutContradictionOrStop : Zipper -> Zipper
+goOutContradictionOrStop zipper =
+    Maybe.withDefault zipper (goOutContradiction zipper)
+
+
 goRoot : Zipper -> Zipper
 goRoot zipper =
     case goUp zipper of
         Nothing ->
-            zipper
+            case goOutContradiction zipper of
+                Nothing ->
+                    zipper
+
+                Just newZipper ->
+                    goRoot newZipper
 
         Just newZipper ->
             goRoot newZipper
@@ -356,12 +387,36 @@ delete : Zipper -> Zipper
 delete zipper =
     case goUp zipper of
         Nothing ->
-            case goDown zipper of
+            case goOutContradiction zipper of
                 Nothing ->
-                    create ""
+                    case goDown zipper of
+                        Nothing ->
+                            create ""
 
-                Just child ->
-                    { child | breadcrumbs = [] }
+                        Just child ->
+                            { child | breadcrumbs = [] }
+
+                Just parent ->
+                    case zipper.steps of
+                        Last _ ->
+                            let
+                                new =
+                                    Last <| Normal (createElement "prove here")
+                            in
+                            { parent
+                                | steps =
+                                    setProofTypeInSteps
+                                        (Contradiction (getElementFromSteps parent.steps) new)
+                                        parent.steps
+                            }
+
+                        Next _ nextStep ->
+                            { parent
+                                | steps =
+                                    setProofTypeInSteps
+                                        (Contradiction (getElementFromSteps parent.steps) nextStep)
+                                        parent.steps
+                            }
 
         Just parent ->
             case zipper.steps of
