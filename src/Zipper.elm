@@ -16,6 +16,7 @@ module Zipper
         , getValue
         , getVyplyvanieErrors
         , goContradiction
+        , goContradictionOrStop
         , goDown
         , goDownOrStop
         , goRoot
@@ -218,13 +219,11 @@ goDown zipper =
             Just { zipper | steps = nextSteps, breadcrumbs = breadcrumbs }
 
 
-goContradiction : Zipper -> Zipper
+goContradiction : Zipper -> Maybe Zipper
 goContradiction zipper =
-    --zipper
-    --todo: prerobit na maybe zipper?
     case getProofTypeFromSteps zipper.steps of
         Normal _ ->
-            zipper
+            Nothing
 
         Contradiction element contradictionSteps ->
             let
@@ -233,14 +232,18 @@ goContradiction zipper =
                         Last _ ->
                             LastContradictionBreadCrumb element
 
-                        Next _ wtf ->
-                            -- todo: fixme
-                            NextContradictionBreadCrumb element wtf
+                        Next _ nextProof ->
+                            NextContradictionBreadCrumb element nextProof
 
                 breadcrumbs =
                     breadcrumb :: zipper.breadcrumbs
             in
-            { zipper | steps = contradictionSteps, breadcrumbs = breadcrumbs }
+            Just { zipper | steps = contradictionSteps, breadcrumbs = breadcrumbs }
+
+
+goContradictionOrStop : Zipper -> Zipper
+goContradictionOrStop zipper =
+    Maybe.withDefault zipper (goContradiction zipper)
 
 
 goDownOrStop : Zipper -> Zipper
@@ -262,25 +265,22 @@ goUp zipper =
         head :: tail ->
             case head of
                 NextStepBreadCrumb proofType ->
-                    let
-                        nextSteps =
-                            Next proofType zipper.steps
-                    in
-                    Just { steps = nextSteps, breadcrumbs = tail }
+                    Just
+                        { steps = Next proofType zipper.steps
+                        , breadcrumbs = tail
+                        }
 
                 LastContradictionBreadCrumb element ->
-                    let
-                        nextSteps =
-                            Last <| Contradiction element zipper.steps
-                    in
-                    Just { steps = nextSteps, breadcrumbs = tail }
+                    Just
+                        { steps = Last <| Contradiction element zipper.steps
+                        , breadcrumbs = tail
+                        }
 
                 NextContradictionBreadCrumb element steps ->
-                    let
-                        nextSteps =
-                            Next (Contradiction element zipper.steps) steps
-                    in
-                    Just { steps = nextSteps, breadcrumbs = tail }
+                    Just
+                        { steps = Next (Contradiction element zipper.steps) steps
+                        , breadcrumbs = tail
+                        }
 
 
 goRoot : Zipper -> Zipper
@@ -369,4 +369,5 @@ delete zipper =
                     { parent | steps = Last <| getProofTypeFromSteps parent.steps }
 
                 Next _ nextStep ->
-                    { parent | steps = Next (getProofTypeFromSteps parent.steps) nextStep }
+                    Debug.log "WTF2"
+                        { parent | steps = Next (getProofTypeFromSteps parent.steps) nextStep }

@@ -36,7 +36,7 @@ initialModel =
             |> Zipper.goDownOrStop
             |> Zipper.add (Zipper.createElement "(q -> r)")
             |> Zipper.toggleContradiction
-            |> Zipper.goContradiction
+            |> Zipper.goContradictionOrStop
             |> Zipper.toggleContradiction
             |> Zipper.add (Zipper.createElement "(r -> q)")
             |> Zipper.goDownOrStop
@@ -124,7 +124,7 @@ renderLine zipper =
                     , True
                     , Html.ul []
                         (Html.h4 [] [ Html.text "Proove the formula above by contradiction" ]
-                            :: renderProofHelper (Zipper.goContradiction zipper)
+                            :: renderProofHelper (Zipper.goContradictionOrStop zipper)
                         )
                     )
 

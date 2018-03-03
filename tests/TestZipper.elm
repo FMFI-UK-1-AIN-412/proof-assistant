@@ -62,13 +62,13 @@ testDelete =
                 testDeleteFrom
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.edit "something new"
                         |> Zipper.delete
                     )
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.edit "prove here"
                     )
         , test "delete one node inside contradiction" <|
@@ -76,13 +76,13 @@ testDelete =
                 testDeleteFrom
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.add (Zipper.createElement "manually created node")
                         |> Zipper.delete
                     )
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.edit "manually created node"
                     )
         , test "delete one node inside contradiction inside contradiction" <|
@@ -90,16 +90,16 @@ testDelete =
                 testDeleteFrom
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.edit "something new"
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.edit "something even newer"
                         |> Zipper.delete
                     )
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradiction
+                        |> Zipper.goContradictionOrStop
                         |> Zipper.edit "something new"
                     )
         ]
