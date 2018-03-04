@@ -11,7 +11,11 @@ module Zipper
         , down
         , downOrStop
         , edit
+        , enterCase1OrStop
+        , enterCase2OrStop
         , enterContradictionOrStop
+        , getCase1Value
+        , getCase2Value
         , getEmptyError
         , getError
         , getProofTypeFromSteps
@@ -20,6 +24,7 @@ module Zipper
         , getVyplyvanieErrors
         , leaveContradictionOrStop
         , root
+        , toggleCases
         , toggleContradiction
         , up
         , upOrStop
@@ -57,6 +62,7 @@ createElement string =
 type ProofType
     = Normal Element
     | Contradiction Element Steps
+    | Cases Element Steps Steps
 
 
 type Steps
@@ -95,6 +101,9 @@ getElementFromProofType proofType =
         Contradiction element _ ->
             element
 
+        Cases element _ _ ->
+            element
+
 
 setElementInProofType : Element -> ProofType -> ProofType
 setElementInProofType element proofType =
@@ -104,6 +113,9 @@ setElementInProofType element proofType =
 
         Contradiction _ steps ->
             Contradiction element steps
+
+        Cases _ steps1 steps2 ->
+            Cases element steps1 steps2
 
 
 getElementFromSteps : Steps -> Element
@@ -146,6 +158,10 @@ type Breadcrumb
     = NextStepBreadCrumb ProofType
     | LastContradictionBreadCrumb Element
     | NextContradictionBreadCrumb Element Steps
+    | LastCase1BreadCrumb Element Steps
+    | NextCase1BreadCrumb Element Steps Steps
+    | LastCase2BreadCrumb Element Steps
+    | NextCase2BreadCrumb Element Steps Steps
 
 
 type alias Zipper =
@@ -168,6 +184,37 @@ toggleContradiction zipper =
 
                 Contradiction element _ ->
                     Normal element
+
+                Cases _ _ _ ->
+                    -- cases cannot be contradicted directly
+                    proofType
+
+        newSteps =
+            setProofTypeInSteps newProofType zipper.steps
+    in
+    { zipper | steps = newSteps }
+
+
+toggleCases : Zipper -> Zipper
+toggleCases zipper =
+    let
+        proofType =
+            getProofTypeFromSteps zipper.steps
+
+        newCase =
+            Last <| Normal <| createElement "A case"
+
+        newProofType =
+            case proofType of
+                Normal element ->
+                    Cases element newCase newCase
+
+                Cases element _ _ ->
+                    Normal element
+
+                Contradiction _ _ ->
+                    -- contradiction cannot be cased directly
+                    proofType
 
         newSteps =
             setProofTypeInSteps newProofType zipper.steps
@@ -305,16 +352,56 @@ up zipper =
                 NextContradictionBreadCrumb _ _ ->
                     Nothing
 
+                LastCase1BreadCrumb _ _ ->
+                    Nothing
+
+                NextCase1BreadCrumb _ _ _ ->
+                    Nothing
+
+                LastCase2BreadCrumb _ _ ->
+                    Nothing
+
+                NextCase2BreadCrumb _ _ _ ->
+                    Nothing
+
 
 upOrStop : Zipper -> Zipper
 upOrStop zipper =
     Maybe.withDefault zipper (up zipper)
 
 
+root : Zipper -> Zipper
+root zipper =
+    -- todo: refactor
+    case up zipper of
+        Nothing ->
+            case leaveContradiction zipper of
+                Nothing ->
+                    case leaveCase zipper of
+                        Nothing ->
+                            zipper
+
+                        Just newZipper ->
+                            root newZipper
+
+                Just newZipper ->
+                    root newZipper
+
+        Just newZipper ->
+            root newZipper
+
+
+
+-- contradiction
+
+
 enterContradiction : Zipper -> Maybe Zipper
 enterContradiction zipper =
     case getProofTypeFromSteps zipper.steps of
         Normal _ ->
+            Nothing
+
+        Cases _ _ _ ->
             Nothing
 
         Contradiction element contradictionSteps ->
@@ -349,6 +436,18 @@ leaveContradiction zipper =
                 NextStepBreadCrumb _ ->
                     Nothing
 
+                LastCase1BreadCrumb _ _ ->
+                    Nothing
+
+                NextCase1BreadCrumb _ _ _ ->
+                    Nothing
+
+                LastCase2BreadCrumb _ _ ->
+                    Nothing
+
+                NextCase2BreadCrumb _ _ _ ->
+                    Nothing
+
                 LastContradictionBreadCrumb element ->
                     Just
                         { steps = Last <| Contradiction element zipper.steps
@@ -367,19 +466,127 @@ leaveContradictionOrStop zipper =
     Maybe.withDefault zipper (leaveContradiction zipper)
 
 
-root : Zipper -> Zipper
-root zipper =
-    case up zipper of
-        Nothing ->
-            case leaveContradiction zipper of
-                Nothing ->
-                    zipper
 
-                Just newZipper ->
-                    root newZipper
+-- cases
 
-        Just newZipper ->
-            root newZipper
+
+getCase1Value : Zipper -> String
+getCase1Value zipper =
+    -- todo
+    "todo: Case1"
+
+
+getCase2Value : Zipper -> String
+getCase2Value zipper =
+    -- todo
+    "todo: Case2"
+
+
+enterCase1 : Zipper -> Maybe Zipper
+enterCase1 zipper =
+    case getProofTypeFromSteps zipper.steps of
+        Normal _ ->
+            Nothing
+
+        Contradiction _ _ ->
+            Nothing
+
+        Cases element case1 case2 ->
+            let
+                breadcrumb =
+                    case zipper.steps of
+                        Last _ ->
+                            LastCase1BreadCrumb element case2
+
+                        Next _ nextProof ->
+                            NextCase1BreadCrumb element case2 nextProof
+
+                breadcrumbs =
+                    breadcrumb :: zipper.breadcrumbs
+            in
+            Just { zipper | steps = case1, breadcrumbs = breadcrumbs }
+
+
+enterCase1OrStop : Zipper -> Zipper
+enterCase1OrStop zipper =
+    Maybe.withDefault zipper (enterCase1 zipper)
+
+
+enterCase2 : Zipper -> Maybe Zipper
+enterCase2 zipper =
+    case getProofTypeFromSteps zipper.steps of
+        Normal _ ->
+            Nothing
+
+        Contradiction _ _ ->
+            Nothing
+
+        Cases element case1 case2 ->
+            let
+                breadcrumb =
+                    case zipper.steps of
+                        Last _ ->
+                            LastCase2BreadCrumb element case1
+
+                        Next _ nextProof ->
+                            NextCase2BreadCrumb element case1 nextProof
+
+                breadcrumbs =
+                    breadcrumb :: zipper.breadcrumbs
+            in
+            Just { zipper | steps = case2, breadcrumbs = breadcrumbs }
+
+
+enterCase2OrStop : Zipper -> Zipper
+enterCase2OrStop zipper =
+    Maybe.withDefault zipper (enterCase2 zipper)
+
+
+leaveCase : Zipper -> Maybe Zipper
+leaveCase zipper =
+    case zipper.breadcrumbs of
+        [] ->
+            Nothing
+
+        head :: tail ->
+            case head of
+                NextStepBreadCrumb _ ->
+                    Nothing
+
+                LastContradictionBreadCrumb _ ->
+                    Nothing
+
+                NextContradictionBreadCrumb _ _ ->
+                    Nothing
+
+                LastCase1BreadCrumb element case2 ->
+                    Just
+                        { steps = Last <| Cases element zipper.steps case2
+                        , breadcrumbs = tail
+                        }
+
+                NextCase1BreadCrumb element case2 nextProof ->
+                    Just
+                        { steps = Next (Cases element zipper.steps case2) nextProof
+                        , breadcrumbs = tail
+                        }
+
+                LastCase2BreadCrumb element case1 ->
+                    Just
+                        { steps = Last <| Cases element case1 zipper.steps
+                        , breadcrumbs = tail
+                        }
+
+                NextCase2BreadCrumb element case1 nextProof ->
+                    Just
+                        { steps = Next (Cases element case1 zipper.steps) nextProof
+                        , breadcrumbs = tail
+                        }
+
+
+leaveCaseOrStop : Zipper -> Zipper
+leaveCaseOrStop zipper =
+    Maybe.withDefault zipper (leaveCase zipper)
 
 
 
@@ -403,16 +610,29 @@ edit value zipper =
 
 delete : Zipper -> Zipper
 delete zipper =
+    -- todo: this has to be refactored
     case up zipper of
         Nothing ->
             case leaveContradiction zipper of
                 Nothing ->
-                    case down zipper of
+                    case leaveCase zipper of
                         Nothing ->
-                            create ""
+                            case down zipper of
+                                Nothing ->
+                                    create ""
 
-                        Just child ->
-                            { child | breadcrumbs = [] }
+                                Just child ->
+                                    { child | breadcrumbs = [] }
+
+                        Just parent ->
+                            case zipper.steps of
+                                Last _ ->
+                                    -- todo:
+                                    zipper
+
+                                Next _ _ ->
+                                    -- todo:
+                                    zipper
 
                 Just parent ->
                     case zipper.steps of

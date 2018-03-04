@@ -21,20 +21,20 @@ initialModel : Model
 initialModel =
     { proof =
         Zipper.create "(q -> p)"
-            |> Zipper.add (Zipper.createElement "(p -> q)")
-            |> Zipper.downOrStop
             |> Zipper.add (Zipper.createElement "((q -> r) & (r-> q))")
             |> Zipper.downOrStop
-            |> Zipper.add (Zipper.createElement "(q -> r)")
             |> Zipper.toggleContradiction
             |> Zipper.enterContradictionOrStop
-            |> Zipper.toggleContradiction
+            |> Zipper.edit "(q -> r)"
             |> Zipper.add (Zipper.createElement "(r -> q)")
+            |> Zipper.leaveContradictionOrStop
             |> Zipper.downOrStop
             |> Zipper.add (Zipper.createElement "(p -> r)")
-            |> Zipper.upOrStop
-            |> Zipper.leaveContradictionOrStop
-            |> Zipper.add (Zipper.createElement "tm")
+            |> Zipper.downOrStop
+            |> Zipper.downOrStop
+            |> Zipper.add (Zipper.createElement "(a | b)")
+            |> Zipper.downOrStop
+            |> Zipper.toggleCases
             |> Zipper.root
     }
 
@@ -44,30 +44,34 @@ initialModel =
 
 
 type Msg
-    = AddToZipper Zipper.Zipper
-    | EditZipper Zipper.Zipper String
-    | MouseHovered Zipper.Zipper Bool
+    = ZipperAdd Zipper.Zipper
+    | ZipperEdit Zipper.Zipper String
+    | ShowButtons Zipper.Zipper Bool
     | DeleteProofStep Zipper.Zipper
-    | MakeContradiction Zipper.Zipper
+    | ToggleContradiction Zipper.Zipper
+    | ToggleCases Zipper.Zipper
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        AddToZipper zipper ->
+        ZipperAdd zipper ->
             { model | proof = Zipper.add (Zipper.createElement "") zipper }
 
-        EditZipper zipper value ->
+        ZipperEdit zipper value ->
             { model | proof = Zipper.edit value zipper }
 
-        MouseHovered zipper state ->
+        ShowButtons zipper state ->
             { model | proof = Zipper.changeShowButtons state zipper }
 
         DeleteProofStep zipper ->
             { model | proof = Zipper.delete zipper }
 
-        MakeContradiction zipper ->
+        ToggleContradiction zipper ->
             { model | proof = Zipper.toggleContradiction zipper }
+
+        ToggleCases zipper ->
+            { model | proof = Zipper.toggleCases zipper }
 
 
 
@@ -81,6 +85,11 @@ render model =
 
 
 -- Helpers
+
+
+emptyNode : Html.Html Msg
+emptyNode =
+    Html.text ""
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
@@ -109,11 +118,38 @@ renderProofHelper zipper =
     base :: rest
 
 
-renderButtons : Zipper.Zipper -> String -> Html.Html Msg
-renderButtons zipper contradictionText =
+renderButtons : Zipper.Zipper -> Maybe String -> Maybe String -> Html.Html Msg
+renderButtons zipper contradictionText casesText =
+    let
+        contradictionButton =
+            case contradictionText of
+                Nothing ->
+                    emptyNode
+
+                Just text ->
+                    Button.button
+                        [ Button.onClick <| ToggleContradiction zipper
+                        , Button.outlineInfo
+                        , Button.attrs [ Html.Attributes.class "ml-1" ]
+                        ]
+                        [ Html.text text ]
+
+        casesButton =
+            case casesText of
+                Nothing ->
+                    emptyNode
+
+                Just text ->
+                    Button.button
+                        [ Button.onClick <| ToggleCases zipper
+                        , Button.outlineInfo
+                        , Button.attrs [ Html.Attributes.class "ml-1" ]
+                        ]
+                        [ Html.text text ]
+    in
     Html.div []
         [ Button.button
-            [ Button.onClick <| AddToZipper zipper
+            [ Button.onClick <| ZipperAdd zipper
             , Button.outlineSuccess
             , Button.attrs [ Html.Attributes.class "ml-1" ]
             ]
@@ -124,38 +160,62 @@ renderButtons zipper contradictionText =
             , Button.attrs [ Html.Attributes.class "ml-1" ]
             ]
             [ Html.text "x" ]
-        , Button.button
-            [ Button.onClick <| MakeContradiction zipper
-            , Button.outlineInfo
-            , Button.attrs [ Html.Attributes.class "ml-1" ]
-            ]
-            [ Html.text contradictionText ]
+        , contradictionButton
+        , casesButton
+        ]
+
+
+renderContradiction : Zipper.Zipper -> Html.Html Msg
+renderContradiction zipper =
+    Html.ul []
+        (Html.h4
+            []
+            [ Html.text "By contradiction:" ]
+            :: renderProofHelper (Zipper.enterContradictionOrStop zipper)
+        )
+
+
+renderCases : Zipper.Zipper -> Html.Html Msg
+renderCases zipper =
+    let
+        renderCaseInput text =
+            InputGroup.config
+                (InputGroup.text
+                    [ Input.value text
+                    , Input.disabled True
+                    , Input.success
+                    ]
+                )
+                |> InputGroup.view
+    in
+    Html.div []
+        [ Html.h4 [] [ Html.text "By cases:" ]
+        , renderCaseInput <| Zipper.getCase1Value zipper
+        , Html.div [] (renderProofHelper <| Zipper.enterCase1OrStop zipper)
+        , renderCaseInput <| Zipper.getCase2Value zipper
+        , Html.div [] (renderProofHelper <| Zipper.enterCase2OrStop zipper)
         ]
 
 
 renderLine : Zipper.Zipper -> Html.Html Msg
 renderLine zipper =
     let
-        ( contradictionText, disabled, contradictionBase ) =
+        ( contradictionText, casesText, disabled, subElements ) =
             case Zipper.getProofTypeFromSteps zipper.steps of
                 Zipper.Normal _ ->
-                    ( "Contradict", False, Html.text "" )
+                    ( Just "Contradict", Just "Cases", False, emptyNode )
 
                 Zipper.Contradiction _ _ ->
-                    ( "Remove contradict"
-                    , True
-                    , Html.ul []
-                        (Html.h4
-                            []
-                            [ Html.text "By contradiction:" ]
-                            :: renderProofHelper (Zipper.enterContradictionOrStop zipper)
-                        )
-                    )
+                    ( Just "Undo contradict", Nothing, True, renderContradiction zipper )
+
+                Zipper.Cases _ _ _ ->
+                    -- todo
+                    ( Nothing, Just "Undo cases", True, renderCases zipper )
 
         ( errorNode, groupStatus, inputStatus ) =
             case ErrorHandler.handleErrors zipper of
                 Ok _ ->
-                    ( Html.text "", Form.groupSuccess, Input.success )
+                    ( emptyNode, Form.groupSuccess, Input.success )
 
                 Err error ->
                     ( Form.validationText [] [ Html.text error ]
@@ -165,6 +225,12 @@ renderLine zipper =
 
         showButtons =
             Zipper.getShowButtons zipper
+
+        buttons =
+            if showButtons then
+                renderButtons zipper contradictionText casesText
+            else
+                emptyNode
     in
     Html.div []
         [ Form.group [ groupStatus ]
@@ -172,7 +238,7 @@ renderLine zipper =
                 (InputGroup.text
                     [ Input.placeholder "Formula"
                     , Input.value <| Zipper.getValue zipper
-                    , Input.onInput <| EditZipper zipper
+                    , Input.onInput <| ZipperEdit zipper
                     , Input.disabled disabled
                     , inputStatus
                     ]
@@ -180,16 +246,13 @@ renderLine zipper =
                 |> InputGroup.successors
                     [ InputGroup.button
                         [ Button.outlineInfo
-                        , Button.onClick <| MouseHovered zipper (not showButtons)
+                        , Button.onClick <| ShowButtons zipper (not showButtons)
                         ]
                         [ Html.text "?" ]
                     ]
                 |> InputGroup.view
-            , if showButtons then
-                renderButtons zipper contradictionText
-              else
-                Html.text ""
+            , buttons
             , errorNode
             ]
-        , contradictionBase
+        , subElements
         ]
