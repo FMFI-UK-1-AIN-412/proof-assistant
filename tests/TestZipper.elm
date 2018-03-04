@@ -68,7 +68,7 @@ testDelete =
                     (zipper
                         |> Zipper.toggleContradiction
                         |> Zipper.enterContradictionOrStop
-                        |> Zipper.edit "prove here"
+                        |> Zipper.edit ""
                     )
         , test "delete one node inside contradiction" <|
             \_ ->

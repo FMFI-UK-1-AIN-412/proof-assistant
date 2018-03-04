@@ -608,58 +608,80 @@ edit value zipper =
     { zipper | steps = editStep value zipper.steps }
 
 
-delete : Zipper -> Zipper
-delete zipper =
-    -- todo: this has to be refactored
+getParentForDelete : Zipper -> Maybe Zipper
+getParentForDelete zipper =
     case up zipper of
         Nothing ->
             case leaveContradiction zipper of
                 Nothing ->
                     case leaveCase zipper of
                         Nothing ->
-                            case down zipper of
-                                Nothing ->
-                                    create ""
-
-                                Just child ->
-                                    { child | breadcrumbs = [] }
+                            Nothing
 
                         Just parent ->
-                            case zipper.steps of
-                                Last _ ->
-                                    -- todo:
-                                    zipper
-
-                                Next _ _ ->
-                                    -- todo:
-                                    zipper
+                            Just parent
 
                 Just parent ->
+                    Just parent
+
+        Just parent ->
+            Just parent
+
+
+delete : Zipper -> Zipper
+delete zipper =
+    case getParentForDelete zipper of
+        Nothing ->
+            case down zipper of
+                Nothing ->
+                    create ""
+
+                Just child ->
+                    { child | breadcrumbs = [] }
+
+        Just parent ->
+            let
+                proofType =
+                    getProofTypeFromSteps parent.steps
+
+                newStep =
+                    Last <| Normal (createElement "")
+            in
+            case proofType of
+                Normal _ ->
                     case zipper.steps of
                         Last _ ->
-                            let
-                                new =
-                                    Last <| Normal (createElement "prove here")
-                            in
+                            { parent | steps = Last proofType }
+
+                        Next _ nextStep ->
+                            { parent | steps = Next proofType nextStep }
+
+                Contradiction element _ ->
+                    case zipper.steps of
+                        Last _ ->
                             { parent
                                 | steps =
-                                    setProofTypeInSteps
-                                        (Contradiction (getElementFromSteps parent.steps) new)
-                                        parent.steps
+                                    setProofTypeInSteps (Contradiction element newStep) parent.steps
                             }
 
                         Next _ nextStep ->
                             { parent
                                 | steps =
-                                    setProofTypeInSteps
-                                        (Contradiction (getElementFromSteps parent.steps) nextStep)
-                                        parent.steps
+                                    setProofTypeInSteps (Contradiction element nextStep) parent.steps
                             }
 
-        Just parent ->
-            case zipper.steps of
-                Last _ ->
-                    { parent | steps = Last <| getProofTypeFromSteps parent.steps }
+                Cases element case1 case2 ->
+                    case zipper.steps of
+                        Last _ ->
+                            -- todo: write a test for this
+                            if case1 == zipper.steps then
+                                { parent | steps = Last <| Cases element newStep case2 }
+                            else
+                                { parent | steps = Last <| Cases element case1 newStep }
 
-                Next _ nextStep ->
-                    { parent | steps = Next (getProofTypeFromSteps parent.steps) nextStep }
+                        Next _ nextStep ->
+                            -- todo: write a test fot this (not working for now)
+                            if case1 == zipper.steps then
+                                { parent | steps = Next (Cases element newStep case2) nextStep }
+                            else
+                                { parent | steps = Next (Cases element case1 newStep) nextStep }
