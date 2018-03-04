@@ -1,7 +1,6 @@
 module TestZipper exposing (..)
 
 import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, int, list, string)
 import Test exposing (..)
 import Zipper
 
@@ -10,13 +9,13 @@ zipper : Zipper.Zipper
 zipper =
     Zipper.create "element_one"
         |> Zipper.add (Zipper.createElement "element_two")
-        |> Zipper.goDownOrStop
+        |> Zipper.downOrStop
         |> Zipper.add (Zipper.createElement "element_three")
-        |> Zipper.goRoot
+        |> Zipper.root
 
 
 zipperElement2 =
-    Zipper.goDown zipper
+    Zipper.down zipper
 
 
 testZipperValue : Zipper.Zipper -> String -> Expectation
@@ -25,14 +24,14 @@ testZipperValue zipper value =
 
 
 testGoDown =
-    describe "Test goDown"
-        [ test "once " <| \_ -> testZipperValue (zipper |> Zipper.goDownOrStop) "element_two"
-        , test "twice" <| \_ -> testZipperValue (zipper |> Zipper.goDownOrStop |> Zipper.goDownOrStop) "element_three"
+    describe "Test down"
+        [ test "once " <| \_ -> testZipperValue (zipper |> Zipper.downOrStop) "element_two"
+        , test "twice" <| \_ -> testZipperValue (zipper |> Zipper.downOrStop |> Zipper.downOrStop) "element_three"
         ]
 
 
 testDeleteFrom actual expected =
-    Expect.equal (Zipper.goRoot actual) (Zipper.goRoot expected)
+    Expect.equal (Zipper.root actual) (Zipper.root expected)
 
 
 testDelete =
@@ -45,12 +44,12 @@ testDelete =
         , test "step" <|
             \_ ->
                 testDeleteFrom
-                    (zipper |> Zipper.goDownOrStop |> Zipper.delete)
+                    (zipper |> Zipper.downOrStop |> Zipper.delete)
                     (Zipper.create "element_one" |> Zipper.add (Zipper.createElement "element_three"))
         , test "leaf" <|
             \_ ->
                 testDeleteFrom
-                    (zipper |> Zipper.goDownOrStop |> Zipper.goDownOrStop |> Zipper.delete)
+                    (zipper |> Zipper.downOrStop |> Zipper.downOrStop |> Zipper.delete)
                     (Zipper.create "element_one" |> Zipper.add (Zipper.createElement "element_two"))
         , test "delete contradiction node" <|
             \_ ->
@@ -62,13 +61,13 @@ testDelete =
                 testDeleteFrom
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradictionOrStop
+                        |> Zipper.enterContradictionOrStop
                         |> Zipper.edit "something new"
                         |> Zipper.delete
                     )
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradictionOrStop
+                        |> Zipper.enterContradictionOrStop
                         |> Zipper.edit "prove here"
                     )
         , test "delete one node inside contradiction" <|
@@ -76,13 +75,13 @@ testDelete =
                 testDeleteFrom
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradictionOrStop
+                        |> Zipper.enterContradictionOrStop
                         |> Zipper.add (Zipper.createElement "manually created node")
                         |> Zipper.delete
                     )
                     (zipper
                         |> Zipper.toggleContradiction
-                        |> Zipper.goContradictionOrStop
+                        |> Zipper.enterContradictionOrStop
                         |> Zipper.edit "manually created node"
                     )
         ]
