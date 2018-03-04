@@ -84,4 +84,58 @@ testDelete =
                         |> Zipper.enterContradictionOrStop
                         |> Zipper.edit "manually created node"
                     )
+        , test "delete node in case1 which has no children" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleCases
+                        |> Zipper.enterCase1OrStop
+                        |> Zipper.edit "something"
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleCases
+                    )
+        , test "delete node in case2 which has no children" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleCases
+                        |> Zipper.enterCase2OrStop
+                        |> Zipper.edit "something"
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleCases
+                    )
+        , test "delete node in case1 which has children" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleCases
+                        |> Zipper.enterCase1OrStop
+                        |> Zipper.edit "something"
+                        |> Zipper.add (Zipper.createElement "child")
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleCases
+                        |> Zipper.enterCase1OrStop
+                        |> Zipper.edit "child"
+                    )
+        , test "delete node in case2 which has children" <|
+            \_ ->
+                testDeleteFrom
+                    (zipper
+                        |> Zipper.toggleCases
+                        |> Zipper.enterCase2OrStop
+                        |> Zipper.edit "something"
+                        |> Zipper.add (Zipper.createElement "child")
+                        |> Zipper.delete
+                    )
+                    (zipper
+                        |> Zipper.toggleCases
+                        |> Zipper.enterCase2OrStop
+                        |> Zipper.edit "child"
+                    )
         ]

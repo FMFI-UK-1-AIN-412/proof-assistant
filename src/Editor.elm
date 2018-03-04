@@ -32,9 +32,16 @@ initialModel =
             |> Zipper.add (Zipper.createElement "(p -> r)")
             |> Zipper.downOrStop
             |> Zipper.downOrStop
-            |> Zipper.add (Zipper.createElement "(a | b)")
+            |> Zipper.add (Zipper.createElement "((a&b) | b)")
             |> Zipper.downOrStop
             |> Zipper.toggleCases
+            |> Zipper.enterCase1OrStop
+            |> Zipper.edit "(a & b)"
+            |> Zipper.downOrStop
+            |> Zipper.add (Zipper.createElement "b")
+            |> Zipper.add (Zipper.createElement "a")
+            |> Zipper.upOrStop
+            |> Zipper.leaveContradictionOrStop
             |> Zipper.root
     }
 
@@ -94,11 +101,7 @@ emptyNode =
 
 renderProof : Zipper.Zipper -> Html.Html Msg
 renderProof zipper =
-    Form.form []
-        [ Html.ul
-            [ Html.Attributes.style [ ( "padding-left", "0" ) ] ]
-            (renderProofHelper zipper)
-        ]
+    Form.form [] [ Html.div [] (renderProofHelper zipper) ]
 
 
 renderProofHelper : Zipper.Zipper -> List (Html.Html Msg)
@@ -165,9 +168,18 @@ renderButtons zipper contradictionText casesText =
         ]
 
 
+innerStyle =
+    Html.Attributes.style
+        [ ( "border", "1px solid black" )
+        , ( "padding", "20px 20px 20px 30px" )
+        , ( "box-shadow", "0 0 5px #cfcfcf" )
+        , ( "margin-bottom", "20px" )
+        ]
+
+
 renderContradiction : Zipper.Zipper -> Html.Html Msg
 renderContradiction zipper =
-    Html.ul []
+    Html.div [ innerStyle ]
         (Html.h4
             []
             [ Html.text "By contradiction:" ]
@@ -179,21 +191,29 @@ renderCases : Zipper.Zipper -> Html.Html Msg
 renderCases zipper =
     let
         renderCaseInput text =
-            InputGroup.config
-                (InputGroup.text
-                    [ Input.value text
-                    , Input.disabled True
-                    , Input.success
-                    ]
-                )
-                |> InputGroup.view
+            Html.div
+                [ Html.Attributes.style [ ( "margin-bottom", "20px" ) ] ]
+                [ InputGroup.config
+                    (InputGroup.text
+                        [ Input.value text
+                        , Input.disabled True
+                        , Input.success
+                        ]
+                    )
+                    |> InputGroup.view
+                ]
     in
     Html.div []
-        [ Html.h4 [] [ Html.text "By cases:" ]
-        , renderCaseInput <| Zipper.getCase1Value zipper
-        , Html.div [] (renderProofHelper <| Zipper.enterCase1OrStop zipper)
-        , renderCaseInput <| Zipper.getCase2Value zipper
-        , Html.div [] (renderProofHelper <| Zipper.enterCase2OrStop zipper)
+        [ Html.div [ innerStyle ]
+            [ Html.h4 [] [ Html.text "Case 1" ]
+            , renderCaseInput <| Zipper.getCase1Value zipper
+            , Html.div [] (renderProofHelper <| Zipper.enterCase1OrStop zipper)
+            ]
+        , Html.div [ innerStyle ]
+            [ Html.h4 [] [ Html.text "Case 2" ]
+            , renderCaseInput <| Zipper.getCase2Value zipper
+            , Html.div [] (renderProofHelper <| Zipper.enterCase2OrStop zipper)
+            ]
         ]
 
 

@@ -146,8 +146,8 @@ setProofTypeInSteps proofType steps =
         Last _ ->
             Last proofType
 
-        Next _ steps ->
-            Next proofType steps
+        Next _ nextSteps ->
+            Next proofType nextSteps
 
 
 
@@ -202,7 +202,7 @@ toggleCases zipper =
             getProofTypeFromSteps zipper.steps
 
         newCase =
-            Last <| Normal <| createElement "A case"
+            Last <| Normal <| createElement ""
 
         newProofType =
             case proofType of
@@ -657,31 +657,28 @@ delete zipper =
                             { parent | steps = Next proofType nextStep }
 
                 Contradiction element _ ->
-                    case zipper.steps of
-                        Last _ ->
-                            { parent
-                                | steps =
-                                    setProofTypeInSteps (Contradiction element newStep) parent.steps
-                            }
+                    let
+                        nextStep =
+                            case zipper.steps of
+                                Last _ ->
+                                    newStep
 
-                        Next _ nextStep ->
-                            { parent
-                                | steps =
-                                    setProofTypeInSteps (Contradiction element nextStep) parent.steps
-                            }
+                                Next _ nextStep ->
+                                    nextStep
+                    in
+                    { parent | steps = setProofTypeInSteps (Contradiction element nextStep) parent.steps }
 
                 Cases element case1 case2 ->
-                    case zipper.steps of
-                        Last _ ->
-                            -- todo: write a test for this
-                            if case1 == zipper.steps then
-                                { parent | steps = Last <| Cases element newStep case2 }
-                            else
-                                { parent | steps = Last <| Cases element case1 newStep }
+                    let
+                        nextStep =
+                            case zipper.steps of
+                                Last _ ->
+                                    newStep
 
-                        Next _ nextStep ->
-                            -- todo: write a test fot this (not working for now)
-                            if case1 == zipper.steps then
-                                { parent | steps = Next (Cases element newStep case2) nextStep }
-                            else
-                                { parent | steps = Next (Cases element case1 newStep) nextStep }
+                                Next _ nextStep ->
+                                    nextStep
+                    in
+                    if case1 == zipper.steps then
+                        { parent | steps = setProofTypeInSteps (Cases element nextStep case2) parent.steps }
+                    else
+                        { parent | steps = setProofTypeInSteps (Cases element case1 nextStep) parent.steps }
