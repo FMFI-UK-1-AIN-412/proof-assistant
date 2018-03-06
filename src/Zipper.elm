@@ -1,34 +1,26 @@
 module Zipper
     exposing
-        ( DropdownStates(..)
-        , ProofType(..)
-        , Steps(..)
-        , Zipper
+        ( Zipper
         , add
         , create
-        , createElement
         , delete
         , down
         , downOrStop
-        , dropdownStates
         , edit
         , enterCase1OrStop
         , enterCase2OrStop
         , enterContradictionOrStop
-        , getAllZipperStates
         , getCase1Value
         , getCase2Value
         , getElement
-        , getElementFromSteps
         , getEmptyError
         , getError
         , getGUI
-        , getProofTypeFromSteps
         , getValue
         , getVyplyvanieErrors
         , leaveContradictionOrStop
         , root
-        , setElementInSteps
+        , setElement
         , setGUI
         , toggleCases
         , toggleContradiction
@@ -36,237 +28,53 @@ module Zipper
         , upOrStop
         )
 
-import Bootstrap.Dropdown as Dropdown
 import Formula
 import Matcher
-import Parser exposing (Parser)
+import Proof
 
 
--- Element
-
-
-type DropdownStates
-    = NormalState
-    | PremisState
-
-
-dropdownStates =
-    [ NormalState, PremisState ]
-
-
-type alias GUI =
-    { showButtons : Bool
-    , dropdown : Dropdown.State
-    }
-
-
-getAllZipperStates : Zipper -> List Zipper
-getAllZipperStates zipper =
-    zipper
-        :: List.foldr (++)
-            []
-            (List.map
-                (\newZipper -> getAllZipperStates newZipper)
-                (getChildrenZippers zipper)
-            )
-
-
-getChildrenZippers : Zipper -> List Zipper
-getChildrenZippers zipper =
-    let
-        downZippers =
-            case down zipper of
-                Nothing ->
-                    []
-
-                Just newZipper ->
-                    [ newZipper ]
-
-        contraZippers =
-            case enterContradiction zipper of
-                Nothing ->
-                    []
-
-                Just newZipper ->
-                    [ newZipper ]
-
-        case1Zipper =
-            case enterCase1 zipper of
-                Nothing ->
-                    []
-
-                Just newZipper ->
-                    [ newZipper ]
-
-        case2Zipper =
-            case enterCase2 zipper of
-                Nothing ->
-                    []
-
-                Just newZipper ->
-                    [ newZipper ]
-    in
-    downZippers ++ contraZippers ++ case1Zipper ++ case2Zipper
-
-
-type alias Element =
-    { value : String
-    , formula : Result Parser.Error Formula.Formula
-    , dropdownType : DropdownStates
-    , gui : GUI
-    }
-
-
-createElement : String -> Element
-createElement string =
-    { value = string
-    , formula = Formula.parse string
-    , dropdownType = NormalState
-    , gui = { showButtons = False, dropdown = Dropdown.initialState }
-    }
-
-
-
--- Steps & ProofTypes
-
-
-type ProofType
-    = Normal Element
-    | Contradiction Element Steps
-    | Cases Element Steps Steps
-
-
-type Steps
-    = Last ProofType
-    | Next ProofType Steps
-
-
-addStep : Element -> Steps -> Steps
-addStep element steps =
-    case steps of
-        Last proof ->
-            Next proof <| Last (Normal element)
-
-        Next proof nextStep ->
-            Next proof <| Next (Normal element) nextStep
-
-
-editStep : String -> Steps -> Steps
-editStep value steps =
-    let
-        element =
-            getElementFromSteps steps
-
-        newElement =
-            { element | value = value, formula = Formula.parse value }
-    in
-    setElementInSteps newElement steps
-
-
-getElementFromProofType : ProofType -> Element
-getElementFromProofType proofType =
-    case proofType of
-        Normal element ->
-            element
-
-        Contradiction element _ ->
-            element
-
-        Cases element _ _ ->
-            element
-
-
-setElementInProofType : Element -> ProofType -> ProofType
-setElementInProofType element proofType =
-    case proofType of
-        Normal _ ->
-            Normal element
-
-        Contradiction _ steps ->
-            Contradiction element steps
-
-        Cases _ steps1 steps2 ->
-            Cases element steps1 steps2
-
-
-getElementFromSteps : Steps -> Element
-getElementFromSteps =
-    getElementFromProofType << getProofTypeFromSteps
-
-
-getElement : Zipper -> Element
+getElement : Zipper -> Proof.Element
 getElement zipper =
-    getElementFromSteps zipper.steps
-
-
-setElementInSteps : Element -> Steps -> Steps
-setElementInSteps element steps =
-    setProofTypeInSteps
-        (setElementInProofType element <| getProofTypeFromSteps steps)
-        steps
-
-
-getProofTypeFromSteps : Steps -> ProofType
-getProofTypeFromSteps steps =
-    case steps of
-        Last proofType ->
-            proofType
-
-        Next proofType _ ->
-            proofType
-
-
-setProofTypeInSteps : ProofType -> Steps -> Steps
-setProofTypeInSteps proofType steps =
-    case steps of
-        Last _ ->
-            Last proofType
-
-        Next _ nextSteps ->
-            Next proofType nextSteps
-
-
-
--- Zipper
+    Proof.getElementFromSteps zipper.steps
 
 
 type Breadcrumb
-    = NextStepBreadCrumb ProofType
-    | LastContradictionBreadCrumb Element
-    | NextContradictionBreadCrumb Element Steps
-    | LastCase1BreadCrumb Element Steps
-    | NextCase1BreadCrumb Element Steps Steps
-    | LastCase2BreadCrumb Element Steps
-    | NextCase2BreadCrumb Element Steps Steps
+    = NextStepBreadCrumb Proof.ProofType
+    | LastContradictionBreadCrumb Proof.Element
+    | NextContradictionBreadCrumb Proof.Element Proof.Steps
+    | LastCase1BreadCrumb Proof.Element Proof.Steps
+    | NextCase1BreadCrumb Proof.Element Proof.Steps Proof.Steps
+    | LastCase2BreadCrumb Proof.Element Proof.Steps
+    | NextCase2BreadCrumb Proof.Element Proof.Steps Proof.Steps
 
 
 type alias Zipper =
-    { steps : Steps, breadcrumbs : List Breadcrumb }
+    { steps : Proof.Steps, breadcrumbs : List Breadcrumb }
 
 
 toggleContradiction : Zipper -> Zipper
 toggleContradiction zipper =
     let
         proofType =
-            getProofTypeFromSteps zipper.steps
+            Proof.getProofTypeFromSteps zipper.steps
 
         newContradiction =
-            Last <| Normal <| createElement "contradict me"
+            Proof.Last <| Proof.Normal <| Proof.createElement "contradict me"
 
         newProofType =
             case proofType of
-                Normal element ->
-                    Contradiction element newContradiction
+                Proof.Normal element ->
+                    Proof.Contradiction element newContradiction
 
-                Contradiction element _ ->
-                    Normal element
+                Proof.Contradiction element _ ->
+                    Proof.Normal element
 
-                Cases _ _ _ ->
+                Proof.Cases _ _ _ ->
                     -- cases cannot be contradicted directly
                     proofType
 
         newSteps =
-            setProofTypeInSteps newProofType zipper.steps
+            Proof.setProofTypeInSteps newProofType zipper.steps
     in
     { zipper | steps = newSteps }
 
@@ -275,32 +83,32 @@ toggleCases : Zipper -> Zipper
 toggleCases zipper =
     let
         proofType =
-            getProofTypeFromSteps zipper.steps
+            Proof.getProofTypeFromSteps zipper.steps
 
         newCase =
-            Last <| Normal <| createElement ""
+            Proof.Last <| Proof.Normal <| Proof.createElement ""
 
         newProofType =
             case proofType of
-                Normal element ->
-                    Cases element newCase newCase
+                Proof.Normal element ->
+                    Proof.Cases element newCase newCase
 
-                Cases element _ _ ->
-                    Normal element
+                Proof.Cases element _ _ ->
+                    Proof.Normal element
 
-                Contradiction _ _ ->
+                Proof.Contradiction _ _ ->
                     -- contradiction cannot be cased directly
                     proofType
 
         newSteps =
-            setProofTypeInSteps newProofType zipper.steps
+            Proof.setProofTypeInSteps newProofType zipper.steps
     in
     { zipper | steps = newSteps }
 
 
 getError : Zipper -> Maybe String
 getError zipper =
-    case (getElementFromSteps zipper.steps).formula of
+    case (Proof.getElementFromSteps zipper.steps).formula of
         Ok _ ->
             Nothing
 
@@ -310,7 +118,7 @@ getError zipper =
 
 getEmptyError : Zipper -> Maybe String
 getEmptyError zipper =
-    if (getElementFromSteps zipper.steps).value == "" then
+    if (Proof.getElementFromSteps zipper.steps).value == "" then
         Just "Input should not be empty."
     else
         Nothing
@@ -332,7 +140,7 @@ previousFormulasTmp zipper =
     -- todo: aj v hlavnej vetve
     let
         this =
-            case (getElementFromSteps zipper.steps).formula of
+            case (Proof.getElementFromSteps zipper.steps).formula of
                 Ok formula ->
                     [ formula ]
 
@@ -352,7 +160,7 @@ previousFormulasTmp zipper =
 
 getVyplyvanieErrors : Zipper -> Maybe String
 getVyplyvanieErrors zipper =
-    case (getElementFromSteps zipper.steps).formula of
+    case (Proof.getElementFromSteps zipper.steps).formula of
         Ok formula ->
             Matcher.isOk formula (previousFormulas zipper)
 
@@ -362,24 +170,29 @@ getVyplyvanieErrors zipper =
 
 getValue : Zipper -> String
 getValue zipper =
-    (getElementFromSteps zipper.steps).value
+    (Proof.getElementFromSteps zipper.steps).value
 
 
-getGUI : Zipper -> GUI
+getGUI : Zipper -> Proof.GUI
 getGUI zipper =
-    (getElementFromSteps zipper.steps).gui
+    (Proof.getElementFromSteps zipper.steps).gui
 
 
-setGUI : GUI -> Zipper -> Zipper
+setGUI : Proof.GUI -> Zipper -> Zipper
 setGUI gui zipper =
     let
         oldElement =
-            getElementFromSteps zipper.steps
+            Proof.getElementFromSteps zipper.steps
 
         element =
             { oldElement | gui = gui }
     in
-    { zipper | steps = setElementInSteps element zipper.steps }
+    setElement element zipper
+
+
+setElement : Proof.Element -> Zipper -> Zipper
+setElement element zipper =
+    { zipper | steps = Proof.setElementInSteps element zipper.steps }
 
 
 
@@ -389,10 +202,10 @@ setGUI gui zipper =
 down : Zipper -> Maybe Zipper
 down zipper =
     case zipper.steps of
-        Last _ ->
+        Proof.Last _ ->
             Nothing
 
-        Next proofType nextSteps ->
+        Proof.Next proofType nextSteps ->
             let
                 breadcrumb =
                     NextStepBreadCrumb proofType
@@ -418,7 +231,7 @@ up zipper =
             case head of
                 NextStepBreadCrumb proofType ->
                     Just
-                        { steps = Next proofType zipper.steps
+                        { steps = Proof.Next proofType zipper.steps
                         , breadcrumbs = tail
                         }
 
@@ -473,21 +286,21 @@ root zipper =
 
 enterContradiction : Zipper -> Maybe Zipper
 enterContradiction zipper =
-    case getProofTypeFromSteps zipper.steps of
-        Normal _ ->
+    case Proof.getProofTypeFromSteps zipper.steps of
+        Proof.Normal _ ->
             Nothing
 
-        Cases _ _ _ ->
+        Proof.Cases _ _ _ ->
             Nothing
 
-        Contradiction element contradictionSteps ->
+        Proof.Contradiction element contradictionSteps ->
             let
                 breadcrumb =
                     case zipper.steps of
-                        Last _ ->
+                        Proof.Last _ ->
                             LastContradictionBreadCrumb element
 
-                        Next _ nextProof ->
+                        Proof.Next _ nextProof ->
                             NextContradictionBreadCrumb element nextProof
 
                 breadcrumbs =
@@ -526,13 +339,13 @@ leaveContradiction zipper =
 
                 LastContradictionBreadCrumb element ->
                     Just
-                        { steps = Last <| Contradiction element zipper.steps
+                        { steps = Proof.Last <| Proof.Contradiction element zipper.steps
                         , breadcrumbs = tail
                         }
 
                 NextContradictionBreadCrumb element steps ->
                     Just
-                        { steps = Next (Contradiction element zipper.steps) steps
+                        { steps = Proof.Next (Proof.Contradiction element zipper.steps) steps
                         , breadcrumbs = tail
                         }
 
@@ -560,21 +373,21 @@ getCase2Value zipper =
 
 enterCase1 : Zipper -> Maybe Zipper
 enterCase1 zipper =
-    case getProofTypeFromSteps zipper.steps of
-        Normal _ ->
+    case Proof.getProofTypeFromSteps zipper.steps of
+        Proof.Normal _ ->
             Nothing
 
-        Contradiction _ _ ->
+        Proof.Contradiction _ _ ->
             Nothing
 
-        Cases element case1 case2 ->
+        Proof.Cases element case1 case2 ->
             let
                 breadcrumb =
                     case zipper.steps of
-                        Last _ ->
+                        Proof.Last _ ->
                             LastCase1BreadCrumb element case2
 
-                        Next _ nextProof ->
+                        Proof.Next _ nextProof ->
                             NextCase1BreadCrumb element case2 nextProof
 
                 breadcrumbs =
@@ -590,21 +403,21 @@ enterCase1OrStop zipper =
 
 enterCase2 : Zipper -> Maybe Zipper
 enterCase2 zipper =
-    case getProofTypeFromSteps zipper.steps of
-        Normal _ ->
+    case Proof.getProofTypeFromSteps zipper.steps of
+        Proof.Normal _ ->
             Nothing
 
-        Contradiction _ _ ->
+        Proof.Contradiction _ _ ->
             Nothing
 
-        Cases element case1 case2 ->
+        Proof.Cases element case1 case2 ->
             let
                 breadcrumb =
                     case zipper.steps of
-                        Last _ ->
+                        Proof.Last _ ->
                             LastCase2BreadCrumb element case1
 
-                        Next _ nextProof ->
+                        Proof.Next _ nextProof ->
                             NextCase2BreadCrumb element case1 nextProof
 
                 breadcrumbs =
@@ -637,25 +450,25 @@ leaveCase zipper =
 
                 LastCase1BreadCrumb element case2 ->
                     Just
-                        { steps = Last <| Cases element zipper.steps case2
+                        { steps = Proof.Last <| Proof.Cases element zipper.steps case2
                         , breadcrumbs = tail
                         }
 
                 NextCase1BreadCrumb element case2 nextProof ->
                     Just
-                        { steps = Next (Cases element zipper.steps case2) nextProof
+                        { steps = Proof.Next (Proof.Cases element zipper.steps case2) nextProof
                         , breadcrumbs = tail
                         }
 
                 LastCase2BreadCrumb element case1 ->
                     Just
-                        { steps = Last <| Cases element case1 zipper.steps
+                        { steps = Proof.Last <| Proof.Cases element case1 zipper.steps
                         , breadcrumbs = tail
                         }
 
                 NextCase2BreadCrumb element case1 nextProof ->
                     Just
-                        { steps = Next (Cases element case1 zipper.steps) nextProof
+                        { steps = Proof.Next (Proof.Cases element case1 zipper.steps) nextProof
                         , breadcrumbs = tail
                         }
 
@@ -671,17 +484,17 @@ leaveCaseOrStop zipper =
 
 create : String -> Zipper
 create value =
-    { steps = Last <| Normal <| createElement value, breadcrumbs = [] }
+    { steps = Proof.Last <| Proof.Normal <| Proof.createElement value, breadcrumbs = [] }
 
 
-add : Element -> Zipper -> Zipper
+add : Proof.Element -> Zipper -> Zipper
 add element zipper =
-    { zipper | steps = addStep element zipper.steps }
+    { zipper | steps = Proof.addStep element zipper.steps }
 
 
 edit : String -> Zipper -> Zipper
 edit value zipper =
-    { zipper | steps = editStep value zipper.steps }
+    { zipper | steps = Proof.editStep value zipper.steps }
 
 
 getParentForDelete : Zipper -> Maybe Zipper
@@ -718,43 +531,43 @@ delete zipper =
         Just parent ->
             let
                 proofType =
-                    getProofTypeFromSteps parent.steps
+                    Proof.getProofTypeFromSteps parent.steps
 
                 newStep =
-                    Last <| Normal (createElement "")
+                    Proof.Last <| Proof.Normal (Proof.createElement "")
             in
             case proofType of
-                Normal _ ->
+                Proof.Normal _ ->
                     case zipper.steps of
-                        Last _ ->
-                            { parent | steps = Last proofType }
+                        Proof.Last _ ->
+                            { parent | steps = Proof.Last proofType }
 
-                        Next _ nextStep ->
-                            { parent | steps = Next proofType nextStep }
+                        Proof.Next _ nextStep ->
+                            { parent | steps = Proof.Next proofType nextStep }
 
-                Contradiction element _ ->
+                Proof.Contradiction element _ ->
                     let
                         nextStep =
                             case zipper.steps of
-                                Last _ ->
+                                Proof.Last _ ->
                                     newStep
 
-                                Next _ nextStep ->
+                                Proof.Next _ nextStep ->
                                     nextStep
                     in
-                    { parent | steps = setProofTypeInSteps (Contradiction element nextStep) parent.steps }
+                    { parent | steps = Proof.setProofTypeInSteps (Proof.Contradiction element nextStep) parent.steps }
 
-                Cases element case1 case2 ->
+                Proof.Cases element case1 case2 ->
                     let
                         nextStep =
                             case zipper.steps of
-                                Last _ ->
+                                Proof.Last _ ->
                                     newStep
 
-                                Next _ nextStep ->
+                                Proof.Next _ nextStep ->
                                     nextStep
                     in
                     if case1 == zipper.steps then
-                        { parent | steps = setProofTypeInSteps (Cases element nextStep case2) parent.steps }
+                        { parent | steps = Proof.setProofTypeInSteps (Proof.Cases element nextStep case2) parent.steps }
                     else
-                        { parent | steps = setProofTypeInSteps (Cases element case1 nextStep) parent.steps }
+                        { parent | steps = Proof.setProofTypeInSteps (Proof.Cases element case1 nextStep) parent.steps }

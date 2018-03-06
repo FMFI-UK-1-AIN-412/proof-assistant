@@ -9,6 +9,7 @@ import ErrorHandler
 import Html
 import Html.Attributes
 import Html.Events
+import Proof
 import Zipper
 
 
@@ -23,25 +24,25 @@ initialModel : Model
 initialModel =
     { proof =
         Zipper.create "(q -> p)"
-            |> Zipper.add (Zipper.createElement "((q -> r) & (r-> q))")
+            |> Zipper.add (Proof.createElement "((q -> r) & (r-> q))")
             |> Zipper.downOrStop
             |> Zipper.toggleContradiction
             |> Zipper.enterContradictionOrStop
             |> Zipper.edit "(q -> r)"
-            |> Zipper.add (Zipper.createElement "(r -> q)")
+            |> Zipper.add (Proof.createElement "(r -> q)")
             |> Zipper.leaveContradictionOrStop
             |> Zipper.downOrStop
-            |> Zipper.add (Zipper.createElement "(p -> r)")
+            |> Zipper.add (Proof.createElement "(p -> r)")
             |> Zipper.downOrStop
             |> Zipper.downOrStop
-            |> Zipper.add (Zipper.createElement "((a&b) | b)")
+            |> Zipper.add (Proof.createElement "((a&b) | b)")
             |> Zipper.downOrStop
             |> Zipper.toggleCases
             |> Zipper.enterCase1OrStop
             |> Zipper.edit "(a & b)"
             |> Zipper.downOrStop
-            |> Zipper.add (Zipper.createElement "b")
-            |> Zipper.add (Zipper.createElement "a")
+            |> Zipper.add (Proof.createElement "b")
+            |> Zipper.add (Proof.createElement "a")
             |> Zipper.upOrStop
             |> Zipper.leaveContradictionOrStop
             |> Zipper.root
@@ -60,14 +61,14 @@ type Msg
     | ToggleContradiction Zipper.Zipper
     | ToggleCases Zipper.Zipper
     | DropdownMsg Zipper.Zipper Dropdown.State
-    | UpdateDropdownState Zipper.Zipper Zipper.DropdownStates
+    | UpdateDropdownState Zipper.Zipper Proof.DropdownStates
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
         ZipperAdd zipper ->
-            { model | proof = Zipper.add (Zipper.createElement "") zipper }
+            { model | proof = Zipper.add (Proof.createElement "") zipper }
 
         ZipperEdit zipper value ->
             { model | proof = Zipper.edit value zipper }
@@ -104,16 +105,13 @@ update msg model =
         UpdateDropdownState zipper state ->
             let
                 oldElement =
-                    Zipper.getElementFromSteps zipper.steps
+                    Zipper.getElement zipper
 
                 newElement =
                     { oldElement | dropdownType = state }
 
-                newSteps =
-                    Zipper.setElementInSteps newElement zipper.steps
-
                 newProof =
-                    { zipper | steps = newSteps }
+                    Zipper.setElement newElement zipper
             in
             { model | proof = newProof }
 
@@ -258,14 +256,14 @@ renderLine : Zipper.Zipper -> Html.Html Msg
 renderLine zipper =
     let
         ( contradictionText, casesText, disabled, subElements ) =
-            case Zipper.getProofTypeFromSteps zipper.steps of
-                Zipper.Normal _ ->
+            case Proof.getProofTypeFromSteps zipper.steps of
+                Proof.Normal _ ->
                     ( Just "Contradict", Just "Cases", False, emptyNode )
 
-                Zipper.Contradiction _ _ ->
+                Proof.Contradiction _ _ ->
                     ( Just "Undo contradict", Nothing, True, renderContradiction zipper )
 
-                Zipper.Cases _ _ _ ->
+                Proof.Cases _ _ _ ->
                     -- todo
                     ( Nothing, Just "Undo cases", True, renderCases zipper )
 
@@ -316,7 +314,7 @@ renderLine zipper =
                                         ]
                                         [ Html.text <| toString state ]
                                 )
-                                Zipper.dropdownStates
+                                Proof.dropdownStates
                         }
                     ]
                 |> InputGroup.successors
