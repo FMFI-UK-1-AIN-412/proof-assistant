@@ -1,12 +1,14 @@
-module Editor exposing (Model, Msg(..), initialModel, render, update)
+module Editor exposing (Model, Msg(..), initialModel, render, subscriptions, update)
 
 import Bootstrap.Button as Button
+import Bootstrap.Dropdown as Dropdown
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
 import ErrorHandler
 import Html
 import Html.Attributes
+import Html.Events
 import Zipper
 
 
@@ -57,6 +59,8 @@ type Msg
     | DeleteProofStep Zipper.Zipper
     | ToggleContradiction Zipper.Zipper
     | ToggleCases Zipper.Zipper
+    | DropdownMsg Zipper.Zipper Dropdown.State
+    | UpdateDropdownState Zipper.Zipper Zipper.DropdownStates
 
 
 update : Msg -> Model -> Model
@@ -69,7 +73,14 @@ update msg model =
             { model | proof = Zipper.edit value zipper }
 
         ShowButtons zipper state ->
-            { model | proof = Zipper.changeShowButtons state zipper }
+            let
+                oldGui =
+                    Zipper.getGUI zipper
+
+                newGui =
+                    { oldGui | showButtons = state }
+            in
+            { model | proof = Zipper.setGUI newGui zipper }
 
         DeleteProofStep zipper ->
             { model | proof = Zipper.delete zipper }
@@ -79,6 +90,32 @@ update msg model =
 
         ToggleCases zipper ->
             { model | proof = Zipper.toggleCases zipper }
+
+        DropdownMsg zipper state ->
+            let
+                oldGui =
+                    Zipper.getGUI zipper
+
+                newGui =
+                    { oldGui | dropdown = state }
+            in
+            { model | proof = Zipper.setGUI newGui zipper }
+
+        UpdateDropdownState zipper state ->
+            let
+                oldElement =
+                    Zipper.getElementFromSteps zipper.steps
+
+                newElement =
+                    { oldElement | dropdownType = state }
+
+                newSteps =
+                    Zipper.setElementInSteps newElement zipper.steps
+
+                newProof =
+                    { zipper | steps = newSteps }
+            in
+            { model | proof = newProof }
 
 
 
@@ -170,7 +207,7 @@ renderButtons zipper contradictionText casesText =
 
 innerStyle =
     Html.Attributes.style
-        [ ( "border", "1px solid black" )
+        [ ( "border", "1px solid #cfcfcf" )
         , ( "padding", "20px 20px 20px 30px" )
         , ( "box-shadow", "0 0 5px #cfcfcf" )
         , ( "margin-bottom", "20px" )
@@ -232,19 +269,18 @@ renderLine zipper =
                     -- todo
                     ( Nothing, Just "Undo cases", True, renderCases zipper )
 
-        ( errorNode, groupStatus, inputStatus ) =
+        ( errorNode, inputStatus ) =
             case ErrorHandler.handleErrors zipper of
                 Ok _ ->
-                    ( emptyNode, Form.groupSuccess, Input.success )
+                    ( emptyNode, Input.success )
 
                 Err error ->
-                    ( Form.validationText [] [ Html.text error ]
-                    , Form.groupDanger
+                    ( Form.invalidFeedback [] [ Html.text <| "WTF?" ++ error ]
                     , Input.danger
                     )
 
         showButtons =
-            Zipper.getShowButtons zipper
+            (Zipper.getGUI zipper).showButtons
 
         buttons =
             if showButtons then
@@ -253,7 +289,7 @@ renderLine zipper =
                 emptyNode
     in
     Html.div []
-        [ Form.group [ groupStatus ]
+        [ Form.group []
             [ InputGroup.config
                 (InputGroup.text
                     [ Input.placeholder "Formula"
@@ -263,6 +299,26 @@ renderLine zipper =
                     , inputStatus
                     ]
                 )
+                |> InputGroup.predecessors
+                    [ InputGroup.dropdown
+                        (Zipper.getGUI zipper).dropdown
+                        { options = []
+                        , toggleMsg = DropdownMsg zipper
+                        , toggleButton =
+                            Dropdown.toggle
+                                [ Button.outlineSecondary ]
+                                [ Html.text <| toString <| (Zipper.getElement zipper).dropdownType ]
+                        , items =
+                            List.map
+                                (\state ->
+                                    Dropdown.buttonItem
+                                        [ Html.Events.onClick <| UpdateDropdownState zipper state
+                                        ]
+                                        [ Html.text <| toString state ]
+                                )
+                                Zipper.dropdownStates
+                        }
+                    ]
                 |> InputGroup.successors
                     [ InputGroup.button
                         [ Button.outlineInfo
@@ -271,8 +327,31 @@ renderLine zipper =
                         [ Html.text "?" ]
                     ]
                 |> InputGroup.view
-            , buttons
             , errorNode
+            , Form.validFeedback [] [ Html.text "All good !" ]
+            , Form.invalidFeedback [] [ Html.text "All good !" ]
+            , buttons
             ]
         , subElements
         ]
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ Dropdown.subscriptions (Zipper.getGUI model.proof).dropdown (DropdownMsg model.proof)
+        ]
+
+
+
+-- todo: nechapem preco to hove funguje, podla mna by nemalo.
+--subscriptions : Model -> Sub Msg
+--subscriptions model =
+--    Sub.batch <|
+--        List.map
+--            (\zipper ->
+--                Dropdown.subscriptions
+--                    (Zipper.getGUI <| Zipper.root zipper).dropdown
+--                    (DropdownMsg zipper)
+--            )
+--            (Debug.log "zippers:" (Zipper.getAllZipperStates model.proof))

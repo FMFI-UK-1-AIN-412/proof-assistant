@@ -42,7 +42,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Editor.subscriptions model.editor |> Sub.map EditorMsg
 
 
 main =

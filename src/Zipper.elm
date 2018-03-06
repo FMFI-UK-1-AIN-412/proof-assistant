@@ -1,35 +1,42 @@
 module Zipper
     exposing
-        ( ProofType(..)
+        ( DropdownStates(..)
+        , ProofType(..)
         , Steps(..)
         , Zipper
         , add
-        , changeShowButtons
         , create
         , createElement
         , delete
         , down
         , downOrStop
+        , dropdownStates
         , edit
         , enterCase1OrStop
         , enterCase2OrStop
         , enterContradictionOrStop
+        , getAllZipperStates
         , getCase1Value
         , getCase2Value
+        , getElement
+        , getElementFromSteps
         , getEmptyError
         , getError
+        , getGUI
         , getProofTypeFromSteps
-        , getShowButtons
         , getValue
         , getVyplyvanieErrors
         , leaveContradictionOrStop
         , root
+        , setElementInSteps
+        , setGUI
         , toggleCases
         , toggleContradiction
         , up
         , upOrStop
         )
 
+import Bootstrap.Dropdown as Dropdown
 import Formula
 import Matcher
 import Parser exposing (Parser)
@@ -38,11 +45,75 @@ import Parser exposing (Parser)
 -- Element
 
 
+type DropdownStates
+    = NormalState
+    | PremisState
+
+
+dropdownStates =
+    [ NormalState, PremisState ]
+
+
+type alias GUI =
+    { showButtons : Bool
+    , dropdown : Dropdown.State
+    }
+
+
+getAllZipperStates : Zipper -> List Zipper
+getAllZipperStates zipper =
+    zipper
+        :: List.foldr (++)
+            []
+            (List.map
+                (\newZipper -> getAllZipperStates newZipper)
+                (getChildrenZippers zipper)
+            )
+
+
+getChildrenZippers : Zipper -> List Zipper
+getChildrenZippers zipper =
+    let
+        downZippers =
+            case down zipper of
+                Nothing ->
+                    []
+
+                Just newZipper ->
+                    [ newZipper ]
+
+        contraZippers =
+            case enterContradiction zipper of
+                Nothing ->
+                    []
+
+                Just newZipper ->
+                    [ newZipper ]
+
+        case1Zipper =
+            case enterCase1 zipper of
+                Nothing ->
+                    []
+
+                Just newZipper ->
+                    [ newZipper ]
+
+        case2Zipper =
+            case enterCase2 zipper of
+                Nothing ->
+                    []
+
+                Just newZipper ->
+                    [ newZipper ]
+    in
+    downZippers ++ contraZippers ++ case1Zipper ++ case2Zipper
+
+
 type alias Element =
     { value : String
     , formula : Result Parser.Error Formula.Formula
-    , isPremis : Bool
-    , showButton : Bool
+    , dropdownType : DropdownStates
+    , gui : GUI
     }
 
 
@@ -50,8 +121,8 @@ createElement : String -> Element
 createElement string =
     { value = string
     , formula = Formula.parse string
-    , isPremis = False
-    , showButton = False
+    , dropdownType = NormalState
+    , gui = { showButtons = False, dropdown = Dropdown.initialState }
     }
 
 
@@ -121,6 +192,11 @@ setElementInProofType element proofType =
 getElementFromSteps : Steps -> Element
 getElementFromSteps =
     getElementFromProofType << getProofTypeFromSteps
+
+
+getElement : Zipper -> Element
+getElement zipper =
+    getElementFromSteps zipper.steps
 
 
 setElementInSteps : Element -> Steps -> Steps
@@ -284,26 +360,26 @@ getVyplyvanieErrors zipper =
             Just <| toString str
 
 
-changeShowButtons : Bool -> Zipper -> Zipper
-changeShowButtons bool zipper =
-    let
-        old_element =
-            getElementFromSteps zipper.steps
-
-        element =
-            { old_element | showButton = bool }
-    in
-    { zipper | steps = setElementInSteps element zipper.steps }
-
-
 getValue : Zipper -> String
 getValue zipper =
     (getElementFromSteps zipper.steps).value
 
 
-getShowButtons : Zipper -> Bool
-getShowButtons zipper =
-    (getElementFromSteps zipper.steps).showButton
+getGUI : Zipper -> GUI
+getGUI zipper =
+    (getElementFromSteps zipper.steps).gui
+
+
+setGUI : GUI -> Zipper -> Zipper
+setGUI gui zipper =
+    let
+        oldElement =
+            getElementFromSteps zipper.steps
+
+        element =
+            { oldElement | gui = gui }
+    in
+    { zipper | steps = setElementInSteps element zipper.steps }
 
 
 
