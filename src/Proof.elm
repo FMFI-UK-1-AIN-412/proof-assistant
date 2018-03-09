@@ -1,14 +1,14 @@
 module Proof
     exposing
-        ( DropdownStates(..)
-        , Element
+        ( Element
         , GUI
+        , NodeType(..)
         , ProofType(..)
         , Steps(..)
         , addStep
+        , changeValue
         , createElement
-        , dropdownStates
-        , editStep
+        , getElementFromProofType
         , getElementFromSteps
         , getProofTypeFromSteps
         , setElementInSteps
@@ -17,33 +17,24 @@ module Proof
 
 import Bootstrap.Dropdown as Dropdown
 import Formula
-import Matcher
 import Parser exposing (Parser)
 
 
--- Element
-
-
-type DropdownStates
-    = NormalState
-    | PremisState
-
-
-dropdownStates =
-    [ NormalState, PremisState ]
+type NodeType
+    = Premis
+    | NormalNode
 
 
 type alias GUI =
     { showButtons : Bool
-    , dropdown : Dropdown.State
     }
 
 
 type alias Element =
     { value : String
     , formula : Result Parser.Error Formula.Formula
-    , dropdownType : DropdownStates
     , gui : GUI
+    , nodeType : NodeType
     }
 
 
@@ -51,46 +42,42 @@ createElement : String -> Element
 createElement string =
     { value = string
     , formula = Formula.parse string
-    , dropdownType = NormalState
-    , gui = { showButtons = False, dropdown = Dropdown.initialState }
+    , gui = { showButtons = False }
+    , nodeType = NormalNode
     }
+
+
+changeValue : String -> Element -> Element
+changeValue string element =
+    { element | value = string, formula = Formula.parse string }
 
 
 
 -- Steps & ProofTypes
 
 
-type ProofType
-    = Normal Element
-    | Contradiction Element Steps
-    | Cases Element Steps Steps
-
-
 type Steps
     = Last ProofType
     | Next ProofType Steps
+    | Cases Steps Steps
+
+
+type ProofType
+    = Normal Element
+    | Contradiction Element Steps
 
 
 addStep : Element -> Steps -> Steps
 addStep element steps =
     case steps of
         Last proof ->
-            Next proof <| Last (Normal element)
+            Next proof <| Last <| Normal element
 
         Next proof nextStep ->
             Next proof <| Next (Normal element) nextStep
 
-
-editStep : String -> Steps -> Steps
-editStep value steps =
-    let
-        element =
-            getElementFromSteps steps
-
-        newElement =
-            { element | value = value, formula = Formula.parse value }
-    in
-    setElementInSteps newElement steps
+        Cases _ _ ->
+            steps
 
 
 getElementFromProofType : ProofType -> Element
@@ -100,9 +87,6 @@ getElementFromProofType proofType =
             element
 
         Contradiction element _ ->
-            element
-
-        Cases element _ _ ->
             element
 
 
@@ -115,30 +99,41 @@ setElementInProofType element proofType =
         Contradiction _ steps ->
             Contradiction element steps
 
-        Cases _ steps1 steps2 ->
-            Cases element steps1 steps2
+
+getElementFromSteps : Steps -> Maybe Element
+getElementFromSteps steps =
+    case getProofTypeFromSteps steps of
+        Nothing ->
+            Nothing
+
+        Just proofType ->
+            Just <| getElementFromProofType proofType
 
 
-getElementFromSteps : Steps -> Element
-getElementFromSteps =
-    getElementFromProofType << getProofTypeFromSteps
-
-
-setElementInSteps : Element -> Steps -> Steps
+setElementInSteps : Element -> Steps -> Maybe Steps
 setElementInSteps element steps =
-    setProofTypeInSteps
-        (setElementInProofType element <| getProofTypeFromSteps steps)
-        steps
+    let
+        callback : ProofType -> Maybe Steps
+        callback proofType =
+            Just <|
+                setProofTypeInSteps
+                    (setElementInProofType element <| proofType)
+                    steps
+    in
+    getProofTypeFromSteps steps |> Maybe.andThen callback
 
 
-getProofTypeFromSteps : Steps -> ProofType
+getProofTypeFromSteps : Steps -> Maybe ProofType
 getProofTypeFromSteps steps =
     case steps of
         Last proofType ->
-            proofType
+            Just proofType
 
         Next proofType _ ->
-            proofType
+            Just proofType
+
+        Cases _ _ ->
+            Nothing
 
 
 setProofTypeInSteps : ProofType -> Steps -> Steps
@@ -149,3 +144,6 @@ setProofTypeInSteps proofType steps =
 
         Next _ nextSteps ->
             Next proofType nextSteps
+
+        Cases _ _ ->
+            steps

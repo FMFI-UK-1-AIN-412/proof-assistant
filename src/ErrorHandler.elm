@@ -9,7 +9,7 @@ type alias Handler =
 
 errorHandlers : List Handler
 errorHandlers =
-    [ Zipper.getEmptyError, Zipper.getError, Zipper.getVyplyvanieErrors ]
+    [ Zipper.getEmptyError, Zipper.getError ]
 
 
 handleErrors : Zipper.Zipper -> Result String String
