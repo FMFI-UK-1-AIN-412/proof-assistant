@@ -22,27 +22,28 @@ type alias Model =
 initialModel : Model
 initialModel =
     { proof =
+        -- todo: This is just for simplifing development
         Zipper.create "(q -> p)"
             |> Zipper.add (Proof.createElement "((q -> r) & (r-> q))")
-            |> Zipper.downOrStop
-            |> Zipper.downOrStop
+            |> Zipper.down
+            |> Zipper.down
             |> Zipper.toggleContradiction
-            --|> Zipper.enterContradictionOrStop
-            --|> Zipper.add (Proof.createElement "(r -> q)")
-            --|> Zipper.leaveContradictionOrStop
-            |> Zipper.downOrStop
+            |> Zipper.enterContradiction
+            |> Zipper.add (Proof.createElement "(r -> q)")
+            |> Zipper.leaveContradiction
+            |> Zipper.down
             |> Zipper.add (Proof.createElement "(p -> r)")
-            |> Zipper.downOrStop
-            |> Zipper.downOrStop
+            |> Zipper.down
+            |> Zipper.down
             |> Zipper.add (Proof.createElement "((a&b) | b)")
-            |> Zipper.downOrStop
-            |> Zipper.addCasesOrStop
-            |> Zipper.enterCase1OrStop
+            |> Zipper.down
+            |> Zipper.addCases
+            |> Zipper.enterCase1
             |> Zipper.add (Proof.createElement "b")
-            |> Zipper.downOrStop
+            |> Zipper.down
             |> Zipper.add (Proof.createElement "a")
-            |> Zipper.upOrStop
-            |> Zipper.leaveContradictionOrStop
+            |> Zipper.up
+            |> Zipper.leaveContradiction
             |> Zipper.root
     }
 
@@ -109,12 +110,7 @@ update msg model =
             { model | proof = Zipper.toggleContradiction zipper }
 
         ToggleCases zipper ->
-            { model | proof = Zipper.addCasesOrStop zipper }
-
-
-render : Model -> Html.Html Msg
-render model =
-    renderProof <| Zipper.root model.proof
+            { model | proof = Zipper.addCases zipper }
 
 
 
@@ -124,11 +120,6 @@ render model =
 emptyNode : Html.Html Msg
 emptyNode =
     Html.text ""
-
-
-renderProof : Zipper.Zipper -> Html.Html Msg
-renderProof zipper =
-    Form.form [] [ Html.div [] [ renderStep zipper ] ]
 
 
 buttonPremis : Zipper.Zipper -> String -> Proof.NodeType -> Html.Html Msg
@@ -181,144 +172,9 @@ buttonCases zipper =
         [ Html.text "β" ]
 
 
-innerStyle =
-    Html.Attributes.style
-        [ ( "border", "1px solid #cfcfcf" )
-        , ( "padding", "20px 20px 20px 30px" )
-        , ( "box-shadow", "0 0 5px #cfcfcf" )
-        , ( "margin-bottom", "20px" )
-        ]
-
-
-renderStep : Zipper.Zipper -> Html.Html Msg
-renderStep zipper =
-    case zipper.steps of
-        Proof.Last proofType ->
-            renderLast zipper proofType
-
-        Proof.Next proofType _ ->
-            renderNext zipper proofType (Zipper.downOrStop zipper)
-
-        Proof.Cases _ _ ->
-            renderCases zipper
-
-
-renderNext : Zipper.Zipper -> Proof.ProofType -> Zipper.Zipper -> Html.Html Msg
-renderNext zipper proofType nextZipper =
-    Html.div []
-        [ renderLine zipper proofType (buttonsList zipper proofType False)
-        , renderStep nextZipper
-        ]
-
-
-renderCases : Zipper.Zipper -> Html.Html Msg
-renderCases zipper =
-    Html.div []
-        [ Html.div [ innerStyle ]
-            [ Html.h2 [] [ Html.text "Case 1" ]
-            , renderStep <| Zipper.enterCase1OrStop zipper
-            ]
-        , Html.div [ innerStyle ]
-            [ Html.h2 [] [ Html.text "Case 2" ]
-            , renderStep <| Zipper.enterCase2OrStop zipper
-            ]
-        ]
-
-
-renderLast : Zipper.Zipper -> Proof.ProofType -> Html.Html Msg
-renderLast zipper proofType =
-    Html.div []
-        [ renderLine zipper proofType (buttonsList zipper proofType True)
-        ]
-
-
-renderLine : Zipper.Zipper -> Proof.ProofType -> Html.Html Msg -> Html.Html Msg
-renderLine zipper proofType footer =
+buttonsList : Zipper.Zipper -> Proof.Element -> Bool -> Html.Html Msg
+buttonsList zipper element includeCasesButton =
     let
-        element =
-            Proof.getElementFromProofType proofType
-
-        ( header, attrs, body, subProof ) =
-            case proofType of
-                Proof.Normal _ ->
-                    ( emptyNode
-                    , []
-                    , Form.group []
-                        [ InputGroup.config
-                            (InputGroup.text
-                                [ Input.placeholder "Formula"
-                                , Input.value element.value
-                                , Input.onInput <| ZipperEdit zipper
-                                ]
-                            )
-                            |> predecessor
-                            |> InputGroup.successors
-                                [ InputGroup.button
-                                    [ Button.outlineInfo
-                                    , Button.onClick <| ShowButtons zipper (not element.gui.showButtons)
-                                    ]
-                                    [ Html.text "?" ]
-                                ]
-                            |> InputGroup.view
-                        ]
-                    , emptyNode
-                    )
-
-                Proof.Contradiction element contradictionNode ->
-                    ( Html.h3 [] [ Html.text "Contradiction" ]
-                    , [ innerStyle ]
-                    , Form.group []
-                        [ InputGroup.config
-                            (InputGroup.text
-                                [ Input.disabled True
-                                , Input.value element.value
-                                ]
-                            )
-                            |> predecessor
-                            |> InputGroup.successors
-                                [ InputGroup.button
-                                    [ Button.outlineInfo
-                                    , Button.onClick <| ShowButtons zipper (not element.gui.showButtons)
-                                    ]
-                                    [ Html.text "?" ]
-                                ]
-                            |> InputGroup.view
-                        ]
-                    , renderStep <| Zipper.enterContradictionOrStop zipper
-                    )
-
-        predecessor inputGroup =
-            case element.nodeType of
-                Proof.NormalNode ->
-                    inputGroup
-
-                Proof.Premis ->
-                    inputGroup
-                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Premis:" ] ]
-
-        erorrs =
-            case ErrorHandler.handleErrors zipper of
-                Ok _ ->
-                    emptyNode
-
-                Err error ->
-                    Html.p [] [ Html.text error ]
-    in
-    Html.div attrs
-        [ header
-        , body
-        , erorrs
-        , footer
-        , subProof
-        ]
-
-
-buttonsList : Zipper.Zipper -> Proof.ProofType -> Bool -> Html.Html Msg
-buttonsList zipper proofType includeCasesButton =
-    let
-        element =
-            Proof.getElementFromProofType proofType
-
         buttons =
             case element.nodeType of
                 Proof.Premis ->
@@ -334,22 +190,155 @@ buttonsList zipper proofType includeCasesButton =
                       else
                         emptyNode
                     , buttonDelete zipper
-                    , buttonContradiction zipper contraText
+                    , buttonContradiction zipper "Contradict"
                     , buttonPremis zipper "make premis" Proof.Premis
                     ]
-
-        contraText =
-            case proofType of
-                Proof.Normal _ ->
-                    "Contradict"
-
-                Proof.Contradiction _ _ ->
-                    "Undo contradiction"
     in
     if element.gui.showButtons then
         Html.div [] buttons
     else
         emptyNode
+
+
+innerStyle : Html.Attribute Msg
+innerStyle =
+    Html.Attributes.style
+        [ ( "border", "1px solid #cfcfcf" )
+        , ( "padding", "20px 20px 20px 30px" )
+        , ( "box-shadow", "0 0 5px #cfcfcf" )
+        , ( "margin-bottom", "20px" )
+        ]
+
+
+
+-- Render functions
+
+
+render : Model -> Html.Html Msg
+render model =
+    renderProof <| Zipper.root model.proof
+
+
+renderProof : Zipper.Zipper -> Html.Html Msg
+renderProof zipper =
+    Form.form [] [ Html.div [] [ renderStep zipper ] ]
+
+
+renderStep : Zipper.Zipper -> Html.Html Msg
+renderStep zipper =
+    case zipper.steps of
+        Proof.Last proofType ->
+            renderLast zipper proofType
+
+        Proof.Next proofType _ ->
+            renderNext zipper proofType (Zipper.down zipper)
+
+        Proof.Cases _ _ ->
+            renderCases zipper
+
+
+renderLast : Zipper.Zipper -> Proof.ProofType -> Html.Html Msg
+renderLast zipper proofType =
+    Html.div []
+        [ renderLine zipper proofType True ]
+
+
+renderNext : Zipper.Zipper -> Proof.ProofType -> Zipper.Zipper -> Html.Html Msg
+renderNext zipper proofType nextZipper =
+    Html.div []
+        [ renderLine zipper proofType False
+        , renderStep nextZipper
+        ]
+
+
+renderCases : Zipper.Zipper -> Html.Html Msg
+renderCases zipper =
+    Html.div []
+        [ Html.p [] [ Html.text "Delete the 2 cases bellow", buttonDelete zipper ]
+        , Html.div [ innerStyle ]
+            [ Html.h2 [] [ Html.text "Case 1" ]
+            , renderStep <| Zipper.enterCase1 zipper
+            ]
+        , Html.div [ innerStyle ]
+            [ Html.h2 [] [ Html.text "Case 2" ]
+            , renderStep <| Zipper.enterCase2 zipper
+            ]
+        ]
+
+
+renderLine : Zipper.Zipper -> Proof.ProofType -> Bool -> Html.Html Msg
+renderLine zipper proofType isLast =
+    let
+        element =
+            Proof.getElementFromProofType proofType
+
+        predecessor inputGroup =
+            case element.nodeType of
+                Proof.NormalNode ->
+                    inputGroup
+
+                Proof.Premis ->
+                    inputGroup
+                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Premis:" ] ]
+
+        errors =
+            case ErrorHandler.handleErrors zipper of
+                Ok _ ->
+                    emptyNode
+
+                Err error ->
+                    Html.p [] [ Html.text error ]
+    in
+    case proofType of
+        Proof.Normal _ ->
+            Html.div []
+                [ Form.group []
+                    [ InputGroup.config
+                        (InputGroup.text
+                            [ Input.placeholder "Formula"
+                            , Input.value element.value
+                            , Input.onInput <| ZipperEdit zipper
+                            ]
+                        )
+                        |> predecessor
+                        |> InputGroup.successors
+                            [ InputGroup.button
+                                [ Button.outlineInfo
+                                , Button.onClick <| ShowButtons zipper (not element.gui.showButtons)
+                                ]
+                                [ Html.text "?" ]
+                            ]
+                        |> InputGroup.view
+                    ]
+                , buttonsList zipper element isLast
+                , errors
+                ]
+
+        Proof.Contradiction element contradictionNode ->
+            Html.div [ innerStyle ]
+                [ Html.div []
+                    [ buttonAdd zipper
+                    , buttonDelete zipper
+                    , buttonContradiction zipper "Undo"
+                    ]
+                , Html.h3 [] [ Html.text "Contradiction" ]
+                , Form.group []
+                    [ InputGroup.config
+                        (InputGroup.text
+                            [ Input.disabled True
+                            , Input.value element.value
+                            ]
+                        )
+                        |> predecessor
+                        |> InputGroup.view
+                    ]
+                , renderStep <| Zipper.enterContradiction zipper
+                , errors
+                ]
+
+
+
+-- Subscriptions
 
 
 subscriptions : Model -> Sub Msg

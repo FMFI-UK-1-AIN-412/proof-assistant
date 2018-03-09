@@ -8,6 +8,7 @@ module Proof
         , addStep
         , changeValue
         , createElement
+        , defaultProofStep
         , getElementFromProofType
         , getElementFromSteps
         , getProofTypeFromSteps
@@ -15,7 +16,6 @@ module Proof
         , setProofTypeInSteps
         )
 
-import Bootstrap.Dropdown as Dropdown
 import Formula
 import Parser exposing (Parser)
 
@@ -65,6 +65,11 @@ type Steps
 type ProofType
     = Normal Element
     | Contradiction Element Steps
+
+
+defaultProofStep : Steps
+defaultProofStep =
+    Last <| Normal <| createElement ""
 
 
 addStep : Element -> Steps -> Steps

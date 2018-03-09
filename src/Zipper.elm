@@ -2,27 +2,24 @@ module Zipper
     exposing
         ( Zipper
         , add
-        , addCasesOrStop
+        , addCases
         , create
         , delete
         , down
-        , downOrStop
         , edit
-        , enterCase1OrStop
-        , enterCase2OrStop
-        , enterContradictionOrStop
+        , enterCase1
+        , enterCase2
+        , enterContradiction
         , getElement
         , getEmptyError
         , getError
-        , leaveContradictionOrStop
+        , leaveContradiction
         , root
         , toggleContradiction
         , up
-        , upOrStop
         )
 
 import Formula
-import Matcher
 import Proof
 
 
@@ -44,9 +41,6 @@ toggleContradiction zipper =
         maybeProofType =
             Proof.getProofTypeFromSteps zipper.steps
 
-        newContradiction =
-            Proof.Last <| Proof.Normal <| Proof.createElement "contradict me"
-
         naybeNewProofType =
             case maybeProofType of
                 Nothing ->
@@ -55,7 +49,7 @@ toggleContradiction zipper =
                 Just proofType ->
                     case proofType of
                         Proof.Normal element ->
-                            Just <| Proof.Contradiction element newContradiction
+                            Just <| Proof.Contradiction element Proof.defaultProofStep
 
                         Proof.Contradiction element _ ->
                             Just <| Proof.Normal element
@@ -71,18 +65,11 @@ toggleContradiction zipper =
     newZipper
 
 
-addCases : Zipper -> Maybe Zipper
-addCases zipper =
-    let
-        proof =
-            Proof.Last <| Proof.Normal <| Proof.createElement ""
-
-        newCases =
-            Proof.Cases proof proof
-    in
+addCasesOrNothing : Zipper -> Maybe Zipper
+addCasesOrNothing zipper =
     case zipper.steps of
         Proof.Last proofType ->
-            Just { zipper | steps = Proof.Next proofType newCases }
+            Just { zipper | steps = Proof.Next proofType <| Proof.Cases Proof.defaultProofStep Proof.defaultProofStep }
 
         Proof.Next _ _ ->
             Nothing
@@ -91,9 +78,9 @@ addCases zipper =
             Nothing
 
 
-addCasesOrStop : Zipper -> Zipper
-addCasesOrStop zipper =
-    Maybe.withDefault zipper (addCases zipper)
+addCases : Zipper -> Zipper
+addCases zipper =
+    Maybe.withDefault zipper (addCasesOrNothing zipper)
 
 
 getElement : Zipper -> Maybe Proof.Element
@@ -102,11 +89,11 @@ getElement zipper =
 
 
 
----- Move around in zipper
+-- Move around in zipper
 
 
-down : Zipper -> Maybe Zipper
-down zipper =
+downOrNothing : Zipper -> Maybe Zipper
+downOrNothing zipper =
     case zipper.steps of
         Proof.Last _ ->
             Nothing
@@ -125,13 +112,13 @@ down zipper =
             Just { zipper | steps = nextSteps, breadcrumbs = breadcrumbs }
 
 
-downOrStop : Zipper -> Zipper
-downOrStop zipper =
-    Maybe.withDefault zipper (down zipper)
+down : Zipper -> Zipper
+down zipper =
+    Maybe.withDefault zipper (downOrNothing zipper)
 
 
-up : Zipper -> Maybe Zipper
-up zipper =
+upOrNothing : Zipper -> Maybe Zipper
+upOrNothing zipper =
     case zipper.breadcrumbs of
         [] ->
             Nothing
@@ -169,14 +156,14 @@ up zipper =
                         }
 
 
-upOrStop : Zipper -> Zipper
-upOrStop zipper =
-    Maybe.withDefault zipper (up zipper)
+up : Zipper -> Zipper
+up zipper =
+    Maybe.withDefault zipper (upOrNothing zipper)
 
 
 root : Zipper -> Zipper
 root zipper =
-    case up zipper of
+    case upOrNothing zipper of
         Nothing ->
             zipper
 
@@ -184,29 +171,12 @@ root zipper =
             root newZipper
 
 
-edit : Proof.Element -> Zipper -> Zipper
-edit element zipper =
-    let
-        maybeNewSteps =
-            Proof.setElementInSteps element zipper.steps
 
-        newSteps =
-            case maybeNewSteps of
-                Nothing ->
-                    zipper.steps
-
-                Just new ->
-                    new
-    in
-    { zipper | steps = newSteps }
+-- Contradiction
 
 
-
----- contradiction
-
-
-enterContradiction : Zipper -> Maybe Zipper
-enterContradiction zipper =
+enterContradictionOrNothing : Zipper -> Maybe Zipper
+enterContradictionOrNothing zipper =
     case zipper.steps of
         Proof.Last proofType ->
             case proofType of
@@ -236,13 +206,13 @@ enterContradiction zipper =
             Nothing
 
 
-enterContradictionOrStop : Zipper -> Zipper
-enterContradictionOrStop zipper =
-    Maybe.withDefault zipper (enterContradiction zipper)
+enterContradiction : Zipper -> Zipper
+enterContradiction zipper =
+    Maybe.withDefault zipper (enterContradictionOrNothing zipper)
 
 
-leaveContradiction : Zipper -> Maybe Zipper
-leaveContradiction zipper =
+leaveContradictionOrNothing : Zipper -> Maybe Zipper
+leaveContradictionOrNothing zipper =
     case zipper.breadcrumbs of
         [] ->
             Nothing
@@ -271,17 +241,17 @@ leaveContradiction zipper =
                         }
 
 
-leaveContradictionOrStop : Zipper -> Zipper
-leaveContradictionOrStop zipper =
-    Maybe.withDefault zipper (leaveContradiction zipper)
+leaveContradiction : Zipper -> Zipper
+leaveContradiction zipper =
+    Maybe.withDefault zipper (leaveContradictionOrNothing zipper)
 
 
 
 -- Cases
 
 
-enterCase1 : Zipper -> Maybe Zipper
-enterCase1 zipper =
+enterCase1OrNothing : Zipper -> Maybe Zipper
+enterCase1OrNothing zipper =
     case zipper.steps of
         Proof.Last _ ->
             Nothing
@@ -300,13 +270,13 @@ enterCase1 zipper =
             Just { zipper | steps = case1, breadcrumbs = breadcrumbs }
 
 
-enterCase1OrStop : Zipper -> Zipper
-enterCase1OrStop zipper =
-    Maybe.withDefault zipper (enterCase1 zipper)
+enterCase1 : Zipper -> Zipper
+enterCase1 zipper =
+    Maybe.withDefault zipper (enterCase1OrNothing zipper)
 
 
-enterCase2 : Zipper -> Maybe Zipper
-enterCase2 zipper =
+enterCase2OrNothing : Zipper -> Maybe Zipper
+enterCase2OrNothing zipper =
     case zipper.steps of
         Proof.Last _ ->
             Nothing
@@ -325,13 +295,13 @@ enterCase2 zipper =
             Just { zipper | steps = case2, breadcrumbs = breadcrumbs }
 
 
-enterCase2OrStop : Zipper -> Zipper
-enterCase2OrStop zipper =
-    Maybe.withDefault zipper (enterCase2 zipper)
+enterCase2 : Zipper -> Zipper
+enterCase2 zipper =
+    Maybe.withDefault zipper (enterCase2OrNothing zipper)
 
 
 
---Modify zipper
+-- Modify zipper
 
 
 create : String -> Zipper
@@ -344,32 +314,79 @@ add element zipper =
     { zipper | steps = Proof.addStep element zipper.steps }
 
 
+edit : Proof.Element -> Zipper -> Zipper
+edit element zipper =
+    let
+        maybeNewSteps =
+            Proof.setElementInSteps element zipper.steps
+
+        newSteps =
+            case maybeNewSteps of
+                Nothing ->
+                    zipper.steps
+
+                Just new ->
+                    new
+    in
+    { zipper | steps = newSteps }
+
+
 delete : Zipper -> Zipper
 delete zipper =
-    case up zipper of
+    -- todo: implement
+    case upOrNothing zipper of
         Nothing ->
-            case down zipper of
+            case downOrNothing zipper of
                 Nothing ->
-                    create ""
+                    Debug.crash "j" <| create ""
 
                 Just child ->
-                    { child | breadcrumbs = [] }
+                    Debug.crash "k" <| { child | breadcrumbs = [] }
 
         Just parent ->
             case zipper.steps of
                 Proof.Last proofType ->
-                    -- todo
-                    Debug.log "a"
-                        zipper
+                    case parent.steps of
+                        Proof.Last parentProofType ->
+                            Debug.crash "a" zipper
+
+                        Proof.Next parentElement parentNextSteps ->
+                            Debug.log "b" { parent | steps = Proof.Last parentElement }
+
+                        Proof.Cases parentCase1 parentCase2 ->
+                            let
+                                newCase =
+                                    Proof.Last <| Proof.Normal <| Proof.createElement ""
+
+                                ( case1, case2 ) =
+                                    if zipper.steps == parentCase1 then
+                                        ( newCase, parentCase2 )
+                                    else
+                                        ( parentCase1, newCase )
+                            in
+                            Debug.log "c" { parent | steps = Proof.Cases case1 case2 }
 
                 Proof.Next _ nextSteps ->
-                    Debug.log "b"
-                        { zipper | steps = nextSteps }
+                    case parent.steps of
+                        Proof.Last parentProofType ->
+                            Debug.crash "d" zipper
+
+                        Proof.Next parentElement parentNextSteps ->
+                            Debug.log "e" { parent | steps = Proof.Next parentElement nextSteps }
+
+                        Proof.Cases parentCase1 parentCase2 ->
+                            Debug.crash "f" zipper
 
                 Proof.Cases case1 case2 ->
-                    -- todo
-                    Debug.log "c"
-                        zipper
+                    case parent.steps of
+                        Proof.Last parentProofType ->
+                            Debug.crash "g" zipper
+
+                        Proof.Next parentElement parentNextSteps ->
+                            Debug.log "h" { parent | steps = Proof.Last parentElement }
+
+                        Proof.Cases parentCase1 parentCase2 ->
+                            Debug.crash "i" zipper
 
 
 getError : Zipper -> Maybe String

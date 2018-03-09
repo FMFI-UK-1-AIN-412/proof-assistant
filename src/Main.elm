@@ -45,6 +45,7 @@ subscriptions model =
     Editor.subscriptions model.editor |> Sub.map EditorMsg
 
 
+main : Program Never Model Msg
 main =
     Html.program
         { view = view
