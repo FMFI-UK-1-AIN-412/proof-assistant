@@ -7,6 +7,7 @@ module Proof
         , addCases
         , addFormulaStep
         , createFormulaStep
+        , setShowButtons
         )
 
 import Formula
@@ -44,6 +45,18 @@ type Explanation
 type Proof
     = FormulaNode Explanation FormulaStep
     | CasesNode FormulaStep FormulaStep
+
+
+setShowButtons : Bool -> FormulaStep -> FormulaStep
+setShowButtons bool formulaStep =
+    let
+        gui =
+            formulaStep.gui
+
+        newGui =
+            { gui | showButtons = bool }
+    in
+    { formulaStep | gui = newGui }
 
 
 addFormulaStep : FormulaStep -> Proof -> Proof
