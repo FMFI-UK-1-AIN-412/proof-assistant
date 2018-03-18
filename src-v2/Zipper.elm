@@ -3,19 +3,16 @@ module Zipper
         ( Zipper
         , add
         , addCases
+        , changeExplanation
         , create
-          --, delete
+        , delete
         , down
         , downOrNothing
         , edit
         , enterCase1
         , enterCase2
         , enterContradiction
-          --, getElement
-          --, getEmptyError
-          --, getError
         , root
-          --, toggleContradiction
         , up
         )
 
@@ -47,6 +44,19 @@ edit formulaStep zipper =
 
         Proof.FormulaNode expl _ ->
             { zipper | proof = Proof.FormulaNode expl formulaStep }
+
+
+changeExplanation : Proof.Explanation -> Zipper -> Zipper
+changeExplanation explanation zipper =
+    { zipper
+        | proof =
+            case zipper.proof of
+                Proof.FormulaNode _ formStep ->
+                    Proof.FormulaNode explanation formStep
+
+                Proof.CasesNode _ _ ->
+                    zipper.proof
+    }
 
 
 add : Proof.FormulaStep -> Zipper -> Zipper
@@ -151,7 +161,8 @@ enterContradictionOrNothing zipper =
                             GoContradiction formulaStep
 
                         newProof =
-                            Proof.FormulaNode Proof.Premise contradictionFormulaStep
+                            -- todo: toto treba urobit inak1!!
+                            Proof.FormulaNode Proof.Rule contradictionFormulaStep
                     in
                     Just { zipper | proof = newProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
 
@@ -232,3 +243,25 @@ root zipper =
 
         Nothing ->
             zipper
+
+
+delete : Zipper -> Zipper
+delete zipper =
+    case upOrNothing zipper of
+        Nothing ->
+            case downOrNothing zipper of
+                Nothing ->
+                    create <| Proof.createFormulaStep ""
+
+                Just child ->
+                    { child | breadcrumbs = [] }
+
+        Just parent ->
+            case parent.proof of
+                Proof.FormulaNode expl formStep ->
+                    -- todo
+                    zipper
+
+                Proof.CasesNode case1 case2 ->
+                    -- todo
+                    zipper

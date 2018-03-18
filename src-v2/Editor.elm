@@ -1,8 +1,7 @@
 module Editor exposing (Model, Msg(..), initialModel, render, subscriptions, update)
 
---import ErrorHandler
-
 import Bootstrap.Button as Button
+import Bootstrap.ButtonGroup as ButtonGroup
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
@@ -43,7 +42,6 @@ type Msg
     | ZipperAdd Zipper.Zipper
     | ZipperAddCases Zipper.Zipper
     | ZipperExplanation Zipper.Zipper Proof.Explanation
-    | ZipperContradiction Zipper.Zipper
     | ZipperDelete Zipper.Zipper
     | ZipperShowButtons Zipper.Zipper Bool
 
@@ -52,27 +50,31 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         ZipperEdit zipper value ->
-            -- todo
-            model
+            let
+                newProof =
+                    case zipper.proof of
+                        Proof.CasesNode _ _ ->
+                            zipper.proof
+
+                        Proof.FormulaNode expl formulaStep ->
+                            Proof.FormulaNode expl { formulaStep | text = value }
+
+                newZipper =
+                    { zipper | proof = newProof }
+            in
+            { model | zipper = newZipper }
 
         ZipperAdd zipper ->
             { model | zipper = Zipper.add (Proof.createFormulaStep "") zipper }
 
         ZipperAddCases zipper ->
-            -- todo
-            model
+            { model | zipper = Zipper.addCases zipper }
 
         ZipperExplanation zipper explanation ->
-            -- todo
-            model
-
-        ZipperContradiction zipper ->
-            -- todo
-            model
+            { model | zipper = Zipper.changeExplanation explanation zipper }
 
         ZipperDelete zipper ->
-            -- todo
-            model
+            { model | zipper = Zipper.delete zipper }
 
         ZipperShowButtons zipper value ->
             let
@@ -99,11 +101,12 @@ emptyNode =
     Html.text ""
 
 
-myButton onClick style text =
+myButton : Msg -> Button.Option Msg -> String -> Html.Html Msg
+myButton onClick buttonStyle text =
     Button.button
-        [ Button.attrs [ Html.Attributes.class "ml-1" ]
+        [ Button.attrs [ Html.Attributes.class "mr-2" ]
         , Button.onClick onClick
-        , style
+        , buttonStyle
         ]
         [ Html.text text ]
 
@@ -123,18 +126,44 @@ buttonExplanation zipper text explanation =
     myButton (ZipperExplanation zipper explanation) Button.outlineSuccess text
 
 
-buttonContradiction : Zipper.Zipper -> String -> Html.Html Msg
-buttonContradiction zipper text =
-    myButton (ZipperContradiction zipper) Button.outlineDanger text
-
-
 buttonDelete : Zipper.Zipper -> Html.Html Msg
 buttonDelete zipper =
     myButton (ZipperDelete zipper) Button.outlineDanger "x"
 
 
-buttonsList : Zipper.Zipper -> Proof.FormulaStep -> Bool -> Html.Html Msg
-buttonsList zipper element includeCasesButton =
+explanationButtons : Zipper.Zipper -> Proof.Explanation -> List (Html.Html Msg)
+explanationButtons zipper explanation =
+    let
+        ( isRule, isPremise, isContradiction ) =
+            case explanation of
+                Proof.Rule ->
+                    ( True, False, False )
+
+                Proof.Premise ->
+                    ( False, True, False )
+
+                Proof.Contradiction _ ->
+                    ( False, False, True )
+    in
+    [ ButtonGroup.radioButtonGroup []
+        [ ButtonGroup.radioButton
+            isRule
+            [ Button.primary, Button.onClick <| ZipperExplanation zipper Proof.Rule ]
+            [ Html.text "Rule" ]
+        , ButtonGroup.radioButton
+            isPremise
+            [ Button.primary, Button.onClick <| ZipperExplanation zipper Proof.Premise ]
+            [ Html.text "Premise" ]
+        , ButtonGroup.radioButton
+            isContradiction
+            [ Button.primary, Button.onClick <| ZipperExplanation zipper (Proof.Contradiction (Proof.createFormulaStep "")) ]
+            [ Html.text "Contradiction" ]
+        ]
+    ]
+
+
+buttonsList : Zipper.Zipper -> Proof.Explanation -> Bool -> Html.Html Msg
+buttonsList zipper explanation includeCasesButton =
     let
         buttons =
             [ buttonAdd zipper
@@ -143,13 +172,10 @@ buttonsList zipper element includeCasesButton =
               else
                 emptyNode
             , buttonDelete zipper
-            , buttonContradiction zipper "Contradict"
             ]
+                ++ explanationButtons zipper explanation
     in
-    if element.gui.showButtons then
-        Html.div [] buttons
-    else
-        emptyNode
+    Html.div [ Html.Attributes.style [ ( "margin-bottom", "20px" ), ( "margin-top", "-10px" ) ] ] buttons
 
 
 innerStyle : Html.Attribute Msg
@@ -207,6 +233,45 @@ renderCases zipper case1 case2 =
 renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> Html.Html Msg
 renderFormulaNode zipper explanation formulaStep =
     let
+        ( inputGroup, subProof ) =
+            case explanation of
+                Proof.Rule ->
+                    ( InputGroup.config
+                        (InputGroup.text
+                            [ Input.placeholder "Formula"
+                            , Input.value formulaStep.text
+                            , Input.onInput <| ZipperEdit zipper
+                            ]
+                        )
+                    , emptyNode
+                    )
+
+                Proof.Premise ->
+                    ( InputGroup.config
+                        (InputGroup.text
+                            [ Input.placeholder "Formula"
+                            , Input.value formulaStep.text
+                            , Input.onInput <| ZipperEdit zipper
+                            ]
+                        )
+                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Premis:" ] ]
+                    , emptyNode
+                    )
+
+                Proof.Contradiction _ ->
+                    -- todo: zobrazit contradiction vetvu!
+                    ( InputGroup.config
+                        (InputGroup.text
+                            [ Input.disabled True
+                            , Input.value formulaStep.text
+                            ]
+                        )
+                    , Html.div [ innerStyle ]
+                        [ Html.h2 [] [ Html.text "Proov by contradiction" ]
+                        , renderStep <| Zipper.enterContradiction zipper
+                        ]
+                    )
+
         ( nextNode, isLast ) =
             case Zipper.downOrNothing zipper of
                 Just newZipper ->
@@ -217,14 +282,7 @@ renderFormulaNode zipper explanation formulaStep =
     in
     Html.div []
         [ Form.group []
-            [ InputGroup.config
-                (InputGroup.text
-                    [ Input.placeholder "Formula"
-                    , Input.value formulaStep.text
-                    , Input.onInput <| ZipperEdit zipper
-                    ]
-                )
-                --|> predecessor
+            [ inputGroup
                 |> InputGroup.successors
                     [ InputGroup.button
                         [ Button.outlineInfo
@@ -234,7 +292,11 @@ renderFormulaNode zipper explanation formulaStep =
                     ]
                 |> InputGroup.view
             ]
-        , buttonsList zipper formulaStep isLast
+        , if formulaStep.gui.showButtons then
+            buttonsList zipper explanation isLast
+          else
+            emptyNode
+        , subProof
         , nextNode
         ]
 
