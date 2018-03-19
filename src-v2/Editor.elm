@@ -148,15 +148,15 @@ explanationButtons zipper explanation =
     [ ButtonGroup.radioButtonGroup []
         [ ButtonGroup.radioButton
             isRule
-            [ Button.primary, Button.onClick <| ZipperExplanation zipper Proof.Rule ]
+            [ Button.info, Button.onClick <| ZipperExplanation zipper Proof.Rule ]
             [ Html.text "Rule" ]
         , ButtonGroup.radioButton
             isPremise
-            [ Button.primary, Button.onClick <| ZipperExplanation zipper Proof.Premise ]
+            [ Button.info, Button.onClick <| ZipperExplanation zipper Proof.Premise ]
             [ Html.text "Premise" ]
         , ButtonGroup.radioButton
             isContradiction
-            [ Button.primary, Button.onClick <| ZipperExplanation zipper (Proof.Contradiction (Proof.createFormulaStep "")) ]
+            [ Button.info, Button.onClick <| ZipperExplanation zipper (Proof.Contradiction (Proof.createFormulaStep "")) ]
             [ Html.text "Contradiction" ]
         ]
     ]
@@ -199,10 +199,10 @@ render model =
 
 renderProof : Zipper.Zipper -> Html.Html Msg
 renderProof zipper =
-    Form.form [] [ Html.div [] [ renderStep zipper ] ]
+    Form.form [] [ Html.div [] (renderStep zipper) ]
 
 
-renderStep : Zipper.Zipper -> Html.Html Msg
+renderStep : Zipper.Zipper -> List (Html.Html Msg)
 renderStep zipper =
     case zipper.proof of
         Proof.FormulaNode explanation formulaStep ->
@@ -212,27 +212,52 @@ renderStep zipper =
             renderCases zipper case1 case2
 
 
-renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> Html.Html Msg
+renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (Html.Html Msg)
 renderCases zipper case1 case2 =
-    Html.div []
-        [ Html.p []
-            [ Html.text "Delete the 2 cases bellow"
-            , buttonDelete zipper
-            ]
-        , Html.div [ innerStyle ]
-            [ Html.h2 [] [ Html.text "Case 1" ]
-            , renderStep <| Zipper.enterCase1 zipper
-            ]
-        , Html.div [ innerStyle ]
-            [ Html.h2 [] [ Html.text "Case 2" ]
-            , renderStep <| Zipper.enterCase2 zipper
-            ]
+    [ Html.p []
+        [ Html.text "Delete the 2 cases bellow"
+        , buttonDelete zipper
         ]
+    , Html.div [ innerStyle ]
+        (Html.h2 [] [ Html.text "Case 1" ]
+            :: renderStep (Zipper.enterCase1 zipper)
+        )
+    , Html.div [ innerStyle ]
+        (Html.h2 [] [ Html.text "Case 2" ]
+            :: renderStep (Zipper.enterCase2 zipper)
+        )
+    ]
 
 
-renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> Html.Html Msg
+validationNode : String -> String -> Html.Html Msg
+validationNode text class =
+    Html.div
+        [ Html.Attributes.class class
+        , Html.Attributes.style [ ( "display", "block" ) ]
+        ]
+        [ Html.text text ]
+
+
+validNode : String -> ( Input.Option Msg, Html.Html Msg )
+validNode text =
+    ( Input.success
+    , validationNode text "valid-feedback"
+    )
+
+
+invalidNode : String -> ( Input.Option Msg, Html.Html Msg )
+invalidNode text =
+    ( Input.danger
+    , validationNode text "invalid-feedback"
+    )
+
+
+renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> List (Html.Html Msg)
 renderFormulaNode zipper explanation formulaStep =
     let
+        ( validationStatus, validationNode ) =
+            validNode ""
+
         ( inputGroup, subProof ) =
             case explanation of
                 Proof.Rule ->
@@ -241,9 +266,10 @@ renderFormulaNode zipper explanation formulaStep =
                             [ Input.placeholder "Formula"
                             , Input.value formulaStep.text
                             , Input.onInput <| ZipperEdit zipper
+                            , validationStatus
                             ]
                         )
-                    , emptyNode
+                    , []
                     )
 
                 Proof.Premise ->
@@ -255,21 +281,21 @@ renderFormulaNode zipper explanation formulaStep =
                             ]
                         )
                         |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Premis:" ] ]
-                    , emptyNode
+                    , []
                     )
 
                 Proof.Contradiction _ ->
-                    -- todo: zobrazit contradiction vetvu!
                     ( InputGroup.config
                         (InputGroup.text
                             [ Input.disabled True
                             , Input.value formulaStep.text
                             ]
                         )
-                    , Html.div [ innerStyle ]
-                        [ Html.h2 [] [ Html.text "Proov by contradiction" ]
-                        , renderStep <| Zipper.enterContradiction zipper
-                        ]
+                    , [ Html.div [ innerStyle ]
+                            (Html.h2 [] [ Html.text "Prove by contradiction" ]
+                                :: renderStep (Zipper.enterContradiction zipper)
+                            )
+                      ]
                     )
 
         ( nextNode, isLast ) =
@@ -278,27 +304,30 @@ renderFormulaNode zipper explanation formulaStep =
                     ( renderStep newZipper, False )
 
                 Nothing ->
-                    ( emptyNode, True )
+                    ( [], True )
+
+        ( buttons, inputButtonDesign ) =
+            if formulaStep.gui.showButtons then
+                ( buttonsList zipper explanation isLast, Button.info )
+            else
+                ( emptyNode, Button.outlineInfo )
     in
-    Html.div []
-        [ Form.group []
-            [ inputGroup
-                |> InputGroup.successors
-                    [ InputGroup.button
-                        [ Button.outlineInfo
-                        , Button.onClick <| ZipperShowButtons zipper (not formulaStep.gui.showButtons)
-                        ]
-                        [ Html.text "?" ]
+    [ Form.group []
+        [ inputGroup
+            |> InputGroup.successors
+                [ InputGroup.button
+                    [ inputButtonDesign
+                    , Button.onClick <| ZipperShowButtons zipper (not formulaStep.gui.showButtons)
                     ]
-                |> InputGroup.view
-            ]
-        , if formulaStep.gui.showButtons then
-            buttonsList zipper explanation isLast
-          else
-            emptyNode
-        , subProof
-        , nextNode
+                    [ Html.text "?" ]
+                ]
+            |> InputGroup.view
+        , validationNode
         ]
+    , buttons
+    ]
+        ++ subProof
+        ++ nextNode
 
 
 
