@@ -8,7 +8,7 @@ module Zipper
         , delete
         , down
         , downOrNothing
-        , edit
+        , editValue
         , enterCase1
         , enterCase2
         , enterContradiction
@@ -36,16 +36,6 @@ create formulaStep =
     { proof = Proof.FormulaNode Proof.Rule formulaStep, breadcrumbs = [] }
 
 
-edit : Proof.FormulaStep -> Zipper -> Zipper
-edit formulaStep zipper =
-    case zipper.proof of
-        Proof.CasesNode _ _ ->
-            zipper
-
-        Proof.FormulaNode expl _ ->
-            { zipper | proof = Proof.FormulaNode expl formulaStep }
-
-
 changeExplanation : Proof.Explanation -> Zipper -> Zipper
 changeExplanation explanation zipper =
     { zipper
@@ -61,7 +51,7 @@ changeExplanation explanation zipper =
 
 add : Proof.FormulaStep -> Zipper -> Zipper
 add formulaStep zipper =
-    { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
+    matchAll { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
 
 
 addCases : Zipper -> Zipper
@@ -247,6 +237,7 @@ root zipper =
 
 delete : Zipper -> Zipper
 delete zipper =
+    -- todo: this is not implemented! finish it!
     case upOrNothing zipper of
         Nothing ->
             case downOrNothing zipper of
@@ -265,3 +256,124 @@ delete zipper =
                 Proof.CasesNode case1 case2 ->
                     -- todo
                     zipper
+
+
+editValue : String -> Zipper -> Zipper
+editValue value zipper =
+    let
+        newProof =
+            case zipper.proof of
+                Proof.CasesNode _ _ ->
+                    zipper.proof
+
+                Proof.FormulaNode expl formulaStep ->
+                    Proof.FormulaNode expl <| Proof.changeFormulaStepText value formulaStep
+    in
+    matchAll { zipper | proof = newProof }
+
+
+
+-- Matcher specific
+
+
+matchAll : Zipper -> Zipper
+matchAll zipper =
+    -- WARNING: Close your eyes, otherwise you'll have an heart attack!!!
+    let
+        newZipper1 =
+            match zipper
+
+        newZipper2 =
+            case downOrNothing newZipper1 of
+                Nothing ->
+                    newZipper1
+
+                Just childrenZipper ->
+                    up (matchAll childrenZipper)
+
+        newZipper3 =
+            case enterContradictionOrNothing newZipper2 of
+                Nothing ->
+                    newZipper2
+
+                Just childrenZipper ->
+                    up (matchAll childrenZipper)
+
+        newZipper4 =
+            case enterCase1OrNothing newZipper3 of
+                Nothing ->
+                    newZipper3
+
+                Just childrenZipper ->
+                    up (matchAll childrenZipper)
+
+        newZipper5 =
+            case enterCase2OrNothing newZipper4 of
+                Nothing ->
+                    newZipper4
+
+                Just childrenZipper ->
+                    up (matchAll childrenZipper)
+    in
+    -- See, I warned you.
+    newZipper5
+
+
+match : Zipper -> Zipper
+match zipper =
+    case zipper.proof of
+        Proof.FormulaNode expl formulaStep ->
+            let
+                matched =
+                    callMatcher <| findFormulas zipper
+
+                newProof =
+                    Proof.FormulaNode expl { formulaStep | matched = matched }
+            in
+            { zipper | proof = newProof }
+
+        Proof.CasesNode _ _ ->
+            zipper
+
+
+callMatcher : List Proof.FormulaStep -> Maybe Proof.Matched
+callMatcher formulaSteps =
+    let
+        _ =
+            Debug.log "callMatcher called" formulaSteps
+    in
+    case formulaSteps of
+        toProve :: from ->
+            Proof.matcher toProve from
+
+        [] ->
+            Nothing
+
+
+findFormulas : Zipper -> List Proof.FormulaStep
+findFormulas zipper =
+    let
+        this =
+            case zipper.proof of
+                Proof.FormulaNode expl formulaStep ->
+                    Just formulaStep
+
+                Proof.CasesNode _ _ ->
+                    Nothing
+    in
+    case this of
+        Just formulaStep ->
+            case upOrNothing zipper of
+                Nothing ->
+                    [ formulaStep ]
+
+                Just parentZipper ->
+                    formulaStep :: findFormulas parentZipper
+
+        Nothing ->
+            case upOrNothing zipper of
+                Nothing ->
+                    []
+
+                Just parentZipper ->
+                    findFormulas parentZipper

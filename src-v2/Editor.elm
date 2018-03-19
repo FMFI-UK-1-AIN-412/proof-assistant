@@ -23,13 +23,18 @@ initialModel : Model
 initialModel =
     { zipper =
         (Zipper.create <| Proof.createFormulaStep "(a->b)")
+            |> Zipper.changeExplanation Proof.Premise
             |> Zipper.add (Proof.createFormulaStep "a")
             |> Zipper.down
+            |> Zipper.changeExplanation Proof.Premise
             |> Zipper.add (Proof.createFormulaStep "b")
             |> Zipper.down
-            |> Zipper.addCases
-            |> Zipper.enterCase1
-            |> Zipper.add (Proof.createFormulaStep "c")
+            |> Zipper.add (Proof.createFormulaStep "[!!]")
+
+    --|> Zipper.down
+    --|> Zipper.addCases
+    --|> Zipper.enterCase1
+    --|> Zipper.add (Proof.createFormulaStep "c")
     }
 
 
@@ -50,19 +55,7 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         ZipperEdit zipper value ->
-            let
-                newProof =
-                    case zipper.proof of
-                        Proof.CasesNode _ _ ->
-                            zipper.proof
-
-                        Proof.FormulaNode expl formulaStep ->
-                            Proof.FormulaNode expl { formulaStep | text = value }
-
-                newZipper =
-                    { zipper | proof = newProof }
-            in
-            { model | zipper = newZipper }
+            { model | zipper = Zipper.editValue value zipper }
 
         ZipperAdd zipper ->
             { model | zipper = Zipper.add (Proof.createFormulaStep "") zipper }
@@ -175,7 +168,7 @@ buttonsList zipper explanation includeCasesButton =
             ]
                 ++ explanationButtons zipper explanation
     in
-    Html.div [ Html.Attributes.style [ ( "margin-bottom", "20px" ), ( "margin-top", "-10px" ) ] ] buttons
+    Html.div [ Html.Attributes.style [ ( "getErgin-bottom", "20px" ), ( "margin-top", "-10px" ) ] ] buttons
 
 
 innerStyle : Html.Attribute Msg
@@ -214,9 +207,9 @@ renderStep zipper =
 
 renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (Html.Html Msg)
 renderCases zipper case1 case2 =
-    [ Html.p []
+    [ Html.p [ Html.Attributes.class "text-right" ]
         [ Html.text "Delete the 2 cases bellow"
-        , buttonDelete zipper
+        , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
         ]
     , Html.div [ innerStyle ]
         (Html.h2 [] [ Html.text "Case 1" ]
@@ -256,7 +249,12 @@ renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> L
 renderFormulaNode zipper explanation formulaStep =
     let
         ( validationStatus, validationNode ) =
-            validNode ""
+            case Proof.getStatus explanation formulaStep of
+                Err errMsg ->
+                    invalidNode errMsg
+
+                Ok okMsg ->
+                    validNode okMsg
 
         ( inputGroup, subProof ) =
             case explanation of
