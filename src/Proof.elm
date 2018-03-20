@@ -122,21 +122,21 @@ type Matched
 flatten2 : FormulaStep -> List FormulaStep -> List ( FormulaStep, FormulaStep )
 flatten2 element list =
     case list of
-        first :: rest ->
-            ( element, first ) :: flatten2 element rest
-
         [] ->
             []
+
+        first :: rest ->
+            ( element, first ) :: flatten2 element rest
 
 
 flatten : List ( FormulaStep, List FormulaStep ) -> List ( FormulaStep, FormulaStep )
 flatten original =
     case original of
-        first :: rest ->
-            uncurry flatten2 first ++ flatten rest
-
         [] ->
             []
+
+        first :: rest ->
+            uncurry flatten2 first ++ flatten rest
 
 
 matchFirst :
@@ -199,26 +199,29 @@ matcherToStr matched =
 getStatus : Explanation -> FormulaStep -> Result String String
 getStatus explanation formulaStep =
     -- todo: yoyo: potrebujem tu mat aj Explanation vsak?
-    case formulaStep.formula of
-        Err error ->
-            Err <| "Could not parse: " ++ toString error
+    if formulaStep.text == "" then
+        Err <| "Formula should not be empty"
+    else
+        case formulaStep.formula of
+            Err error ->
+                Err <| "Could not parse: " ++ toString error
 
-        Ok _ ->
-            case explanation of
-                Premise ->
-                    Ok ""
+            Ok _ ->
+                case explanation of
+                    Premise ->
+                        Ok ""
 
-                Rule ->
-                    case formulaStep.matched of
-                        Nothing ->
-                            Err "Could not match for any rule"
+                    Rule ->
+                        case formulaStep.matched of
+                            Nothing ->
+                                Err "Could not match for any rule"
 
-                        Just matched ->
-                            Ok <| matcherToStr matched
+                            Just matched ->
+                                Ok <| matcherToStr matched
 
-                Contradiction _ ->
-                    -- todo
-                    Err "This is not implemented yet!"
+                    Contradiction _ ->
+                        -- todo
+                        Err "This is not implemented yet!"
 
 
 

@@ -24,17 +24,12 @@ initialModel =
     { zipper =
         (Zipper.create <| Proof.createFormulaStep "(a->b)")
             |> Zipper.changeExplanation Proof.Premise
+            |> Zipper.add (Proof.createFormulaStep "(b->-c)")
+            |> Zipper.down
+            |> Zipper.changeExplanation Proof.Premise
             |> Zipper.add (Proof.createFormulaStep "a")
             |> Zipper.down
             |> Zipper.changeExplanation Proof.Premise
-            |> Zipper.add (Proof.createFormulaStep "b")
-            |> Zipper.down
-            |> Zipper.add (Proof.createFormulaStep "[!!]")
-
-    --|> Zipper.down
-    --|> Zipper.addCases
-    --|> Zipper.enterCase1
-    --|> Zipper.add (Proof.createFormulaStep "c")
     }
 
 
@@ -168,7 +163,7 @@ buttonsList zipper explanation includeCasesButton =
             ]
                 ++ explanationButtons zipper explanation
     in
-    Html.div [ Html.Attributes.style [ ( "getErgin-bottom", "20px" ), ( "margin-top", "-10px" ) ] ] buttons
+    Html.div [ Html.Attributes.style [ ( "margin-bottom", "20px" ), ( "margin-top", "-10px" ) ] ] buttons
 
 
 innerStyle : Html.Attribute Msg
@@ -278,7 +273,7 @@ renderFormulaNode zipper explanation formulaStep =
                             , Input.onInput <| ZipperEdit zipper
                             ]
                         )
-                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Premis:" ] ]
+                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Premise:" ] ]
                     , []
                     )
 

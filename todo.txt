@@ -6,11 +6,10 @@ mat 2 verzie
 
 todo:
 - fix delete nodes
-- implement basic matcher
 
 
 Otazky:
-- kazdy FormulaNode by mal mat nejake ID (int), zobrazit ho ako predecessor
-- contradiction je nejaky divny, ako by mal fungovat?
-- cases, ako ma fungovat?
+- kazdy FormulaNode by mal mat nejake ID (int), zobrazit ho ako predecessor [ANO]
+- contradiction je nejaky divny, ako by mal fungovat? [AUTOMATICKY TAM VRAZIT NEEDITOVATELNY NODE]
+- cases, ako ma fungovat? [VID SCREENSHOT]
 - ukazat nejake jednoduche dokazy co by sa mali vediet dat dokazat
