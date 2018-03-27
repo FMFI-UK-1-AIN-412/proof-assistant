@@ -11,3 +11,4 @@ todo:
 Otazky:
 - cases, ako ma fungovat? [VID SCREENSHOT]
 - ukazat nejake jednoduche dokazy co by sa mali vediet dat dokazat
+- after explanation change, run the matchers!

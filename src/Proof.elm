@@ -122,8 +122,12 @@ flatten original =
 
 type Justification
     = ModusPonens Int Int
-    | Transitivity Int Int
+    | ModusTolens Int Int
+    | HypotheticalSyllogism Int Int
+    | Conjuction Int Int
+    | DisjunctiveSyllogism Int Int
     | Addition Int
+    | Simplification Int
 
 
 type alias Validator =
@@ -155,7 +159,9 @@ unaryValidator step branch =
     matchAnyFunctions1
         step
         branch
-        [ matcherAdditionWTF ]
+        [ matcherAdditionWTF
+        , matcherSimplificationWTF
+        ]
 
 
 matchFirst1 : FormulaStep -> List FormulaStep -> UnaryMatcherHelper -> Maybe Justification
@@ -198,7 +204,10 @@ binaryValidator step branch =
         step
         (flatten (List.Extra.select branch))
         [ matcherModusPonensWTF
-        , matcherTransitivityWTF
+        , matcherModusTolensWTF
+        , matcherHypotheticalSyllogismWTF
+        , matcherConjunctionWTF
+        , matcherDisjunctiveSyllogismWTF
         ]
 
 
@@ -236,9 +245,19 @@ matchAnyFunctions2 toProve allCombinations functions =
 ---
 
 
+matcherSimplificationWTF : UnaryMatcherHelper
+matcherSimplificationWTF from toProve =
+    helper1 matcherSimplification from toProve (Simplification from.index)
+
+
 matcherAdditionWTF : UnaryMatcherHelper
 matcherAdditionWTF from toProve =
     helper1 matcherAddition from toProve (Addition from.index)
+
+
+matcherConjunctionWTF : BinaryMatcherHelper
+matcherConjunctionWTF from1 from2 toProve =
+    helper2 matcherConjunction from1 from2 toProve (Conjuction from1.index from2.index)
 
 
 matcherModusPonensWTF : BinaryMatcherHelper
@@ -246,9 +265,19 @@ matcherModusPonensWTF from1 from2 toProve =
     helper2 matcherModusPonens from1 from2 toProve (ModusPonens from1.index from2.index)
 
 
-matcherTransitivityWTF : BinaryMatcherHelper
-matcherTransitivityWTF from1 from2 toProve =
-    helper2 matcherTransitivity from1 from2 toProve (Transitivity from1.index from2.index)
+matcherModusTolensWTF : BinaryMatcherHelper
+matcherModusTolensWTF from1 from2 toProve =
+    helper2 matcherModusTolens from1 from2 toProve (ModusTolens from1.index from2.index)
+
+
+matcherHypotheticalSyllogismWTF : BinaryMatcherHelper
+matcherHypotheticalSyllogismWTF from1 from2 toProve =
+    helper2 matcherHypotheticalSyllogism from1 from2 toProve (HypotheticalSyllogism from1.index from2.index)
+
+
+matcherDisjunctiveSyllogismWTF : BinaryMatcherHelper
+matcherDisjunctiveSyllogismWTF from1 from2 toProve =
+    helper2 matcherDisjunctiveSyllogism from1 from2 toProve (DisjunctiveSyllogism from1.index from2.index)
 
 
 matcherToStr : Justification -> String
@@ -257,11 +286,23 @@ matcherToStr matched =
         ModusPonens index1 index2 ->
             "Justification by: Modus Ponens from formulas " ++ toString index1 ++ " and " ++ toString index2
 
-        Transitivity index1 index2 ->
-            "Justification by: Transitivity from formulas " ++ toString index1 ++ " and " ++ toString index2
+        ModusTolens index1 index2 ->
+            "Justification by: Modus Tolens from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        HypotheticalSyllogism index1 index2 ->
+            "Justification by: Hypothetical Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        Conjuction index1 index2 ->
+            "Justification by: Conjuction from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        DisjunctiveSyllogism index1 index2 ->
+            "Justification by: Disjunctive Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Addition index ->
             "Justification by: Addition from formula " ++ toString index
+
+        Simplification index ->
+            "Justification by: Simplification from formula " ++ toString index
 
 
 getStatus : Explanation -> FormulaStep -> Result String String
@@ -348,6 +389,39 @@ matcherAddition from toProve =
             False
 
 
+matcherSimplification : UnaryMatcher
+matcherSimplification from toProve =
+    -- (a & b) => (a) | (b)
+    case from of
+        Formula.Conj a b ->
+            (toProve == a) || (toProve == b)
+
+        _ ->
+            False
+
+
+matcherConjunction : BinaryMatcher
+matcherConjunction from1 from2 toProve =
+    -- (a) & (b) => (a & b)
+    case toProve of
+        Formula.Conj a b ->
+            (from1 == a) && (from2 == b)
+
+        _ ->
+            False
+
+
+matcherModusTolens : BinaryMatcher
+matcherModusTolens from1 from2 toProve =
+    -- (a -> b) & (-b) => (-a)
+    case ( from1, from2, toProve ) of
+        ( Formula.Impl a1 b1, Formula.Neg b2, Formula.Neg a2 ) ->
+            (b1 == b2) && (a1 == a2)
+
+        _ ->
+            False
+
+
 matcherModusPonens : BinaryMatcher
 matcherModusPonens from1 from2 toProve =
     -- (a -> b) & (a) => (b)
@@ -359,8 +433,8 @@ matcherModusPonens from1 from2 toProve =
             False
 
 
-matcherTransitivity : BinaryMatcher
-matcherTransitivity from1 from2 toProve =
+matcherHypotheticalSyllogism : BinaryMatcher
+matcherHypotheticalSyllogism from1 from2 toProve =
     -- (a -> b) & (b -> c) => (a -> c)
     case ( from1, from2, toProve ) of
         ( Formula.Impl a1 b1, Formula.Impl b2 c2, Formula.Impl a3 c3 ) ->
@@ -368,3 +442,20 @@ matcherTransitivity from1 from2 toProve =
 
         _ ->
             False
+
+
+matcherDisjunctiveSyllogism : BinaryMatcher
+matcherDisjunctiveSyllogism from1 from2 toProve =
+    -- (p|q) & (-p) => q
+    case ( from1, from2, toProve ) of
+        ( Formula.Disj p1 q1, Formula.Neg p2, q2 ) ->
+            (p1 == p2) && (q1 == q2)
+
+        _ ->
+            False
+
+
+
+-- todo: add Constructive Dilemma - https://www.tutorialspoint.com/discrete_mathematics/rules_of_inference.htm
+-- todo: add Destructive Dilemma - https://www.tutorialspoint.com/discrete_mathematics/rules_of_inference.htm
+-- todo: add Grimaldy - https://github.com/ZoltanOnody/proof-assistant/pull/3#issuecomment-375382616
