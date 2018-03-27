@@ -123,6 +123,7 @@ flatten original =
 type Justification
     = ModusPonens Int Int
     | Transitivity Int Int
+    | Addition Int
 
 
 type alias Validator =
@@ -151,7 +152,40 @@ nonaryValidator step branch =
 
 unaryValidator : Validator
 unaryValidator step branch =
-    Nothing
+    matchAnyFunctions1
+        step
+        branch
+        [ matcherAdditionWTF ]
+
+
+matchFirst1 : FormulaStep -> List FormulaStep -> UnaryMatcherHelper -> Maybe Justification
+matchFirst1 step branch function =
+    case branch of
+        [] ->
+            Nothing
+
+        this :: rest ->
+            case function this step of
+                Nothing ->
+                    matchFirst1 step rest function
+
+                Just x ->
+                    Just x
+
+
+matchAnyFunctions1 : FormulaStep -> List FormulaStep -> List UnaryMatcherHelper -> Maybe Justification
+matchAnyFunctions1 toProve allCombinations functions =
+    case functions of
+        [] ->
+            Nothing
+
+        function :: rest ->
+            case matchFirst1 toProve allCombinations function of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    matchAnyFunctions1 toProve allCombinations rest
 
 
 
@@ -160,7 +194,7 @@ unaryValidator step branch =
 
 binaryValidator : Validator
 binaryValidator step branch =
-    matchAnyFunctions
+    matchAnyFunctions2
         step
         (flatten (List.Extra.select branch))
         [ matcherModusPonensWTF
@@ -168,8 +202,8 @@ binaryValidator step branch =
         ]
 
 
-matchFirst : FormulaStep -> List ( FormulaStep, FormulaStep ) -> BinaryMatcherHelper -> Maybe Justification
-matchFirst step branch function =
+matchFirst2 : FormulaStep -> List ( FormulaStep, FormulaStep ) -> BinaryMatcherHelper -> Maybe Justification
+matchFirst2 step branch function =
     case branch of
         [] ->
             Nothing
@@ -177,39 +211,44 @@ matchFirst step branch function =
         this :: rest ->
             case function (Tuple.first this) (Tuple.second this) step of
                 Nothing ->
-                    matchFirst step rest function
+                    matchFirst2 step rest function
 
                 Just x ->
                     Just x
 
 
-matchAnyFunctions : FormulaStep -> List ( FormulaStep, FormulaStep ) -> List BinaryMatcherHelper -> Maybe Justification
-matchAnyFunctions toProve allCombinations functions =
+matchAnyFunctions2 : FormulaStep -> List ( FormulaStep, FormulaStep ) -> List BinaryMatcherHelper -> Maybe Justification
+matchAnyFunctions2 toProve allCombinations functions =
     case functions of
         [] ->
             Nothing
 
         function :: rest ->
-            case matchFirst toProve allCombinations function of
+            case matchFirst2 toProve allCombinations function of
                 Just x ->
                     Just x
 
                 Nothing ->
-                    matchAnyFunctions toProve allCombinations rest
+                    matchAnyFunctions2 toProve allCombinations rest
 
 
 
 ---
 
 
+matcherAdditionWTF : UnaryMatcherHelper
+matcherAdditionWTF from toProve =
+    helper1 matcherAddition from toProve (Addition from.index)
+
+
 matcherModusPonensWTF : BinaryMatcherHelper
 matcherModusPonensWTF from1 from2 toProve =
-    helper matcherModusPonens from1 from2 toProve (ModusPonens from1.index from2.index)
+    helper2 matcherModusPonens from1 from2 toProve (ModusPonens from1.index from2.index)
 
 
 matcherTransitivityWTF : BinaryMatcherHelper
 matcherTransitivityWTF from1 from2 toProve =
-    helper matcherTransitivity from1 from2 toProve (Transitivity from1.index from2.index)
+    helper2 matcherTransitivity from1 from2 toProve (Transitivity from1.index from2.index)
 
 
 matcherToStr : Justification -> String
@@ -220,6 +259,9 @@ matcherToStr matched =
 
         Transitivity index1 index2 ->
             "Justification by: Transitivity from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        Addition index ->
+            "Justification by: Addition from formula " ++ toString index
 
 
 getStatus : Explanation -> FormulaStep -> Result String String
@@ -261,8 +303,29 @@ type alias BinaryMatcherHelper =
     FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
 
 
-helper : BinaryMatcher -> FormulaStep -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
-helper func from1 from2 toProve answer =
+type alias UnaryMatcher =
+    Formula.Formula -> Formula.Formula -> Bool
+
+
+type alias UnaryMatcherHelper =
+    FormulaStep -> FormulaStep -> Maybe Justification
+
+
+helper1 : UnaryMatcher -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
+helper1 func from toProve answer =
+    case ( from.formula, toProve.formula ) of
+        ( Ok fromOK, Ok toProveOK ) ->
+            if func fromOK toProveOK then
+                Just answer
+            else
+                Nothing
+
+        _ ->
+            Nothing
+
+
+helper2 : BinaryMatcher -> FormulaStep -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
+helper2 func from1 from2 toProve answer =
     case ( from1.formula, from2.formula, toProve.formula ) of
         ( Ok from1OK, Ok from2OK, Ok toProveOK ) ->
             if func from1OK from2OK toProveOK then
@@ -272,6 +335,17 @@ helper func from1 from2 toProve answer =
 
         _ ->
             Nothing
+
+
+matcherAddition : UnaryMatcher
+matcherAddition from toProve =
+    -- a => (a|b)
+    case toProve of
+        Formula.Disj a b ->
+            (from == a) || (from == b)
+
+        _ ->
+            False
 
 
 matcherModusPonens : BinaryMatcher
