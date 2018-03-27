@@ -44,6 +44,7 @@ type Msg
     | ZipperExplanation Zipper.Zipper Proof.Explanation
     | ZipperDelete Zipper.Zipper
     | ZipperShowButtons Zipper.Zipper Bool
+    | ZipperCreateContradictionFirstNode Zipper.Zipper
 
 
 update : Msg -> Model -> Model
@@ -79,6 +80,9 @@ update msg model =
             in
             { model | zipper = newZipper }
 
+        ZipperCreateContradictionFirstNode zipper ->
+            { model | zipper = Zipper.createContradictionFirstNode zipper }
+
 
 
 -- Helpers
@@ -97,6 +101,11 @@ myButton onClick buttonStyle text =
         , buttonStyle
         ]
         [ Html.text text ]
+
+
+buttonCreateContradictionFirstNode : Zipper.Zipper -> Html.Html Msg
+buttonCreateContradictionFirstNode zipper =
+    myButton (ZipperCreateContradictionFirstNode zipper) Button.outlineSuccess "+"
 
 
 buttonAdd : Zipper.Zipper -> Html.Html Msg
@@ -124,7 +133,7 @@ explanationButtons zipper explanation =
     let
         ( isRule, isPremise, isContradiction ) =
             case explanation of
-                Proof.Rule ->
+                Proof.Rule _ ->
                     ( True, False, False )
 
                 Proof.Premise ->
@@ -136,7 +145,7 @@ explanationButtons zipper explanation =
     [ ButtonGroup.radioButtonGroup []
         [ ButtonGroup.radioButton
             isRule
-            [ Button.info, Button.onClick <| ZipperExplanation zipper Proof.Rule ]
+            [ Button.info, Button.onClick <| ZipperExplanation zipper (Proof.Rule Nothing) ]
             [ Html.text "Rule" ]
         , ButtonGroup.radioButton
             isPremise
@@ -144,7 +153,7 @@ explanationButtons zipper explanation =
             [ Html.text "Premise" ]
         , ButtonGroup.radioButton
             isContradiction
-            [ Button.info, Button.onClick <| ZipperExplanation zipper (Proof.Contradiction (Proof.createFormulaStep "")) ]
+            [ Button.info, Button.onClick <| ZipperExplanation zipper (Proof.Contradiction Nothing) ]
             [ Html.text "Contradiction" ]
         ]
     ]
@@ -253,7 +262,7 @@ renderFormulaNode zipper explanation formulaStep =
 
         ( inputGroup, subProof ) =
             case explanation of
-                Proof.Rule ->
+                Proof.Rule _ ->
                     ( InputGroup.config
                         (InputGroup.text
                             [ Input.placeholder "Formula"
@@ -277,7 +286,16 @@ renderFormulaNode zipper explanation formulaStep =
                     , []
                     )
 
-                Proof.Contradiction _ ->
+                Proof.Contradiction proof ->
+                    let
+                        elements =
+                            case proof of
+                                Just _ ->
+                                    renderStep (Zipper.enterContradiction zipper)
+
+                                Nothing ->
+                                    [ buttonCreateContradictionFirstNode zipper ]
+                    in
                     ( InputGroup.config
                         (InputGroup.text
                             [ Input.disabled True
@@ -285,8 +303,14 @@ renderFormulaNode zipper explanation formulaStep =
                             ]
                         )
                     , [ Html.div [ innerStyle ]
-                            (Html.h2 [] [ Html.text "Prove by contradiction" ]
-                                :: renderStep (Zipper.enterContradiction zipper)
+                            ([ Html.h2 [] [ Html.text "Prove" ]
+                             , Input.text
+                                [ Input.disabled True
+                                , Input.value <| "-" ++ formulaStep.text
+                                ]
+                             , Html.hr [] []
+                             ]
+                                ++ elements
                             )
                       ]
                     )

@@ -28,7 +28,6 @@ type alias FormulaStep =
     { text : String
     , formula : Result Parser.Error Formula.Formula
     , next : Maybe Proof
-    , matched : Maybe Matched
     , gui : GUI
     }
 
@@ -38,7 +37,6 @@ createFormulaStep text =
     { text = text
     , formula = Formula.parse text
     , next = Nothing
-    , matched = Nothing
     , gui = { showButtons = False }
     }
 
@@ -50,8 +48,8 @@ changeFormulaStepText text formulaStep =
 
 type Explanation
     = Premise
-    | Rule
-    | Contradiction FormulaStep
+    | Rule (Maybe Matched)
+    | Contradiction (Maybe Proof)
 
 
 type Proof
@@ -77,12 +75,12 @@ addFormulaStep formulaStep proof =
         FormulaNode expl oldFormulaStep ->
             case oldFormulaStep.next of
                 Nothing ->
-                    FormulaNode expl { oldFormulaStep | next = Just <| FormulaNode Rule formulaStep }
+                    FormulaNode expl { oldFormulaStep | next = Just <| FormulaNode (Rule Nothing) formulaStep }
 
                 Just nextStep ->
                     let
                         newNext =
-                            FormulaNode Rule { formulaStep | next = Just nextStep }
+                            FormulaNode (Rule Nothing) { formulaStep | next = Just nextStep }
                     in
                     FormulaNode expl
                         { oldFormulaStep | next = Just newNext }
@@ -211,8 +209,8 @@ getStatus explanation formulaStep =
                     Premise ->
                         Ok ""
 
-                    Rule ->
-                        case formulaStep.matched of
+                    Rule maybeMatched ->
+                        case maybeMatched of
                             Nothing ->
                                 Err "Could not match for any rule"
 

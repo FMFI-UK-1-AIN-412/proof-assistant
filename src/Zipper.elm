@@ -5,6 +5,7 @@ module Zipper
         , addCases
         , changeExplanation
         , create
+        , createContradictionFirstNode
         , delete
         , down
         , downOrNothing
@@ -33,7 +34,7 @@ type alias Zipper =
 
 create : Proof.FormulaStep -> Zipper
 create formulaStep =
-    { proof = Proof.FormulaNode Proof.Rule formulaStep, breadcrumbs = [] }
+    { proof = Proof.FormulaNode (Proof.Rule Nothing) formulaStep, breadcrumbs = [] }
 
 
 changeExplanation : Proof.Explanation -> Zipper -> Zipper
@@ -93,7 +94,7 @@ enterCase1OrNothing zipper =
         Proof.CasesNode case1 case2 ->
             let
                 newProof =
-                    Proof.FormulaNode Proof.Rule case1
+                    Proof.FormulaNode (Proof.Rule Nothing) case1
 
                 breadcrumb =
                     GoCase1 case2
@@ -115,7 +116,7 @@ enterCase2OrNothing zipper =
         Proof.CasesNode case1 case2 ->
             let
                 newProof =
-                    Proof.FormulaNode Proof.Rule case2
+                    Proof.FormulaNode (Proof.Rule Nothing) case2
 
                 breadcrumb =
                     GoCase2 case1
@@ -131,6 +132,36 @@ enterCase2 zipper =
     enterCase2OrNothing zipper |> Maybe.withDefault zipper
 
 
+createContradictionFirstNode : Zipper -> Zipper
+createContradictionFirstNode zipper =
+    case zipper.proof of
+        Proof.CasesNode _ _ ->
+            zipper
+
+        Proof.FormulaNode expl formStep ->
+            case expl of
+                Proof.Premise ->
+                    zipper
+
+                Proof.Rule _ ->
+                    zipper
+
+                Proof.Contradiction conNode ->
+                    case conNode of
+                        Just _ ->
+                            zipper
+
+                        Nothing ->
+                            let
+                                wtf =
+                                    Proof.FormulaNode (Proof.Rule Nothing) (Proof.createFormulaStep "")
+
+                                newProof =
+                                    Proof.FormulaNode (Proof.Contradiction <| Just wtf) formStep
+                            in
+                            { zipper | proof = newProof }
+
+
 enterContradictionOrNothing : Zipper -> Maybe Zipper
 enterContradictionOrNothing zipper =
     case zipper.proof of
@@ -142,19 +173,20 @@ enterContradictionOrNothing zipper =
                 Proof.Premise ->
                     Nothing
 
-                Proof.Rule ->
+                Proof.Rule _ ->
                     Nothing
 
-                Proof.Contradiction contradictionFormulaStep ->
-                    let
-                        breadcrumb =
-                            GoContradiction formulaStep
+                Proof.Contradiction maybeProof ->
+                    case maybeProof of
+                        Nothing ->
+                            Nothing
 
-                        newProof =
-                            -- todo: toto treba urobit inak1!!
-                            Proof.FormulaNode Proof.Rule contradictionFormulaStep
-                    in
-                    Just { zipper | proof = newProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                        Just nextProof ->
+                            let
+                                breadcrumb =
+                                    GoContradiction formulaStep
+                            in
+                            Just { zipper | proof = nextProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
 
 
 enterContradiction : Zipper -> Zipper
@@ -202,19 +234,11 @@ upOrNothing zipper =
                             Nothing
 
                 GoContradiction formulaStep ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ tmp ->
-                            let
-                                explanation =
-                                    Proof.Contradiction tmp
-
-                                newProof =
-                                    Proof.FormulaNode explanation formulaStep
-                            in
-                            Just { zipper | proof = newProof, breadcrumbs = rest }
-
-                        Proof.CasesNode _ _ ->
-                            Nothing
+                    Just
+                        { zipper
+                            | proof = Proof.FormulaNode (Proof.Contradiction <| Just zipper.proof) formulaStep
+                            , breadcrumbs = rest
+                        }
 
         [] ->
             Nothing
@@ -324,11 +348,22 @@ match zipper =
     case zipper.proof of
         Proof.FormulaNode expl formulaStep ->
             let
+                newExpl =
+                    case expl of
+                        Proof.Rule _ ->
+                            Proof.Rule matched
+
+                        Proof.Premise ->
+                            expl
+
+                        Proof.Contradiction _ ->
+                            expl
+
                 matched =
                     callMatcher <| findFormulas zipper
 
                 newProof =
-                    Proof.FormulaNode expl { formulaStep | matched = matched }
+                    Proof.FormulaNode newExpl formulaStep
             in
             { zipper | proof = newProof }
 
