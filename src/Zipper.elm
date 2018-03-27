@@ -371,12 +371,8 @@ match zipper =
             zipper
 
 
-callMatcher : List Proof.FormulaStep -> Maybe Proof.Matched
+callMatcher : List Proof.FormulaStep -> Maybe Proof.Justification
 callMatcher formulaSteps =
-    let
-        _ =
-            Debug.log "callMatcher called" formulaSteps
-    in
     case formulaSteps of
         toProve :: from ->
             Proof.matcher toProve from

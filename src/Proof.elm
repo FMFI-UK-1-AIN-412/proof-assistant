@@ -3,7 +3,7 @@ module Proof
         ( Explanation(..)
         , FormulaStep
         , GUI
-        , Matched(..)
+        , Justification(..)
         , Proof(..)
         , addCases
         , addFormulaStep
@@ -48,7 +48,7 @@ changeFormulaStepText text formulaStep =
 
 type Explanation
     = Premise
-    | Rule (Maybe Matched)
+    | Rule (Maybe Justification)
     | Contradiction (Maybe Proof)
 
 
@@ -112,7 +112,7 @@ addCases proof =
 -- matcher
 
 
-type Matched
+type Justification
     = ModusPonens Int Int
     | Transitivity Int Int
 
@@ -140,8 +140,8 @@ flatten original =
 matchFirst :
     FormulaStep
     -> List ( FormulaStep, FormulaStep )
-    -> (FormulaStep -> FormulaStep -> FormulaStep -> Maybe Matched)
-    -> Maybe Matched
+    -> (FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification)
+    -> Maybe Justification
 matchFirst toProve fromList function =
     case fromList of
         [] ->
@@ -170,7 +170,7 @@ matchManyFunctions toProve allCombinations functions =
                     matchManyFunctions toProve allCombinations rest
 
 
-matcher : FormulaStep -> List FormulaStep -> Maybe Matched
+matcher : FormulaStep -> List FormulaStep -> Maybe Justification
 matcher toProve from =
     let
         allCombinations =
@@ -184,14 +184,14 @@ matcher toProve from =
         ]
 
 
-matcherToStr : Matched -> String
+matcherToStr : Justification -> String
 matcherToStr matched =
     case matched of
         ModusPonens index1 index2 ->
-            "Matched by: Modus Ponens from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Justification by: Modus Ponens from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Transitivity index1 index2 ->
-            "Matched by: Transitivity from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Justification by: Transitivity from formulas " ++ toString index1 ++ " and " ++ toString index2
 
 
 getStatus : Explanation -> FormulaStep -> Result String String
@@ -209,8 +209,8 @@ getStatus explanation formulaStep =
                     Premise ->
                         Ok ""
 
-                    Rule maybeMatched ->
-                        case maybeMatched of
+                    Rule maybeJustification ->
+                        case maybeJustification of
                             Nothing ->
                                 Err "Could not match for any rule"
 
@@ -227,11 +227,11 @@ getStatus explanation formulaStep =
 
 
 helper :
-    (Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Matched)
+    (Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Justification)
     -> FormulaStep
     -> FormulaStep
     -> FormulaStep
-    -> Maybe Matched
+    -> Maybe Justification
 helper func from1 from2 toProve =
     case from1.formula of
         Err _ ->
@@ -251,7 +251,7 @@ helper func from1 from2 toProve =
                             func from1OK from2OK toProveOK
 
 
-matcherModusPonensOK : Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Matched
+matcherModusPonensOK : Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Justification
 matcherModusPonensOK from1 from2 toProve =
     -- (a -> b) & (a) => (b)
     case from1 of
@@ -265,12 +265,12 @@ matcherModusPonensOK from1 from2 toProve =
             Nothing
 
 
-matcherModusPonens : FormulaStep -> FormulaStep -> FormulaStep -> Maybe Matched
+matcherModusPonens : FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
 matcherModusPonens from1 from2 toProve =
     helper matcherModusPonensOK from1 from2 toProve
 
 
-matcherTransitivityOK : Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Matched
+matcherTransitivityOK : Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Justification
 matcherTransitivityOK from1 from2 toProve =
     -- (a -> b) & (b -> c) => (a -> c)
     case from1 of
@@ -294,6 +294,6 @@ matcherTransitivityOK from1 from2 toProve =
             Nothing
 
 
-matcherTransitivity : FormulaStep -> FormulaStep -> FormulaStep -> Maybe Matched
+matcherTransitivity : FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
 matcherTransitivity from1 from2 toProve =
     helper matcherTransitivityOK from1 from2 toProve
