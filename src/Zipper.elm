@@ -13,6 +13,7 @@ module Zipper
         , enterCase1
         , enterCase2
         , enterContradiction
+        , reindexAll
         , root
         , up
         )
@@ -296,6 +297,77 @@ editValue value zipper =
     matchAll { zipper | proof = newProof }
 
 
+reindexAll : Zipper -> Zipper
+reindexAll zipper =
+    let
+        newZipper1 =
+            reindex zipper
+
+        newZipper2 =
+            case downOrNothing newZipper1 of
+                Nothing ->
+                    newZipper1
+
+                Just childrenZipper ->
+                    up (reindexAll childrenZipper)
+
+        newZipper3 =
+            case enterContradictionOrNothing newZipper2 of
+                Nothing ->
+                    newZipper2
+
+                Just childrenZipper ->
+                    up (reindexAll childrenZipper)
+
+        newZipper4 =
+            case enterCase1OrNothing newZipper3 of
+                Nothing ->
+                    newZipper3
+
+                Just childrenZipper ->
+                    up (reindexAll childrenZipper)
+
+        newZipper5 =
+            case enterCase2OrNothing newZipper4 of
+                Nothing ->
+                    newZipper4
+
+                Just childrenZipper ->
+                    up (reindexAll childrenZipper)
+    in
+    -- See, I warned you.
+    newZipper5
+
+
+reindex : Zipper -> Zipper
+reindex zipper =
+    let
+        newIndex =
+            case upOrNothing zipper of
+                Nothing ->
+                    0
+
+                Just parent ->
+                    case parent.proof of
+                        Proof.FormulaNode _ data ->
+                            data.index + 1
+
+                        -- todo: fixme!
+                        _ ->
+                            888
+
+        newProof =
+            case zipper.proof of
+                Proof.FormulaNode expl data ->
+                    Proof.FormulaNode expl { data | index = newIndex }
+
+                -- todo: fixme
+                _ ->
+                    zipper.proof
+    in
+    { zipper | proof = newProof }
+
+
 
 -- Matcher specific
 
@@ -375,7 +447,7 @@ callMatcher : List Proof.FormulaStep -> Maybe Proof.Justification
 callMatcher formulaSteps =
     case formulaSteps of
         toProve :: from ->
-            Proof.matcher toProve from
+            Proof.validator toProve from
 
         [] ->
             Nothing

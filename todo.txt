@@ -9,7 +9,5 @@ todo:
 
 
 Otazky:
-- kazdy FormulaNode by mal mat nejake ID (int), zobrazit ho ako predecessor [ANO]
-- contradiction je nejaky divny, ako by mal fungovat? [AUTOMATICKY TAM VRAZIT NEEDITOVATELNY NODE]
 - cases, ako ma fungovat? [VID SCREENSHOT]
 - ukazat nejake jednoduche dokazy co by sa mali vediet dat dokazat

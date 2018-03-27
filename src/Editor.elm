@@ -30,6 +30,8 @@ initialModel =
             |> Zipper.add (Proof.createFormulaStep "a")
             |> Zipper.down
             |> Zipper.changeExplanation Proof.Premise
+            |> Zipper.root
+            |> Zipper.reindexAll
     }
 
 
@@ -342,6 +344,7 @@ renderFormulaNode zipper explanation formulaStep =
         , validationNode
         ]
     , buttons
+    , Html.text <| toString formulaStep.index
     ]
         ++ subProof
         ++ nextNode

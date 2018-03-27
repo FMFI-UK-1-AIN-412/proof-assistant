@@ -10,12 +10,13 @@ module Proof
         , changeFormulaStepText
         , createFormulaStep
         , getStatus
-        , matcher
         , setShowButtons
+        , validator
         )
 
 import Formula
 import List.Extra
+import Maybe.Extra as MaybeExtra
 import Parser exposing (Parser)
 
 
@@ -28,6 +29,7 @@ type alias FormulaStep =
     { text : String
     , formula : Result Parser.Error Formula.Formula
     , next : Maybe Proof
+    , index : Int
     , gui : GUI
     }
 
@@ -36,6 +38,7 @@ createFormulaStep : String -> FormulaStep
 createFormulaStep text =
     { text = text
     , formula = Formula.parse text
+    , index = 0
     , next = Nothing
     , gui = { showButtons = False }
     }
@@ -112,51 +115,76 @@ addCases proof =
 -- matcher
 
 
+flatten : List ( FormulaStep, List FormulaStep ) -> List ( FormulaStep, FormulaStep )
+flatten original =
+    List.foldl (\( x, xs ) final -> List.map ((,) x) xs ++ final) [] original
+
+
 type Justification
     = ModusPonens Int Int
     | Transitivity Int Int
 
 
-flatten2 : FormulaStep -> List FormulaStep -> List ( FormulaStep, FormulaStep )
-flatten2 element list =
-    case list of
-        [] ->
-            []
-
-        first :: rest ->
-            ( element, first ) :: flatten2 element rest
+type alias Validator =
+    FormulaStep -> List FormulaStep -> Maybe Justification
 
 
-flatten : List ( FormulaStep, List FormulaStep ) -> List ( FormulaStep, FormulaStep )
-flatten original =
-    case original of
-        [] ->
-            []
-
-        first :: rest ->
-            uncurry flatten2 first ++ flatten rest
+validator : Validator
+validator step branch =
+    binaryValidator step branch
+        |> MaybeExtra.orElseLazy (\() -> unaryValidator step branch)
+        |> MaybeExtra.orElseLazy (\() -> nonaryValidator step branch)
 
 
-matchFirst :
-    FormulaStep
-    -> List ( FormulaStep, FormulaStep )
-    -> (FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification)
-    -> Maybe Justification
-matchFirst toProve fromList function =
-    case fromList of
+
+-- nonary
+
+
+nonaryValidator : Validator
+nonaryValidator step branch =
+    Nothing
+
+
+
+-- unary
+
+
+unaryValidator : Validator
+unaryValidator step branch =
+    Nothing
+
+
+
+-- binary
+
+
+binaryValidator : Validator
+binaryValidator step branch =
+    matchAnyFunctions
+        step
+        (flatten (List.Extra.select branch))
+        [ matcherModusPonensWTF
+        , matcherTransitivityWTF
+        ]
+
+
+matchFirst : FormulaStep -> List ( FormulaStep, FormulaStep ) -> BinaryMatcherHelper -> Maybe Justification
+matchFirst step branch function =
+    case branch of
         [] ->
             Nothing
 
         this :: rest ->
-            case function (Tuple.first this) (Tuple.second this) toProve of
+            case function (Tuple.first this) (Tuple.second this) step of
                 Nothing ->
-                    matchFirst toProve rest function
+                    matchFirst step rest function
 
                 Just x ->
                     Just x
 
 
-matchManyFunctions toProve allCombinations functions =
+matchAnyFunctions : FormulaStep -> List ( FormulaStep, FormulaStep ) -> List BinaryMatcherHelper -> Maybe Justification
+matchAnyFunctions toProve allCombinations functions =
     case functions of
         [] ->
             Nothing
@@ -167,21 +195,21 @@ matchManyFunctions toProve allCombinations functions =
                     Just x
 
                 Nothing ->
-                    matchManyFunctions toProve allCombinations rest
+                    matchAnyFunctions toProve allCombinations rest
 
 
-matcher : FormulaStep -> List FormulaStep -> Maybe Justification
-matcher toProve from =
-    let
-        allCombinations =
-            flatten (List.Extra.select from)
-    in
-    matchManyFunctions
-        toProve
-        allCombinations
-        [ matcherModusPonens
-        , matcherTransitivity
-        ]
+
+---
+
+
+matcherModusPonensWTF : BinaryMatcherHelper
+matcherModusPonensWTF from1 from2 toProve =
+    helper matcherModusPonens from1 from2 toProve (ModusPonens from1.index from2.index)
+
+
+matcherTransitivityWTF : BinaryMatcherHelper
+matcherTransitivityWTF from1 from2 toProve =
+    helper matcherTransitivity from1 from2 toProve (Transitivity from1.index from2.index)
 
 
 matcherToStr : Justification -> String
@@ -196,7 +224,6 @@ matcherToStr matched =
 
 getStatus : Explanation -> FormulaStep -> Result String String
 getStatus explanation formulaStep =
-    -- todo: yoyo: potrebujem tu mat aj Explanation vsak?
     if formulaStep.text == "" then
         Err <| "Formula should not be empty"
     else
@@ -226,38 +253,20 @@ getStatus explanation formulaStep =
 -- matcher implemenatations
 
 
-helper :
-    (Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Justification)
-    -> FormulaStep
-    -> FormulaStep
-    -> FormulaStep
-    -> Maybe Justification
-helper func from1 from2 toProve =
-    case from1.formula of
-        Err _ ->
-            Nothing
-
-        Ok from1OK ->
-            case from2.formula of
-                Err _ ->
-                    Nothing
-
-                Ok from2OK ->
-                    case toProve.formula of
-                        Err _ ->
-                            Nothing
-
-                        Ok toProveOK ->
-                            func from1OK from2OK toProveOK
+type alias BinaryMatcher =
+    Formula.Formula -> Formula.Formula -> Formula.Formula -> Bool
 
 
-matcherModusPonensOK : Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Justification
-matcherModusPonensOK from1 from2 toProve =
-    -- (a -> b) & (a) => (b)
-    case from1 of
-        Formula.Impl a b ->
-            if (a == from2) && (b == toProve) then
-                Just <| ModusPonens 1 2
+type alias BinaryMatcherHelper =
+    FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+
+
+helper : BinaryMatcher -> FormulaStep -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
+helper func from1 from2 toProve answer =
+    case ( from1.formula, from2.formula, toProve.formula ) of
+        ( Ok from1OK, Ok from2OK, Ok toProveOK ) ->
+            if func from1OK from2OK toProveOK then
+                Just answer
             else
                 Nothing
 
@@ -265,35 +274,23 @@ matcherModusPonensOK from1 from2 toProve =
             Nothing
 
 
-matcherModusPonens : FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+matcherModusPonens : BinaryMatcher
 matcherModusPonens from1 from2 toProve =
-    helper matcherModusPonensOK from1 from2 toProve
-
-
-matcherTransitivityOK : Formula.Formula -> Formula.Formula -> Formula.Formula -> Maybe Justification
-matcherTransitivityOK from1 from2 toProve =
-    -- (a -> b) & (b -> c) => (a -> c)
+    -- (a -> b) & (a) => (b)
     case from1 of
-        Formula.Impl a1 b1 ->
-            case from2 of
-                Formula.Impl b2 c2 ->
-                    case toProve of
-                        Formula.Impl a3 c3 ->
-                            if (a1 == a3) && (b1 == b2) && (c2 == c3) then
-                                Just <| Transitivity 1 2
-                            else
-                                Nothing
-
-                        _ ->
-                            Nothing
-
-                _ ->
-                    Nothing
+        Formula.Impl a b ->
+            (a == from2) && (b == toProve)
 
         _ ->
-            Nothing
+            False
 
 
-matcherTransitivity : FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+matcherTransitivity : BinaryMatcher
 matcherTransitivity from1 from2 toProve =
-    helper matcherTransitivityOK from1 from2 toProve
+    -- (a -> b) & (b -> c) => (a -> c)
+    case ( from1, from2, toProve ) of
+        ( Formula.Impl a1 b1, Formula.Impl b2 c2, Formula.Impl a3 c3 ) ->
+            (a1 == a3) && (b1 == b2) && (c2 == c3)
+
+        _ ->
+            False
