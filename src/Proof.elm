@@ -221,7 +221,7 @@ nullaryValidator : Validator
 nullaryValidator step branch =
     matchAnyFunctions0
         step
-        [ matcherAxiom1WTF ]
+        [ helpMe0 matcherAxiom1 Axiom ]
 
 
 matchAnyFunctions0 : FormulaStep -> List NullaryMatcherHelper -> Maybe Justification
@@ -248,8 +248,8 @@ unaryValidator step branch =
     matchAnyFunctions1
         step
         branch
-        [ matcherAdditionWTF
-        , matcherSimplificationWTF
+        [ helpMe1 matcherAddition Addition
+        , helpMe1 matcherSimplification Simplification
         ]
 
 
@@ -283,8 +283,19 @@ matchAnyFunctions1 toProve allCombinations functions =
                     matchAnyFunctions1 toProve allCombinations rest
 
 
+helpMe0 : NullaryMatcher -> Justification -> FormulaStep -> Maybe Justification
+helpMe0 matcherFunction answerFunction toProve =
+    helper0 matcherFunction toProve answerFunction
 
--- binary
+
+helpMe1 : UnaryMatcher -> (Int -> Justification) -> FormulaStep -> FormulaStep -> Maybe Justification
+helpMe1 matcherFunction answerFunction from toProve =
+    helper1 matcherFunction from toProve (answerFunction from.index)
+
+
+helpMe2 : BinaryMatcher -> (Int -> Int -> Justification) -> FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+helpMe2 matcherFunction answerFunction from1 from2 toProve =
+    helper2 matcherFunction from1 from2 toProve (answerFunction from1.index from2.index)
 
 
 binaryValidator : Validator
@@ -292,15 +303,15 @@ binaryValidator step branch =
     matchAnyFunctions2
         step
         (flatten (List.Extra.select branch))
-        [ matcherModusPonensWTF
-        , matcherModusTolensWTF
-        , matcherHypotheticalSyllogismWTF
-        , matcherConjunctionWTF
-        , matcherDisjunctiveSyllogismWTF
-        , matcherConstructiveDilemmaWTF
-        , matcherDestructiveDilemmaWTF
-        , matcherGrimaldi1WTF
-        , matcherGrimaldi2WTF
+        [ helpMe2 matcherModusPonens ModusPonens
+        , helpMe2 matcherModusTolens ModusTolens
+        , helpMe2 matcherHypotheticalSyllogism HypotheticalSyllogism
+        , helpMe2 matcherConjunction Conjuction
+        , helpMe2 matcherDisjunctiveSyllogism DisjunctiveSyllogism
+        , helpMe2 matcherConstructiveDilemma ConstructiveDilemma
+        , helpMe2 matcherDestructiveDilemma DestructiveDilemma
+        , helpMe2 matcherGrimaldi1 Grimaldi1
+        , helpMe2 matcherGrimaldi2 Grimaldi2
         ]
 
 
@@ -335,67 +346,7 @@ matchAnyFunctions2 toProve allCombinations functions =
 
 
 
----
-
-
-matcherAxiom1WTF : NullaryMatcherHelper
-matcherAxiom1WTF toProve =
-    helper0 matcherAxiom1 toProve Axiom
-
-
-matcherSimplificationWTF : UnaryMatcherHelper
-matcherSimplificationWTF from toProve =
-    helper1 matcherSimplification from toProve (Simplification from.index)
-
-
-matcherAdditionWTF : UnaryMatcherHelper
-matcherAdditionWTF from toProve =
-    helper1 matcherAddition from toProve (Addition from.index)
-
-
-matcherConjunctionWTF : BinaryMatcherHelper
-matcherConjunctionWTF from1 from2 toProve =
-    helper2 matcherConjunction from1 from2 toProve (Conjuction from1.index from2.index)
-
-
-matcherModusPonensWTF : BinaryMatcherHelper
-matcherModusPonensWTF from1 from2 toProve =
-    helper2 matcherModusPonens from1 from2 toProve (ModusPonens from1.index from2.index)
-
-
-matcherModusTolensWTF : BinaryMatcherHelper
-matcherModusTolensWTF from1 from2 toProve =
-    helper2 matcherModusTolens from1 from2 toProve (ModusTolens from1.index from2.index)
-
-
-matcherHypotheticalSyllogismWTF : BinaryMatcherHelper
-matcherHypotheticalSyllogismWTF from1 from2 toProve =
-    helper2 matcherHypotheticalSyllogism from1 from2 toProve (HypotheticalSyllogism from1.index from2.index)
-
-
-matcherDisjunctiveSyllogismWTF : BinaryMatcherHelper
-matcherDisjunctiveSyllogismWTF from1 from2 toProve =
-    helper2 matcherDisjunctiveSyllogism from1 from2 toProve (DisjunctiveSyllogism from1.index from2.index)
-
-
-matcherConstructiveDilemmaWTF : BinaryMatcherHelper
-matcherConstructiveDilemmaWTF from1 from2 toProve =
-    helper2 matcherConstructiveDilemma from1 from2 toProve (ConstructiveDilemma from1.index from2.index)
-
-
-matcherDestructiveDilemmaWTF : BinaryMatcherHelper
-matcherDestructiveDilemmaWTF from1 from2 toProve =
-    helper2 matcherDestructiveDilemma from1 from2 toProve (DestructiveDilemma from1.index from2.index)
-
-
-matcherGrimaldi1WTF : BinaryMatcherHelper
-matcherGrimaldi1WTF from1 from2 toProve =
-    helper2 matcherGrimaldi1 from1 from2 toProve (Grimaldi1 from1.index from2.index)
-
-
-matcherGrimaldi2WTF : BinaryMatcherHelper
-matcherGrimaldi2WTF from1 from2 toProve =
-    helper2 matcherGrimaldi2 from1 from2 toProve (Grimaldi2 from1.index from2.index)
+-- Showing matched or error messages
 
 
 matcherToStr : Justification -> String
