@@ -13,5 +13,5 @@ elm-package install
 ## Building
 
 ```bash
-elm-live src/Main.elm src/Zipper.elm src/Editor.elm src/Proof.elm --open --pushstate --output=elm.js
+elm-live src/Main.elm src/Zipper.elm src/Editor.elm src/Proof.elm src/Matcher.elm --open --pushstate --output=elm.js
 ```

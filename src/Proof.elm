@@ -21,6 +21,7 @@ module Proof
 
 import Formula
 import List.Extra
+import Matcher
 import Maybe.Extra as MaybeExtra
 import Parser exposing (Parser)
 
@@ -179,12 +180,7 @@ addCasesToCase2 proof =
 
 
 
--- matcher
-
-
-flatten : List ( FormulaStep, List FormulaStep ) -> List ( FormulaStep, FormulaStep )
-flatten original =
-    List.foldl (\( x, xs ) final -> List.map ((,) x) xs ++ final) [] original
+-- Matcher & Justification types
 
 
 type Justification
@@ -206,6 +202,22 @@ type alias Validator =
     FormulaStep -> List FormulaStep -> Maybe Justification
 
 
+type alias NullaryMatcherHelper =
+    FormulaStep -> Maybe Justification
+
+
+type alias UnaryMatcherHelper =
+    FormulaStep -> FormulaStep -> Maybe Justification
+
+
+type alias BinaryMatcherHelper =
+    FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+
+
+
+-- Validator logic
+
+
 validator : Validator
 validator step branch =
     binaryValidator step branch
@@ -213,34 +225,11 @@ validator step branch =
         |> MaybeExtra.orElseLazy (\() -> nullaryValidator step branch)
 
 
-
--- nullary
-
-
 nullaryValidator : Validator
 nullaryValidator step branch =
     matchAnyFunctions0
         step
-        [ helpMe0 matcherAxiom1 Axiom ]
-
-
-matchAnyFunctions0 : FormulaStep -> List NullaryMatcherHelper -> Maybe Justification
-matchAnyFunctions0 toProve functions =
-    case functions of
-        [] ->
-            Nothing
-
-        function :: rest ->
-            case function toProve of
-                Just x ->
-                    Just x
-
-                Nothing ->
-                    matchAnyFunctions0 toProve rest
-
-
-
--- unary
+        [ runValidator0 Matcher.matcherAxiom1 Axiom ]
 
 
 unaryValidator : Validator
@@ -248,101 +237,31 @@ unaryValidator step branch =
     matchAnyFunctions1
         step
         branch
-        [ helpMe1 matcherAddition Addition
-        , helpMe1 matcherSimplification Simplification
+        [ runValidator1 Matcher.matcherAddition Addition
+        , runValidator1 Matcher.matcherSimplification Simplification
         ]
-
-
-matchFirst1 : FormulaStep -> List FormulaStep -> UnaryMatcherHelper -> Maybe Justification
-matchFirst1 step branch function =
-    case branch of
-        [] ->
-            Nothing
-
-        this :: rest ->
-            case function this step of
-                Nothing ->
-                    matchFirst1 step rest function
-
-                Just x ->
-                    Just x
-
-
-matchAnyFunctions1 : FormulaStep -> List FormulaStep -> List UnaryMatcherHelper -> Maybe Justification
-matchAnyFunctions1 toProve allCombinations functions =
-    case functions of
-        [] ->
-            Nothing
-
-        function :: rest ->
-            case matchFirst1 toProve allCombinations function of
-                Just x ->
-                    Just x
-
-                Nothing ->
-                    matchAnyFunctions1 toProve allCombinations rest
-
-
-helpMe0 : NullaryMatcher -> Justification -> FormulaStep -> Maybe Justification
-helpMe0 matcherFunction answerFunction toProve =
-    helper0 matcherFunction toProve answerFunction
-
-
-helpMe1 : UnaryMatcher -> (Int -> Justification) -> FormulaStep -> FormulaStep -> Maybe Justification
-helpMe1 matcherFunction answerFunction from toProve =
-    helper1 matcherFunction from toProve (answerFunction from.index)
-
-
-helpMe2 : BinaryMatcher -> (Int -> Int -> Justification) -> FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
-helpMe2 matcherFunction answerFunction from1 from2 toProve =
-    helper2 matcherFunction from1 from2 toProve (answerFunction from1.index from2.index)
 
 
 binaryValidator : Validator
 binaryValidator step branch =
     matchAnyFunctions2
         step
-        (flatten (List.Extra.select branch))
-        [ helpMe2 matcherModusPonens ModusPonens
-        , helpMe2 matcherModusTolens ModusTolens
-        , helpMe2 matcherHypotheticalSyllogism HypotheticalSyllogism
-        , helpMe2 matcherConjunction Conjuction
-        , helpMe2 matcherDisjunctiveSyllogism DisjunctiveSyllogism
-        , helpMe2 matcherConstructiveDilemma ConstructiveDilemma
-        , helpMe2 matcherDestructiveDilemma DestructiveDilemma
-        , helpMe2 matcherGrimaldi1 Grimaldi1
-        , helpMe2 matcherGrimaldi2 Grimaldi2
+        (flatten <| List.Extra.select branch)
+        [ runValidator2 Matcher.matcherModusPonens ModusPonens
+        , runValidator2 Matcher.matcherModusTolens ModusTolens
+        , runValidator2 Matcher.matcherHypotheticalSyllogism HypotheticalSyllogism
+        , runValidator2 Matcher.matcherConjunction Conjuction
+        , runValidator2 Matcher.matcherDisjunctiveSyllogism DisjunctiveSyllogism
+        , runValidator2 Matcher.matcherConstructiveDilemma ConstructiveDilemma
+        , runValidator2 Matcher.matcherDestructiveDilemma DestructiveDilemma
+        , runValidator2 Matcher.matcherGrimaldi1 Grimaldi1
+        , runValidator2 Matcher.matcherGrimaldi2 Grimaldi2
         ]
 
 
-matchFirst2 : FormulaStep -> List ( FormulaStep, FormulaStep ) -> BinaryMatcherHelper -> Maybe Justification
-matchFirst2 step branch function =
-    case branch of
-        [] ->
-            Nothing
-
-        this :: rest ->
-            case function (Tuple.first this) (Tuple.second this) step of
-                Nothing ->
-                    matchFirst2 step rest function
-
-                Just x ->
-                    Just x
-
-
-matchAnyFunctions2 : FormulaStep -> List ( FormulaStep, FormulaStep ) -> List BinaryMatcherHelper -> Maybe Justification
-matchAnyFunctions2 toProve allCombinations functions =
-    case functions of
-        [] ->
-            Nothing
-
-        function :: rest ->
-            case matchFirst2 toProve allCombinations function of
-                Just x ->
-                    Just x
-
-                Nothing ->
-                    matchAnyFunctions2 toProve allCombinations rest
+flatten : List ( FormulaStep, List FormulaStep ) -> List ( FormulaStep, FormulaStep )
+flatten original =
+    List.foldl (\( x, xs ) final -> List.map ((,) x) xs ++ final) [] original
 
 
 
@@ -417,38 +336,105 @@ getStatus explanation formulaStep =
 
 
 
--- Matcher type aliases
+-- helpers
 
 
-type alias NullaryMatcher =
-    Formula.Formula -> Bool
+runValidator0 : Matcher.NullaryMatcher -> Justification -> FormulaStep -> Maybe Justification
+runValidator0 matcherFunction answerFunction toProve =
+    helper0 matcherFunction toProve answerFunction
 
 
-type alias NullaryMatcherHelper =
-    FormulaStep -> Maybe Justification
+runValidator1 : Matcher.UnaryMatcher -> (Int -> Justification) -> FormulaStep -> FormulaStep -> Maybe Justification
+runValidator1 matcherFunction answerFunction from toProve =
+    helper1 matcherFunction from toProve (answerFunction from.index)
 
 
-type alias UnaryMatcher =
-    Formula.Formula -> Formula.Formula -> Bool
+runValidator2 : Matcher.BinaryMatcher -> (Int -> Int -> Justification) -> FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+runValidator2 matcherFunction answerFunction from1 from2 toProve =
+    helper2 matcherFunction from1 from2 toProve (answerFunction from1.index from2.index)
 
 
-type alias UnaryMatcherHelper =
-    FormulaStep -> FormulaStep -> Maybe Justification
+matchAnyFunctions0 : FormulaStep -> List NullaryMatcherHelper -> Maybe Justification
+matchAnyFunctions0 toProve functions =
+    case functions of
+        [] ->
+            Nothing
+
+        function :: rest ->
+            case matchFirst0 toProve function of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    matchAnyFunctions0 toProve rest
 
 
-type alias BinaryMatcher =
-    Formula.Formula -> Formula.Formula -> Formula.Formula -> Bool
+matchAnyFunctions1 : FormulaStep -> List FormulaStep -> List UnaryMatcherHelper -> Maybe Justification
+matchAnyFunctions1 toProve allCombinations functions =
+    case functions of
+        [] ->
+            Nothing
+
+        function :: rest ->
+            case matchFirst1 toProve allCombinations function of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    matchAnyFunctions1 toProve allCombinations rest
 
 
-type alias BinaryMatcherHelper =
-    FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
+matchAnyFunctions2 : FormulaStep -> List ( FormulaStep, FormulaStep ) -> List BinaryMatcherHelper -> Maybe Justification
+matchAnyFunctions2 toProve allCombinations functions =
+    case functions of
+        [] ->
+            Nothing
+
+        function :: rest ->
+            case matchFirst2 toProve allCombinations function of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    matchAnyFunctions2 toProve allCombinations rest
 
 
+matchFirst0 : FormulaStep -> NullaryMatcherHelper -> Maybe Justification
+matchFirst0 step function =
+    function step
 
--- Matcher helpers
+
+matchFirst1 : FormulaStep -> List FormulaStep -> UnaryMatcherHelper -> Maybe Justification
+matchFirst1 step branch function =
+    case branch of
+        [] ->
+            Nothing
+
+        this :: rest ->
+            case function this step of
+                Nothing ->
+                    matchFirst1 step rest function
+
+                Just x ->
+                    Just x
 
 
-helper0 : NullaryMatcher -> FormulaStep -> Justification -> Maybe Justification
+matchFirst2 : FormulaStep -> List ( FormulaStep, FormulaStep ) -> BinaryMatcherHelper -> Maybe Justification
+matchFirst2 step branch function =
+    case branch of
+        [] ->
+            Nothing
+
+        this :: rest ->
+            case function (Tuple.first this) (Tuple.second this) step of
+                Nothing ->
+                    matchFirst2 step rest function
+
+                Just x ->
+                    Just x
+
+
+helper0 : Matcher.NullaryMatcher -> FormulaStep -> Justification -> Maybe Justification
 helper0 func toProve answer =
     case toProve.formula of
         Ok toProveOK ->
@@ -461,7 +447,7 @@ helper0 func toProve answer =
             Nothing
 
 
-helper1 : UnaryMatcher -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
+helper1 : Matcher.UnaryMatcher -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
 helper1 func from toProve answer =
     case ( from.formula, toProve.formula ) of
         ( Ok fromOK, Ok toProveOK ) ->
@@ -474,7 +460,7 @@ helper1 func from toProve answer =
             Nothing
 
 
-helper2 : BinaryMatcher -> FormulaStep -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
+helper2 : Matcher.BinaryMatcher -> FormulaStep -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
 helper2 func from1 from2 toProve answer =
     case ( from1.formula, from2.formula, toProve.formula ) of
         ( Ok from1OK, Ok from2OK, Ok toProveOK ) ->
@@ -485,139 +471,3 @@ helper2 func from1 from2 toProve answer =
 
         _ ->
             Nothing
-
-
-
--- Matchers
-
-
-matcherAxiom1 : NullaryMatcher
-matcherAxiom1 toProve =
-    -- (p->(q->p))
-    case toProve of
-        Formula.Impl p1 (Formula.Impl _ p2) ->
-            p1 == p2
-
-        _ ->
-            False
-
-
-matcherAddition : UnaryMatcher
-matcherAddition from toProve =
-    -- a => (a|b)
-    case toProve of
-        Formula.Disj a b ->
-            (from == a) || (from == b)
-
-        _ ->
-            False
-
-
-matcherSimplification : UnaryMatcher
-matcherSimplification from toProve =
-    -- (a & b) => (a) | (b)
-    case from of
-        Formula.Conj a b ->
-            (toProve == a) || (toProve == b)
-
-        _ ->
-            False
-
-
-matcherConjunction : BinaryMatcher
-matcherConjunction from1 from2 toProve =
-    -- (a) & (b) => (a & b)
-    case toProve of
-        Formula.Conj a b ->
-            (from1 == a) && (from2 == b)
-
-        _ ->
-            False
-
-
-matcherModusTolens : BinaryMatcher
-matcherModusTolens from1 from2 toProve =
-    -- (a -> b) & (-b) => (-a)
-    case ( from1, from2, toProve ) of
-        ( Formula.Impl a1 b1, Formula.Neg b2, Formula.Neg a2 ) ->
-            (b1 == b2) && (a1 == a2)
-
-        _ ->
-            False
-
-
-matcherModusPonens : BinaryMatcher
-matcherModusPonens from1 from2 toProve =
-    -- (a -> b) & (a) => (b)
-    case from1 of
-        Formula.Impl a b ->
-            (a == from2) && (b == toProve)
-
-        _ ->
-            False
-
-
-matcherHypotheticalSyllogism : BinaryMatcher
-matcherHypotheticalSyllogism from1 from2 toProve =
-    -- (a -> b) & (b -> c) => (a -> c)
-    case ( from1, from2, toProve ) of
-        ( Formula.Impl a1 b1, Formula.Impl b2 c2, Formula.Impl a3 c3 ) ->
-            (a1 == a3) && (b1 == b2) && (c2 == c3)
-
-        _ ->
-            False
-
-
-matcherDisjunctiveSyllogism : BinaryMatcher
-matcherDisjunctiveSyllogism from1 from2 toProve =
-    -- (p|q) & (-p) => q
-    case ( from1, from2, toProve ) of
-        ( Formula.Disj p1 q1, Formula.Neg p2, q2 ) ->
-            (p1 == p2) && (q1 == q2)
-
-        _ ->
-            False
-
-
-matcherConstructiveDilemma : BinaryMatcher
-matcherConstructiveDilemma from1 from2 toProve =
-    -- ((p->q)&(r->s)) & (p|r) => (q|s)
-    case ( from1, from2, toProve ) of
-        ( Formula.Conj (Formula.Impl p1 q1) (Formula.Impl r1 s1), Formula.Disj p2 r2, Formula.Disj q3 s3 ) ->
-            p1 == p2 && q1 == q3 && r1 == r2 && s1 == s3
-
-        _ ->
-            False
-
-
-matcherDestructiveDilemma : BinaryMatcher
-matcherDestructiveDilemma from1 from2 toProve =
-    -- ((p->q)&(r->s)) & (-q|-s) =>  (-p|-r)
-    case ( from1, from2, toProve ) of
-        ( Formula.Conj (Formula.Impl p1 q1) (Formula.Impl r1 s1), Formula.Disj (Formula.Neg q2) (Formula.Neg s2), Formula.Disj (Formula.Neg p3) (Formula.Neg r3) ) ->
-            p1 == p3 && q1 == q2 && s1 == s2 && r1 == r3
-
-        _ ->
-            False
-
-
-matcherGrimaldi1 : BinaryMatcher
-matcherGrimaldi1 from1 from2 toProve =
-    -- (-p->q) & (-p->-q) => p
-    case ( from1, from2, toProve ) of
-        ( Formula.Impl (Formula.Neg p1) q1, Formula.Impl (Formula.Neg p2) (Formula.Neg q2), p3 ) ->
-            p1 == p2 && p2 == p3 && q1 == q2
-
-        _ ->
-            False
-
-
-matcherGrimaldi2 : BinaryMatcher
-matcherGrimaldi2 from1 from2 toProve =
-    -- (p->r) & (q->r) => ((p|q)->r)
-    case ( from1, from2, toProve ) of
-        ( Formula.Impl p1 r1, Formula.Impl q1 r2, Formula.Impl (Formula.Disj p3 q3) r3 ) ->
-            p1 == p3 && r1 == r2 && r2 == r3 && q1 == q3
-
-        _ ->
-            False
