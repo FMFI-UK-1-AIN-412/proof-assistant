@@ -13,6 +13,7 @@ module Zipper
         , enterCase1
         , enterCase2
         , enterContradiction
+        , matchAll
         , reindexAll
         , root
         , up
@@ -53,7 +54,7 @@ changeExplanation explanation zipper =
 
 add : Proof.FormulaStep -> Zipper -> Zipper
 add formulaStep zipper =
-    matchAll { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
+    { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
 
 
 addCases : Zipper -> Zipper
@@ -273,14 +274,28 @@ delete zipper =
                     { child | breadcrumbs = [] }
 
         Just parent ->
-            case parent.proof of
-                Proof.FormulaNode expl formStep ->
-                    -- todo
-                    zipper
+            case downOrNothing zipper of
+                Nothing ->
+                    case parent.proof of
+                        Proof.FormulaNode expl formStep ->
+                            { parent | proof = Proof.FormulaNode expl { formStep | next = Nothing } }
 
-                Proof.CasesNode case1 case2 ->
-                    -- todo
-                    zipper
+                        Proof.CasesNode case1 case2 ->
+                            -- todo
+                            Debug.crash "WTF 1?" zipper
+
+                Just child ->
+                    case parent.proof of
+                        Proof.FormulaNode expl formStep ->
+                            let
+                                newProof =
+                                    { formStep | next = Just child.proof }
+                            in
+                            { parent | proof = Proof.FormulaNode expl newProof }
+
+                        Proof.CasesNode case1 case2 ->
+                            -- todo
+                            Debug.crash "WTF 2?" zipper
 
 
 editValue : String -> Zipper -> Zipper
@@ -294,7 +309,7 @@ editValue value zipper =
                 Proof.FormulaNode expl formulaStep ->
                     Proof.FormulaNode expl <| Proof.changeFormulaStepText value formulaStep
     in
-    matchAll { zipper | proof = newProof }
+    { zipper | proof = newProof }
 
 
 reindexAll : Zipper -> Zipper
@@ -345,7 +360,7 @@ reindex zipper =
         newIndex =
             case upOrNothing zipper of
                 Nothing ->
-                    0
+                    1
 
                 Just parent ->
                     case parent.proof of

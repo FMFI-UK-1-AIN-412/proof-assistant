@@ -193,7 +193,7 @@ innerStyle =
 
 render : Model -> Html.Html Msg
 render model =
-    renderProof <| Zipper.root model.zipper
+    renderProof <| Zipper.root <| Zipper.matchAll <| Zipper.reindexAll <| model.zipper
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
