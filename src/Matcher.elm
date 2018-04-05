@@ -1,4 +1,21 @@
-module Matcher exposing (..)
+module Matcher
+    exposing
+        ( BinaryMatcher
+        , NullaryMatcher
+        , UnaryMatcher
+        , matcherAddition
+        , matcherAxiom1
+        , matcherConjunction
+        , matcherConstructiveDilemma
+        , matcherDestructiveDilemma
+        , matcherDisjunctiveSyllogism
+        , matcherGrimaldi1
+        , matcherGrimaldi2
+        , matcherHypotheticalSyllogism
+        , matcherModusPonens
+        , matcherModusTolens
+        , matcherSimplification
+        )
 
 import Formula
 
@@ -13,10 +30,6 @@ type alias UnaryMatcher =
 
 type alias BinaryMatcher =
     Formula.Formula -> Formula.Formula -> Formula.Formula -> Bool
-
-
-
--- Matchers
 
 
 matcherAxiom1 : NullaryMatcher

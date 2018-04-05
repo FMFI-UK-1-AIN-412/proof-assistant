@@ -95,19 +95,7 @@ update msg model =
             { model | zipper = Zipper.delete zipper }
 
         ZipperShowButtons zipper value ->
-            let
-                newProofForZipper =
-                    case zipper.proof of
-                        Proof.CasesNode _ _ ->
-                            zipper.proof
-
-                        Proof.FormulaNode expl formulaStep ->
-                            Proof.FormulaNode expl (Proof.setShowButtons value formulaStep)
-
-                newZipper =
-                    { zipper | proof = newProofForZipper }
-            in
-            { model | zipper = newZipper }
+            { model | zipper = Zipper.setButtonsAppearance value zipper }
 
         ZipperCreateContradictionFirstNode zipper ->
             { model | zipper = Zipper.createContradictionFirstNode zipper }
@@ -137,14 +125,24 @@ buttonCreateContradictionFirstNode zipper =
     myButton (ZipperCreateContradictionFirstNode zipper) Button.outlineSuccess "+"
 
 
+buttonAddHelper : Msg -> Html.Html Msg
+buttonAddHelper function =
+    myButton function Button.outlineSuccess "+"
+
+
 buttonAdd : Zipper.Zipper -> Html.Html Msg
 buttonAdd zipper =
-    myButton (ZipperAdd zipper) Button.outlineSuccess "+"
+    buttonAddHelper (ZipperAdd zipper)
+
+
+buttonAddCasesHelper : Msg -> Html.Html Msg
+buttonAddCasesHelper function =
+    myButton function Button.outlineInfo "β"
 
 
 buttonAddCases : Zipper.Zipper -> Html.Html Msg
 buttonAddCases zipper =
-    myButton (ZipperAddCases zipper) Button.outlineInfo "β"
+    buttonAddCasesHelper (ZipperAddCases zipper)
 
 
 buttonExplanation : Zipper.Zipper -> String -> Proof.Explanation -> Html.Html Msg
@@ -220,7 +218,7 @@ innerStyle =
 
 render : Model -> Html.Html Msg
 render model =
-    renderProof <| Zipper.root <| Zipper.matchAll <| Zipper.reindexAll <| model.zipper
+    model.zipper |> Zipper.root |> Zipper.reindexAll |> Zipper.matchAll |> renderProof
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
@@ -238,41 +236,31 @@ renderStep zipper =
             renderCases zipper case1 case2
 
 
-renderCase :
-    Zipper.Zipper
-    -> Proof.FormulaStep
-    -> String
-    -> (Zipper.Zipper -> Zipper.Zipper)
-    -> Msg
-    -> Msg
-    -> (String -> Msg)
-    -> List (Html.Html Msg)
-renderCase zipper case_ text enterCase addCallback addBetaCallback editCallback =
-    Html.h2 [] [ Html.text text ]
-        :: [ Input.text
-                [ Input.value case_.text
-                , Input.onInput editCallback
-                ]
-           , myButton addCallback Button.outlineSuccess "+"
-           ]
-        ++ (case case_.next of
-                Just _ ->
-                    renderStep (enterCase zipper)
-
-                Nothing ->
-                    [ myButton addBetaCallback Button.outlineInfo "β" ]
-           )
-
-
 renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (Html.Html Msg)
 renderCases zipper case1 case2 =
+    let
+        renderCase selectedCase text enterCaseFunction addCallback addBetaCallback editCallback =
+            [ Html.h2 [] [ Html.text text ]
+            , Input.text
+                [ Input.value selectedCase.text
+                , Input.onInput editCallback
+                ]
+            , buttonAddHelper addCallback
+            ]
+                ++ (case selectedCase.next of
+                        Just _ ->
+                            renderStep (enterCaseFunction zipper)
+
+                        Nothing ->
+                            [ buttonAddCasesHelper addBetaCallback ]
+                   )
+    in
     [ Html.p [ Html.Attributes.class "text-right" ]
         [ Html.text "Delete the 2 cases bellow"
         , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
         ]
     , Html.div [ innerStyle ]
-        (renderCase zipper
-            case1
+        (renderCase case1
             "Case 1"
             Zipper.enterCase1
             (ZipperAddStepToCase1 zipper)
@@ -280,8 +268,7 @@ renderCases zipper case1 case2 =
             (ZipperEditCase1 zipper)
         )
     , Html.div [ innerStyle ]
-        (renderCase zipper
-            case2
+        (renderCase case2
             "Case 2"
             Zipper.enterCase2
             (ZipperAddStepToCase2 zipper)

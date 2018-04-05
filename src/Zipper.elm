@@ -22,6 +22,7 @@ module Zipper
         , matchAll
         , reindexAll
         , root
+        , setButtonsAppearance
         , up
         )
 
@@ -58,22 +59,31 @@ changeExplanation explanation zipper =
     }
 
 
+setButtonsAppearance : Bool -> Zipper -> Zipper
+setButtonsAppearance value zipper =
+    let
+        newProof =
+            case zipper.proof of
+                Proof.CasesNode _ _ ->
+                    zipper.proof
+
+                Proof.FormulaNode expl formulaStep ->
+                    Proof.FormulaNode expl (Proof.setShowButtons value formulaStep)
+    in
+    { zipper | proof = newProof }
+
+
 add : Proof.FormulaStep -> Zipper -> Zipper
 add formulaStep zipper =
     { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
 
 
+addStepToCase1 : Proof.FormulaStep -> Zipper -> Zipper
 addStepToCase1 formulaStep zipper =
-    let
-        _ =
-            Debug.log "Called" formulaStep
-
-        _ =
-            Debug.log "ANS" (Proof.addFormulaStepCase1 formulaStep zipper.proof)
-    in
     { zipper | proof = Proof.addFormulaStepCase1 formulaStep zipper.proof }
 
 
+addStepToCase2 : Proof.FormulaStep -> Zipper -> Zipper
 addStepToCase2 formulaStep zipper =
     { zipper | proof = Proof.addFormulaStepCase2 formulaStep zipper.proof }
 
