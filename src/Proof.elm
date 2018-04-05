@@ -199,6 +199,7 @@ type Justification
     | DestructiveDilemma Int Int
     | Grimaldi1 Int Int
     | Grimaldi2 Int Int
+    | Axiom
 
 
 type alias Validator =
@@ -209,16 +210,33 @@ validator : Validator
 validator step branch =
     binaryValidator step branch
         |> MaybeExtra.orElseLazy (\() -> unaryValidator step branch)
-        |> MaybeExtra.orElseLazy (\() -> nonaryValidator step branch)
+        |> MaybeExtra.orElseLazy (\() -> nullaryValidator step branch)
 
 
 
--- nonary
+-- nullary
 
 
-nonaryValidator : Validator
-nonaryValidator step branch =
-    Nothing
+nullaryValidator : Validator
+nullaryValidator step branch =
+    matchAnyFunctions0
+        step
+        [ matcherAxiom1WTF ]
+
+
+matchAnyFunctions0 : FormulaStep -> List NullaryMatcherHelper -> Maybe Justification
+matchAnyFunctions0 toProve functions =
+    case functions of
+        [] ->
+            Nothing
+
+        function :: rest ->
+            case function toProve of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    matchAnyFunctions0 toProve rest
 
 
 
@@ -320,6 +338,11 @@ matchAnyFunctions2 toProve allCombinations functions =
 ---
 
 
+matcherAxiom1WTF : NullaryMatcherHelper
+matcherAxiom1WTF toProve =
+    helper0 matcherAxiom1 toProve Axiom
+
+
 matcherSimplificationWTF : UnaryMatcherHelper
 matcherSimplificationWTF from toProve =
     helper1 matcherSimplification from toProve (Simplification from.index)
@@ -411,6 +434,9 @@ matcherToStr matched =
         Simplification index ->
             "Justification by: Simplification from formula " ++ toString index
 
+        Axiom ->
+            "Justification by: Axiom"
+
 
 getStatus : Explanation -> FormulaStep -> Result String String
 getStatus explanation formulaStep =
@@ -440,7 +466,23 @@ getStatus explanation formulaStep =
 
 
 
--- matcher implemenatations
+-- Matcher type aliases
+
+
+type alias NullaryMatcher =
+    Formula.Formula -> Bool
+
+
+type alias NullaryMatcherHelper =
+    FormulaStep -> Maybe Justification
+
+
+type alias UnaryMatcher =
+    Formula.Formula -> Formula.Formula -> Bool
+
+
+type alias UnaryMatcherHelper =
+    FormulaStep -> FormulaStep -> Maybe Justification
 
 
 type alias BinaryMatcher =
@@ -451,12 +493,21 @@ type alias BinaryMatcherHelper =
     FormulaStep -> FormulaStep -> FormulaStep -> Maybe Justification
 
 
-type alias UnaryMatcher =
-    Formula.Formula -> Formula.Formula -> Bool
+
+-- Matcher helpers
 
 
-type alias UnaryMatcherHelper =
-    FormulaStep -> FormulaStep -> Maybe Justification
+helper0 : NullaryMatcher -> FormulaStep -> Justification -> Maybe Justification
+helper0 func toProve answer =
+    case toProve.formula of
+        Ok toProveOK ->
+            if func toProveOK then
+                Just answer
+            else
+                Nothing
+
+        _ ->
+            Nothing
 
 
 helper1 : UnaryMatcher -> FormulaStep -> FormulaStep -> Justification -> Maybe Justification
@@ -483,6 +534,21 @@ helper2 func from1 from2 toProve answer =
 
         _ ->
             Nothing
+
+
+
+-- Matchers
+
+
+matcherAxiom1 : NullaryMatcher
+matcherAxiom1 toProve =
+    -- (p->(q->p))
+    case toProve of
+        Formula.Impl p1 (Formula.Impl _ p2) ->
+            p1 == p2
+
+        _ ->
+            False
 
 
 matcherAddition : UnaryMatcher
@@ -604,9 +670,3 @@ matcherGrimaldi2 from1 from2 toProve =
 
         _ ->
             False
-
-
-
--- todo: add Constructive Dilemma - https://www.tutorialspoint.com/discrete_mathematics/rules_of_inference.htm
--- todo: add Destructive Dilemma - https://www.tutorialspoint.com/discrete_mathematics/rules_of_inference.htm
--- todo: add Grimaldy - https://github.com/ZoltanOnody/proof-assistant/pull/3#issuecomment-375382616
