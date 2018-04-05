@@ -5,6 +5,8 @@ import Bootstrap.ButtonGroup as ButtonGroup
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
+import Bootstrap.Grid as Grid
+import Bootstrap.Grid.Col as Col
 import Html
 import Html.Attributes
 import Html.Events
@@ -331,22 +333,32 @@ renderFormulaNode zipper explanation formulaStep =
             else
                 ( emptyNode, Button.outlineInfo )
     in
-    [ Form.group []
-        [ inputGroup
-            |> InputGroup.successors
-                [ InputGroup.button
-                    [ inputButtonDesign
-                    , Button.onClick <| ZipperShowButtons zipper (not formulaStep.gui.showButtons)
-                    ]
-                    [ Html.text "?" ]
+    [ Grid.row []
+        [ Grid.col [ Col.sm11 ]
+            ([ Form.group []
+                [ inputGroup
+                    |> InputGroup.successors
+                        [ InputGroup.button
+                            [ inputButtonDesign
+                            , Button.onClick <| ZipperShowButtons zipper (not formulaStep.gui.showButtons)
+                            ]
+                            [ Html.text "?" ]
+                        ]
+                    |> InputGroup.view
+                , validationNode
                 ]
-            |> InputGroup.view
-        , validationNode
+             , buttons
+             ]
+                ++ subProof
+            )
+        , Grid.col
+            [ Col.sm1 ]
+            [ Html.p
+                [ Html.Attributes.style [ ( "font-size", "1.2em" ), ( "text-align", "center" ) ] ]
+                [ Html.text <| "(" ++ toString formulaStep.index ++ ")" ]
+            ]
         ]
-    , buttons
-    , Html.text <| toString formulaStep.index
     ]
-        ++ subProof
         ++ nextNode
 
 

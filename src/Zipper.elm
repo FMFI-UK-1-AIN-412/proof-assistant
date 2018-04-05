@@ -350,41 +350,41 @@ reindexAll zipper =
                 Just childrenZipper ->
                     up (reindexAll childrenZipper)
     in
-    -- See, I warned you.
     newZipper5
 
 
 reindex : Zipper -> Zipper
 reindex zipper =
-    let
-        newIndex =
-            case upOrNothing zipper of
-                Nothing ->
-                    1
-
-                Just parent ->
-                    case parent.proof of
-                        Proof.FormulaNode _ data ->
-                            data.index + 1
-
-                        -- todo: fixme!
-                        _ ->
-                            888
-
-        newProof =
+    case List.head zipper.breadcrumbs of
+        Nothing ->
             case zipper.proof of
                 Proof.FormulaNode expl data ->
-                    Proof.FormulaNode expl { data | index = newIndex }
+                    { zipper | proof = Proof.FormulaNode expl { data | index = 1 } }
 
-                -- todo: fixme
-                _ ->
-                    zipper.proof
-    in
-    { zipper | proof = newProof }
+                Proof.CasesNode case1 case2 ->
+                    { zipper | proof = Proof.CasesNode { case1 | index = 1 } { case2 | index = 2 } }
 
+        Just breadcrumb ->
+            case breadcrumb of
+                GoDown parentExpl parentFormulaStep ->
+                    case zipper.proof of
+                        Proof.FormulaNode expl formStep ->
+                            { zipper | proof = Proof.FormulaNode expl { formStep | index = parentFormulaStep.index + 1 } }
 
+                        Proof.CasesNode _ _ ->
+                            Debug.log "Not sure wether implemented correctly!" zipper
 
--- Matcher specific
+                GoCase1 formulaStep ->
+                    -- todo: fixme
+                    zipper
+
+                GoCase2 formulaStep ->
+                    -- todo: fixme
+                    zipper
+
+                GoContradiction formulaStep ->
+                    -- todo: fixme
+                    zipper
 
 
 matchAll : Zipper -> Zipper
