@@ -3,6 +3,10 @@ module Zipper
         ( Zipper
         , add
         , addCases
+        , addCasesToCase1
+        , addCasesToCase2
+        , addStepToCase1
+        , addStepToCase2
         , changeExplanation
         , create
         , createContradictionFirstNode
@@ -10,6 +14,8 @@ module Zipper
         , down
         , downOrNothing
         , editValue
+        , editValueCase1
+        , editValueCase2
         , enterCase1
         , enterCase2
         , enterContradiction
@@ -25,8 +31,8 @@ import Proof
 
 type Breadcrumb
     = GoDown Proof.Explanation Proof.FormulaStep
-    | GoCase1 Proof.FormulaStep
-    | GoCase2 Proof.FormulaStep
+    | GoCase1 Proof.FormulaStep Proof.FormulaStep
+    | GoCase2 Proof.FormulaStep Proof.FormulaStep
     | GoContradiction Proof.FormulaStep
 
 
@@ -57,9 +63,34 @@ add formulaStep zipper =
     { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
 
 
+addStepToCase1 formulaStep zipper =
+    let
+        _ =
+            Debug.log "Called" formulaStep
+
+        _ =
+            Debug.log "ANS" (Proof.addFormulaStepCase1 formulaStep zipper.proof)
+    in
+    { zipper | proof = Proof.addFormulaStepCase1 formulaStep zipper.proof }
+
+
+addStepToCase2 formulaStep zipper =
+    { zipper | proof = Proof.addFormulaStepCase2 formulaStep zipper.proof }
+
+
 addCases : Zipper -> Zipper
 addCases zipper =
     { zipper | proof = Proof.addCases zipper.proof |> Maybe.withDefault zipper.proof }
+
+
+addCasesToCase1 : Zipper -> Zipper
+addCasesToCase1 zipper =
+    { zipper | proof = Proof.addCasesToCase1 zipper.proof |> Maybe.withDefault zipper.proof }
+
+
+addCasesToCase2 : Zipper -> Zipper
+addCasesToCase2 zipper =
+    { zipper | proof = Proof.addCasesToCase1 zipper.proof |> Maybe.withDefault zipper.proof }
 
 
 downOrNothing : Zipper -> Maybe Zipper
@@ -92,16 +123,19 @@ down zipper =
 
 enterCase1OrNothing : Zipper -> Maybe Zipper
 enterCase1OrNothing zipper =
+    --Debug.log "WTF1"
     case zipper.proof of
         Proof.CasesNode case1 case2 ->
-            let
-                newProof =
-                    Proof.FormulaNode (Proof.Rule Nothing) case1
+            case case1.next of
+                Nothing ->
+                    Nothing
 
-                breadcrumb =
-                    GoCase1 case2
-            in
-            Just { zipper | proof = newProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                Just newProof ->
+                    let
+                        tmp =
+                            { case1 | next = Nothing }
+                    in
+                    Just { zipper | proof = newProof, breadcrumbs = GoCase1 tmp case2 :: zipper.breadcrumbs }
 
         Proof.FormulaNode _ _ ->
             Nothing
@@ -114,16 +148,15 @@ enterCase1 zipper =
 
 enterCase2OrNothing : Zipper -> Maybe Zipper
 enterCase2OrNothing zipper =
+    --Debug.log "WTF2"
     case zipper.proof of
         Proof.CasesNode case1 case2 ->
-            let
-                newProof =
-                    Proof.FormulaNode (Proof.Rule Nothing) case2
+            case case2.next of
+                Nothing ->
+                    Nothing
 
-                breadcrumb =
-                    GoCase2 case1
-            in
-            Just { zipper | proof = newProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                Just newProof ->
+                    Just { zipper | proof = newProof, breadcrumbs = GoCase2 case1 case2 :: zipper.breadcrumbs }
 
         Proof.FormulaNode _ _ ->
             Nothing
@@ -211,29 +244,12 @@ upOrNothing zipper =
                     in
                     Just { zipper | proof = newProof, breadcrumbs = rest }
 
-                GoCase1 step2 ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ step1 ->
-                            let
-                                newProof =
-                                    Proof.CasesNode step1 step2
-                            in
-                            Just { zipper | proof = newProof, breadcrumbs = rest }
+                GoCase1 step1 step2 ->
+                    Just { zipper | proof = Proof.CasesNode { step1 | next = Just zipper.proof } step2, breadcrumbs = rest }
 
-                        Proof.CasesNode _ _ ->
-                            Nothing
-
-                GoCase2 step1 ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ step2 ->
-                            let
-                                newProof =
-                                    Proof.CasesNode step1 step2
-                            in
-                            Just { zipper | proof = newProof, breadcrumbs = rest }
-
-                        Proof.CasesNode _ _ ->
-                            Nothing
+                GoCase2 step1 step2 ->
+                    -- todo: fixme?
+                    Just { zipper | proof = Proof.CasesNode step1 step2, breadcrumbs = rest }
 
                 GoContradiction formulaStep ->
                     Just
@@ -312,6 +328,34 @@ editValue value zipper =
     { zipper | proof = newProof }
 
 
+editValueCase1 : String -> Zipper -> Zipper
+editValueCase1 value zipper =
+    let
+        newProof =
+            case zipper.proof of
+                Proof.CasesNode case1 case2 ->
+                    Proof.CasesNode (Proof.changeFormulaStepText value case1) case2
+
+                Proof.FormulaNode _ _ ->
+                    zipper.proof
+    in
+    { zipper | proof = newProof }
+
+
+editValueCase2 : String -> Zipper -> Zipper
+editValueCase2 value zipper =
+    let
+        newProof =
+            case zipper.proof of
+                Proof.CasesNode case1 case2 ->
+                    Proof.CasesNode case1 (Proof.changeFormulaStepText value case2)
+
+                Proof.FormulaNode _ _ ->
+                    zipper.proof
+    in
+    { zipper | proof = newProof }
+
+
 reindexAll : Zipper -> Zipper
 reindexAll zipper =
     let
@@ -374,11 +418,11 @@ reindex zipper =
                         Proof.CasesNode _ _ ->
                             Debug.log "Not sure wether implemented correctly!" zipper
 
-                GoCase1 formulaStep ->
+                GoCase1 _ formulaStep ->
                     -- todo: fixme
                     zipper
 
-                GoCase2 formulaStep ->
+                GoCase2 formulaStep _ ->
                     -- todo: fixme
                     zipper
 

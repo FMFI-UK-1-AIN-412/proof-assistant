@@ -32,8 +32,9 @@ initialModel =
             |> Zipper.add (Proof.createFormulaStep "a")
             |> Zipper.down
             |> Zipper.changeExplanation Proof.Premise
+            |> Zipper.down
+            |> Zipper.addCases
             |> Zipper.root
-            |> Zipper.reindexAll
     }
 
 
@@ -43,12 +44,18 @@ initialModel =
 
 type Msg
     = ZipperEdit Zipper.Zipper String
+    | ZipperEditCase1 Zipper.Zipper String
+    | ZipperEditCase2 Zipper.Zipper String
     | ZipperAdd Zipper.Zipper
     | ZipperAddCases Zipper.Zipper
     | ZipperExplanation Zipper.Zipper Proof.Explanation
     | ZipperDelete Zipper.Zipper
     | ZipperShowButtons Zipper.Zipper Bool
     | ZipperCreateContradictionFirstNode Zipper.Zipper
+    | ZipperAddStepToCase1 Zipper.Zipper
+    | ZipperAddStepToCase2 Zipper.Zipper
+    | ZipperAddBetaStepToCase1 Zipper.Zipper
+    | ZipperAddBetaStepToCase2 Zipper.Zipper
 
 
 update : Msg -> Model -> Model
@@ -57,8 +64,26 @@ update msg model =
         ZipperEdit zipper value ->
             { model | zipper = Zipper.editValue value zipper }
 
+        ZipperEditCase1 zipper value ->
+            { model | zipper = Zipper.editValueCase1 value zipper }
+
+        ZipperEditCase2 zipper value ->
+            { model | zipper = Zipper.editValueCase2 value zipper }
+
         ZipperAdd zipper ->
             { model | zipper = Zipper.add (Proof.createFormulaStep "") zipper }
+
+        ZipperAddStepToCase1 zipper ->
+            { model | zipper = Zipper.addStepToCase1 (Proof.createFormulaStep "") zipper }
+
+        ZipperAddStepToCase2 zipper ->
+            { model | zipper = Zipper.addStepToCase2 (Proof.createFormulaStep "") zipper }
+
+        ZipperAddBetaStepToCase1 zipper ->
+            { model | zipper = Zipper.addCasesToCase1 zipper }
+
+        ZipperAddBetaStepToCase2 zipper ->
+            { model | zipper = Zipper.addCasesToCase2 zipper }
 
         ZipperAddCases zipper ->
             { model | zipper = Zipper.addCases zipper }
@@ -213,6 +238,32 @@ renderStep zipper =
             renderCases zipper case1 case2
 
 
+renderCase :
+    Zipper.Zipper
+    -> Proof.FormulaStep
+    -> String
+    -> (Zipper.Zipper -> Zipper.Zipper)
+    -> Msg
+    -> Msg
+    -> (String -> Msg)
+    -> List (Html.Html Msg)
+renderCase zipper case_ text enterCase addCallback addBetaCallback editCallback =
+    Html.h2 [] [ Html.text text ]
+        :: [ Input.text
+                [ Input.value case_.text
+                , Input.onInput editCallback
+                ]
+           , myButton addCallback Button.outlineSuccess "+"
+           ]
+        ++ (case case_.next of
+                Just _ ->
+                    renderStep (enterCase zipper)
+
+                Nothing ->
+                    [ myButton addBetaCallback Button.outlineInfo "β" ]
+           )
+
+
 renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (Html.Html Msg)
 renderCases zipper case1 case2 =
     [ Html.p [ Html.Attributes.class "text-right" ]
@@ -220,12 +271,22 @@ renderCases zipper case1 case2 =
         , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
         ]
     , Html.div [ innerStyle ]
-        (Html.h2 [] [ Html.text "Case 1" ]
-            :: renderStep (Zipper.enterCase1 zipper)
+        (renderCase zipper
+            case1
+            "Case 1"
+            Zipper.enterCase1
+            (ZipperAddStepToCase1 zipper)
+            (ZipperAddBetaStepToCase1 zipper)
+            (ZipperEditCase1 zipper)
         )
     , Html.div [ innerStyle ]
-        (Html.h2 [] [ Html.text "Case 2" ]
-            :: renderStep (Zipper.enterCase2 zipper)
+        (renderCase zipper
+            case2
+            "Case 2"
+            Zipper.enterCase2
+            (ZipperAddStepToCase2 zipper)
+            (ZipperAddBetaStepToCase2 zipper)
+            (ZipperEditCase2 zipper)
         )
     ]
 

@@ -6,7 +6,12 @@ module Proof
         , Justification(..)
         , Proof(..)
         , addCases
+        , addCasesToCase1
+        , addCasesToCase2
         , addFormulaStep
+        , addFormulaStepCase1
+        , addFormulaStepCase2
+        , addFormulaStepToFromulaStep
         , changeFormulaStepText
         , createFormulaStep
         , getStatus
@@ -72,24 +77,48 @@ setShowButtons bool formulaStep =
     { formulaStep | gui = newGui }
 
 
+addFormulaStepToFromulaStep : FormulaStep -> FormulaStep -> FormulaStep
+addFormulaStepToFromulaStep toAdd original =
+    case original.next of
+        Nothing ->
+            { original | next = Just <| FormulaNode (Rule Nothing) toAdd }
+
+        Just nextStep ->
+            let
+                newNext =
+                    FormulaNode (Rule Nothing) { toAdd | next = Just nextStep }
+            in
+            { original | next = Just newNext }
+
+
 addFormulaStep : FormulaStep -> Proof -> Proof
 addFormulaStep formulaStep proof =
     case proof of
         FormulaNode expl oldFormulaStep ->
-            case oldFormulaStep.next of
-                Nothing ->
-                    FormulaNode expl { oldFormulaStep | next = Just <| FormulaNode (Rule Nothing) formulaStep }
-
-                Just nextStep ->
-                    let
-                        newNext =
-                            FormulaNode (Rule Nothing) { formulaStep | next = Just nextStep }
-                    in
-                    FormulaNode expl
-                        { oldFormulaStep | next = Just newNext }
+            FormulaNode expl (addFormulaStepToFromulaStep formulaStep oldFormulaStep)
 
         CasesNode _ _ ->
             proof
+
+
+addFormulaStepCase1 : FormulaStep -> Proof -> Proof
+addFormulaStepCase1 formulaStep proof =
+    case proof of
+        FormulaNode _ _ ->
+            proof
+
+        CasesNode case1 case2 ->
+            CasesNode (addFormulaStepToFromulaStep formulaStep case1) case2
+
+
+addFormulaStepCase2 : FormulaStep -> Proof -> Proof
+addFormulaStepCase2 formulaStep proof =
+    case proof of
+        FormulaNode _ _ ->
+            proof
+
+        CasesNode case1 case2 ->
+            CasesNode case1 (addFormulaStepToFromulaStep formulaStep case2)
 
 
 addCases : Proof -> Maybe Proof
@@ -109,6 +138,44 @@ addCases proof =
 
         CasesNode _ _ ->
             Nothing
+
+
+addCasesToCase1 : Proof -> Maybe Proof
+addCasesToCase1 proof =
+    case proof of
+        FormulaNode _ _ ->
+            Nothing
+
+        CasesNode case1 case2 ->
+            case case1.next of
+                Just _ ->
+                    Nothing
+
+                Nothing ->
+                    let
+                        newCase1 =
+                            { case1 | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
+                    in
+                    Just <| CasesNode newCase1 case2
+
+
+addCasesToCase2 : Proof -> Maybe Proof
+addCasesToCase2 proof =
+    case proof of
+        FormulaNode _ _ ->
+            Nothing
+
+        CasesNode case1 case2 ->
+            case case2.next of
+                Just _ ->
+                    Nothing
+
+                Nothing ->
+                    let
+                        newCase2 =
+                            { case2 | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
+                    in
+                    Just <| CasesNode case1 newCase2
 
 
 
