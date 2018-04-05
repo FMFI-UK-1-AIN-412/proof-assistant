@@ -195,6 +195,10 @@ type Justification
     | DisjunctiveSyllogism Int Int
     | Addition Int
     | Simplification Int
+    | ConstructiveDilemma Int Int
+    | DestructiveDilemma Int Int
+    | Grimaldi1 Int Int
+    | Grimaldi2 Int Int
 
 
 type alias Validator =
@@ -275,6 +279,10 @@ binaryValidator step branch =
         , matcherHypotheticalSyllogismWTF
         , matcherConjunctionWTF
         , matcherDisjunctiveSyllogismWTF
+        , matcherConstructiveDilemmaWTF
+        , matcherDestructiveDilemmaWTF
+        , matcherGrimaldi1WTF
+        , matcherGrimaldi2WTF
         ]
 
 
@@ -347,6 +355,26 @@ matcherDisjunctiveSyllogismWTF from1 from2 toProve =
     helper2 matcherDisjunctiveSyllogism from1 from2 toProve (DisjunctiveSyllogism from1.index from2.index)
 
 
+matcherConstructiveDilemmaWTF : BinaryMatcherHelper
+matcherConstructiveDilemmaWTF from1 from2 toProve =
+    helper2 matcherConstructiveDilemma from1 from2 toProve (ConstructiveDilemma from1.index from2.index)
+
+
+matcherDestructiveDilemmaWTF : BinaryMatcherHelper
+matcherDestructiveDilemmaWTF from1 from2 toProve =
+    helper2 matcherDestructiveDilemma from1 from2 toProve (DestructiveDilemma from1.index from2.index)
+
+
+matcherGrimaldi1WTF : BinaryMatcherHelper
+matcherGrimaldi1WTF from1 from2 toProve =
+    helper2 matcherGrimaldi1 from1 from2 toProve (Grimaldi1 from1.index from2.index)
+
+
+matcherGrimaldi2WTF : BinaryMatcherHelper
+matcherGrimaldi2WTF from1 from2 toProve =
+    helper2 matcherGrimaldi2 from1 from2 toProve (Grimaldi2 from1.index from2.index)
+
+
 matcherToStr : Justification -> String
 matcherToStr matched =
     case matched of
@@ -364,6 +392,18 @@ matcherToStr matched =
 
         DisjunctiveSyllogism index1 index2 ->
             "Justification by: Disjunctive Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        ConstructiveDilemma index1 index2 ->
+            "Justification by: Constructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        DestructiveDilemma index1 index2 ->
+            "Justification by: Destructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        Grimaldi1 index1 index2 ->
+            "Justification by: Grimaldi1 from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+        Grimaldi2 index1 index2 ->
+            "Justification by: Grimaldi2 from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Addition index ->
             "Justification by: Addition from formula " ++ toString index
@@ -517,6 +557,50 @@ matcherDisjunctiveSyllogism from1 from2 toProve =
     case ( from1, from2, toProve ) of
         ( Formula.Disj p1 q1, Formula.Neg p2, q2 ) ->
             (p1 == p2) && (q1 == q2)
+
+        _ ->
+            False
+
+
+matcherConstructiveDilemma : BinaryMatcher
+matcherConstructiveDilemma from1 from2 toProve =
+    -- ((p->q)&(r->s)) & (p|r) => (q|s)
+    case ( from1, from2, toProve ) of
+        ( Formula.Conj (Formula.Impl p1 q1) (Formula.Impl r1 s1), Formula.Disj p2 r2, Formula.Disj q3 s3 ) ->
+            p1 == p2 && q1 == q3 && r1 == r2 && s1 == s3
+
+        _ ->
+            False
+
+
+matcherDestructiveDilemma : BinaryMatcher
+matcherDestructiveDilemma from1 from2 toProve =
+    -- ((p->q)&(r->s)) & (-q|-s) =>  (-p|-r)
+    case ( from1, from2, toProve ) of
+        ( Formula.Conj (Formula.Impl p1 q1) (Formula.Impl r1 s1), Formula.Disj (Formula.Neg q2) (Formula.Neg s2), Formula.Disj (Formula.Neg p3) (Formula.Neg r3) ) ->
+            p1 == p3 && q1 == q2 && s1 == s2 && r1 == r3
+
+        _ ->
+            False
+
+
+matcherGrimaldi1 : BinaryMatcher
+matcherGrimaldi1 from1 from2 toProve =
+    -- (-p->q) & (-p->-q) => p
+    case ( from1, from2, toProve ) of
+        ( Formula.Impl (Formula.Neg p1) q1, Formula.Impl (Formula.Neg p2) (Formula.Neg q2), p3 ) ->
+            p1 == p2 && p2 == p3 && q1 == q2
+
+        _ ->
+            False
+
+
+matcherGrimaldi2 : BinaryMatcher
+matcherGrimaldi2 from1 from2 toProve =
+    -- (p->r) & (q->r) => ((p|q)->r)
+    case ( from1, from2, toProve ) of
+        ( Formula.Impl p1 r1, Formula.Impl q1 r2, Formula.Impl (Formula.Disj p3 q3) r3 ) ->
+            p1 == p3 && r1 == r2 && r2 == r3 && q1 == q3
 
         _ ->
             False
