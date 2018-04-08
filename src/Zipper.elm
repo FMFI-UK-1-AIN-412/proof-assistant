@@ -100,7 +100,7 @@ addCasesToCase1 zipper =
 
 addCasesToCase2 : Zipper -> Zipper
 addCasesToCase2 zipper =
-    { zipper | proof = Proof.addCasesToCase1 zipper.proof |> Maybe.withDefault zipper.proof }
+    { zipper | proof = Proof.addCasesToCase2 zipper.proof |> Maybe.withDefault zipper.proof }
 
 
 downOrNothing : Zipper -> Maybe Zipper
@@ -249,8 +249,7 @@ upOrNothing zipper =
                     Just { zipper | proof = Proof.CasesNode { step1 | next = Just zipper.proof } step2, breadcrumbs = rest }
 
                 GoCase2 step1 step2 ->
-                    -- todo: fixme?
-                    Just { zipper | proof = Proof.CasesNode step1 step2, breadcrumbs = rest }
+                    Just { zipper | proof = Proof.CasesNode step1 { step2 | next = Just zipper.proof }, breadcrumbs = rest }
 
                 GoContradiction formulaStep ->
                     Just
@@ -280,8 +279,8 @@ root zipper =
 
 delete : Zipper -> Zipper
 delete zipper =
-    case List.head zipper.breadcrumbs of
-        Nothing ->
+    case zipper.breadcrumbs of
+        [] ->
             case downOrNothing zipper of
                 Nothing ->
                     create <| Proof.createFormulaStep ""
@@ -289,27 +288,55 @@ delete zipper =
                 Just child ->
                     { child | breadcrumbs = [] }
 
-        Just breadcrumb ->
-            --case downOrNothing zipper of
-            --    Nothing ->
-            --        case parent.proof of
-            --            Proof.FormulaNode expl formStep ->
-            --                { parent | proof = Proof.FormulaNode expl { formStep | next = Nothing } }
-            --            Proof.CasesNode case1 case2 ->
-            --                -- todo
-            --                Debug.crash "WTF 1?" zipper
-            --    Just child ->
-            --        case parent.proof of
-            --            Proof.FormulaNode expl formStep ->
-            --                let
-            --                    newProof =
-            --                        { formStep | next = Just child.proof }
-            --                in
-            --                { parent | proof = Proof.FormulaNode expl newProof }
-            --            Proof.CasesNode case1 case2 ->
-            --                -- todo
-            --                Debug.crash "WTF 2?" zipper
-            Debug.crash "" zipper
+        breadcrumb :: rest ->
+            case breadcrumb of
+                GoDown parentExpl parentFormulaStep ->
+                    case zipper.proof of
+                        Proof.FormulaNode _ data ->
+                            { proof = Proof.FormulaNode parentExpl { parentFormulaStep | next = data.next }
+                            , breadcrumbs = rest
+                            }
+
+                        Proof.CasesNode _ _ ->
+                            { proof = Proof.FormulaNode parentExpl { parentFormulaStep | next = Nothing }
+                            , breadcrumbs = rest
+                            }
+
+                GoCase1 case1 case2 ->
+                    case zipper.proof of
+                        Proof.FormulaNode _ data ->
+                            { proof = Proof.CasesNode { case1 | next = data.next } case2
+                            , breadcrumbs = rest
+                            }
+
+                        Proof.CasesNode _ _ ->
+                            { proof = Proof.CasesNode { case1 | next = Nothing } case2
+                            , breadcrumbs = rest
+                            }
+
+                GoCase2 case1 case2 ->
+                    case zipper.proof of
+                        Proof.FormulaNode _ data ->
+                            { proof = Proof.CasesNode case1 { case2 | next = data.next }
+                            , breadcrumbs = rest
+                            }
+
+                        Proof.CasesNode _ _ ->
+                            { proof = Proof.CasesNode case1 { case2 | next = Nothing }
+                            , breadcrumbs = rest
+                            }
+
+                GoContradiction parentFormulaStep ->
+                    case zipper.proof of
+                        Proof.FormulaNode _ data ->
+                            { proof = Proof.FormulaNode (Proof.Contradiction data.next) parentFormulaStep
+                            , breadcrumbs = rest
+                            }
+
+                        Proof.CasesNode _ _ ->
+                            { proof = Proof.FormulaNode (Proof.Contradiction Nothing) parentFormulaStep
+                            , breadcrumbs = rest
+                            }
 
 
 editValue : String -> Zipper -> Zipper
