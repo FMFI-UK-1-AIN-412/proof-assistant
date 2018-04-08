@@ -1,0 +1,20 @@
+.button-list {
+	margin-bottom: 20px;
+	margin-top: -10px;
+}
+
+.inner-style {
+	border: 1px solid #cfcfcf;
+	padding: 20px 20px 20px 30px;
+	box-shadow: 0 0 5px #cfcfcf;
+	margin-bottom: 20px;
+}
+
+.block {
+	display: block;
+}
+
+.index-text {
+	font-size: 1.2em;
+	text-align: center;
+}

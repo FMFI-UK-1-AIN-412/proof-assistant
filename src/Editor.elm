@@ -189,27 +189,20 @@ explanationButtons zipper explanation =
 buttonsList : Zipper.Zipper -> Proof.Explanation -> Bool -> Html.Html Msg
 buttonsList zipper explanation includeCasesButton =
     let
+        casesButton =
+            if includeCasesButton then
+                buttonAddCases zipper
+            else
+                emptyNode
+
         buttons =
             [ buttonAdd zipper
-            , if includeCasesButton then
-                buttonAddCases zipper
-              else
-                emptyNode
+            , casesButton
             , buttonDelete zipper
             ]
                 ++ explanationButtons zipper explanation
     in
-    Html.div [ Html.Attributes.style [ ( "margin-bottom", "20px" ), ( "margin-top", "-10px" ) ] ] buttons
-
-
-innerStyle : Html.Attribute Msg
-innerStyle =
-    Html.Attributes.style
-        [ ( "border", "1px solid #cfcfcf" )
-        , ( "padding", "20px 20px 20px 30px" )
-        , ( "box-shadow", "0 0 5px #cfcfcf" )
-        , ( "margin-bottom", "20px" )
-        ]
+    Html.div [ Html.Attributes.class "button-list" ] buttons
 
 
 
@@ -259,7 +252,7 @@ renderCases zipper case1 case2 =
         [ Html.text "Delete the 2 cases bellow"
         , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
         ]
-    , Html.div [ innerStyle ]
+    , Html.div [ Html.Attributes.class "inner-style" ]
         (renderCase case1
             "Case 1"
             Zipper.enterCase1
@@ -267,7 +260,7 @@ renderCases zipper case1 case2 =
             (ZipperAddBetaStepToCase1 zipper)
             (ZipperEditCase1 zipper)
         )
-    , Html.div [ innerStyle ]
+    , Html.div [ Html.Attributes.class "inner-style" ]
         (renderCase case2
             "Case 2"
             Zipper.enterCase2
@@ -282,7 +275,7 @@ validationNode : String -> String -> Html.Html Msg
 validationNode text class =
     Html.div
         [ Html.Attributes.class class
-        , Html.Attributes.style [ ( "display", "block" ) ]
+        , Html.Attributes.class "block"
         ]
         [ Html.text text ]
 
@@ -354,7 +347,7 @@ renderFormulaNode zipper explanation formulaStep =
                             , Input.value formulaStep.text
                             ]
                         )
-                    , [ Html.div [ innerStyle ]
+                    , [ Html.div [ Html.Attributes.class "inner-style" ]
                             ([ Html.h2 [] [ Html.text "Prove" ]
                              , Input.text
                                 [ Input.disabled True
@@ -402,7 +395,7 @@ renderFormulaNode zipper explanation formulaStep =
         , Grid.col
             [ Col.sm1 ]
             [ Html.p
-                [ Html.Attributes.style [ ( "font-size", "1.2em" ), ( "text-align", "center" ) ] ]
+                [ Html.Attributes.class "index-text" ]
                 [ Html.text <| "(" ++ toString formulaStep.index ++ ")" ]
             ]
         ]

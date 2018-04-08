@@ -107,20 +107,14 @@ downOrNothing : Zipper -> Maybe Zipper
 downOrNothing zipper =
     case zipper.proof of
         Proof.FormulaNode exp nextStep ->
-            case nextStep.next of
-                Just nextProof ->
-                    let
-                        breadcrumb =
-                            GoDown exp { nextStep | next = Nothing }
-                    in
-                    Just
-                        { zipper
-                            | proof = nextProof
-                            , breadcrumbs = breadcrumb :: zipper.breadcrumbs
-                        }
-
-                Nothing ->
-                    Nothing
+            Maybe.map
+                (\nextProof ->
+                    { zipper
+                        | proof = nextProof
+                        , breadcrumbs = GoDown exp { nextStep | next = Nothing } :: zipper.breadcrumbs
+                    }
+                )
+                nextStep.next
 
         Proof.CasesNode _ _ ->
             Nothing
@@ -133,19 +127,16 @@ down zipper =
 
 enterCase1OrNothing : Zipper -> Maybe Zipper
 enterCase1OrNothing zipper =
-    --Debug.log "WTF1"
     case zipper.proof of
         Proof.CasesNode case1 case2 ->
-            case case1.next of
-                Nothing ->
-                    Nothing
-
-                Just newProof ->
-                    let
-                        tmp =
-                            { case1 | next = Nothing }
-                    in
-                    Just { zipper | proof = newProof, breadcrumbs = GoCase1 tmp case2 :: zipper.breadcrumbs }
+            Maybe.map
+                (\newProof ->
+                    { zipper
+                        | proof = newProof
+                        , breadcrumbs = GoCase1 { case1 | next = Nothing } case2 :: zipper.breadcrumbs
+                    }
+                )
+                case1.next
 
         Proof.FormulaNode _ _ ->
             Nothing
@@ -158,15 +149,16 @@ enterCase1 zipper =
 
 enterCase2OrNothing : Zipper -> Maybe Zipper
 enterCase2OrNothing zipper =
-    --Debug.log "WTF2"
     case zipper.proof of
         Proof.CasesNode case1 case2 ->
-            case case2.next of
-                Nothing ->
-                    Nothing
-
-                Just newProof ->
-                    Just { zipper | proof = newProof, breadcrumbs = GoCase2 case1 case2 :: zipper.breadcrumbs }
+            Maybe.map
+                (\newProof ->
+                    { zipper
+                        | proof = newProof
+                        , breadcrumbs = GoCase2 case1 { case2 | next = Nothing } :: zipper.breadcrumbs
+                    }
+                )
+                case2.next
 
         Proof.FormulaNode _ _ ->
             Nothing
@@ -222,16 +214,15 @@ enterContradictionOrNothing zipper =
                     Nothing
 
                 Proof.Contradiction maybeProof ->
-                    case maybeProof of
-                        Nothing ->
-                            Nothing
-
-                        Just nextProof ->
+                    Maybe.map
+                        (\nextProof ->
                             let
                                 breadcrumb =
                                     GoContradiction formulaStep
                             in
-                            Just { zipper | proof = nextProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                            { zipper | proof = nextProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                        )
+                        maybeProof
 
 
 enterContradiction : Zipper -> Zipper
@@ -289,8 +280,7 @@ root zipper =
 
 delete : Zipper -> Zipper
 delete zipper =
-    -- todo: this is not implemented! finish it!
-    case upOrNothing zipper of
+    case List.head zipper.breadcrumbs of
         Nothing ->
             case downOrNothing zipper of
                 Nothing ->
@@ -299,29 +289,27 @@ delete zipper =
                 Just child ->
                     { child | breadcrumbs = [] }
 
-        Just parent ->
-            case downOrNothing zipper of
-                Nothing ->
-                    case parent.proof of
-                        Proof.FormulaNode expl formStep ->
-                            { parent | proof = Proof.FormulaNode expl { formStep | next = Nothing } }
-
-                        Proof.CasesNode case1 case2 ->
-                            -- todo
-                            Debug.crash "WTF 1?" zipper
-
-                Just child ->
-                    case parent.proof of
-                        Proof.FormulaNode expl formStep ->
-                            let
-                                newProof =
-                                    { formStep | next = Just child.proof }
-                            in
-                            { parent | proof = Proof.FormulaNode expl newProof }
-
-                        Proof.CasesNode case1 case2 ->
-                            -- todo
-                            Debug.crash "WTF 2?" zipper
+        Just breadcrumb ->
+            --case downOrNothing zipper of
+            --    Nothing ->
+            --        case parent.proof of
+            --            Proof.FormulaNode expl formStep ->
+            --                { parent | proof = Proof.FormulaNode expl { formStep | next = Nothing } }
+            --            Proof.CasesNode case1 case2 ->
+            --                -- todo
+            --                Debug.crash "WTF 1?" zipper
+            --    Just child ->
+            --        case parent.proof of
+            --            Proof.FormulaNode expl formStep ->
+            --                let
+            --                    newProof =
+            --                        { formStep | next = Just child.proof }
+            --                in
+            --                { parent | proof = Proof.FormulaNode expl newProof }
+            --            Proof.CasesNode case1 case2 ->
+            --                -- todo
+            --                Debug.crash "WTF 2?" zipper
+            Debug.crash "" zipper
 
 
 editValue : String -> Zipper -> Zipper
