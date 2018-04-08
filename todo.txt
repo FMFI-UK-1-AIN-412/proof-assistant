@@ -1,11 +1,5 @@
-mat 2 verzie 
-1) automat
-2) vyber co chcem matchnut
-
-
-
 todo:
-- fix delete nodes
+- indexing...
 
 
 Otazky:

@@ -190,6 +190,7 @@ type Justification
     | Conjuction Int Int
     | DisjunctiveSyllogism Int Int
     | Addition Int
+    | SameFormula Int
     | Simplification Int
     | ConstructiveDilemma Int Int
     | DestructiveDilemma Int Int
@@ -239,6 +240,7 @@ unaryValidator step branch =
         branch
         [ runValidator1 Matcher.matcherAddition Addition
         , runValidator1 Matcher.matcherSimplification Simplification
+        , runValidator1 Matcher.matcherSameFormula SameFormula
         ]
 
 
@@ -303,6 +305,9 @@ matcherToStr matched =
 
         Simplification index ->
             "Justification by: Simplification from formula " ++ toString index
+
+        SameFormula index ->
+            "This formula alredy appears on step " ++ toString index
 
         Axiom ->
             "Justification by: Axiom"

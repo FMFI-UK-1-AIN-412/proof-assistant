@@ -9,7 +9,8 @@ module Zipper
         , addStepToCase2
         , changeExplanation
         , create
-        , createContradictionFirstNode
+        , createContradictionCasesNode
+        , createContradictionFormulaNode
         , delete
         , down
         , downOrNothing
@@ -169,8 +170,8 @@ enterCase2 zipper =
     enterCase2OrNothing zipper |> Maybe.withDefault zipper
 
 
-createContradictionFirstNode : Zipper -> Zipper
-createContradictionFirstNode zipper =
+createContradictionNodeHelper : Proof.Proof -> Zipper -> Zipper
+createContradictionNodeHelper node zipper =
     case zipper.proof of
         Proof.CasesNode _ _ ->
             zipper
@@ -189,14 +190,25 @@ createContradictionFirstNode zipper =
                             zipper
 
                         Nothing ->
-                            let
-                                wtf =
-                                    Proof.FormulaNode (Proof.Rule Nothing) (Proof.createFormulaStep "")
+                            { zipper | proof = Proof.FormulaNode (Proof.Contradiction <| Just node) formStep }
 
-                                newProof =
-                                    Proof.FormulaNode (Proof.Contradiction <| Just wtf) formStep
-                            in
-                            { zipper | proof = newProof }
+
+createContradictionFormulaNode : Zipper -> Zipper
+createContradictionFormulaNode zipper =
+    let
+        node =
+            Proof.FormulaNode (Proof.Rule Nothing) (Proof.createFormulaStep "")
+    in
+    createContradictionNodeHelper node zipper
+
+
+createContradictionCasesNode : Zipper -> Zipper
+createContradictionCasesNode zipper =
+    let
+        node =
+            Proof.CasesNode (Proof.createFormulaStep "") (Proof.createFormulaStep "")
+    in
+    createContradictionNodeHelper node zipper
 
 
 enterContradictionOrNothing : Zipper -> Maybe Zipper
@@ -236,14 +248,7 @@ upOrNothing zipper =
         breadcrumb :: rest ->
             case breadcrumb of
                 GoDown expl formulaStep ->
-                    let
-                        newFormulaStep =
-                            { formulaStep | next = Just zipper.proof }
-
-                        newProof =
-                            Proof.FormulaNode expl newFormulaStep
-                    in
-                    Just { zipper | proof = newProof, breadcrumbs = rest }
+                    Just { zipper | proof = Proof.FormulaNode expl { formulaStep | next = Just zipper.proof }, breadcrumbs = rest }
 
                 GoCase1 step1 step2 ->
                     Just { zipper | proof = Proof.CasesNode { step1 | next = Just zipper.proof } step2, breadcrumbs = rest }

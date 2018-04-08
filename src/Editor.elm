@@ -51,7 +51,8 @@ type Msg
     | ZipperExplanation Zipper.Zipper Proof.Explanation
     | ZipperDelete Zipper.Zipper
     | ZipperShowButtons Zipper.Zipper Bool
-    | ZipperCreateContradictionFirstNode Zipper.Zipper
+    | ZipperCreateContradictionFormulaNode Zipper.Zipper
+    | ZipperCreateContradictionCasesNode Zipper.Zipper
     | ZipperAddStepToCase1 Zipper.Zipper
     | ZipperAddStepToCase2 Zipper.Zipper
     | ZipperAddBetaStepToCase1 Zipper.Zipper
@@ -97,8 +98,11 @@ update msg model =
         ZipperShowButtons zipper value ->
             { model | zipper = Zipper.setButtonsAppearance value zipper }
 
-        ZipperCreateContradictionFirstNode zipper ->
-            { model | zipper = Zipper.createContradictionFirstNode zipper }
+        ZipperCreateContradictionFormulaNode zipper ->
+            { model | zipper = Zipper.createContradictionFormulaNode zipper }
+
+        ZipperCreateContradictionCasesNode zipper ->
+            { model | zipper = Zipper.createContradictionCasesNode zipper }
 
 
 
@@ -120,9 +124,14 @@ myButton onClick buttonStyle text =
         [ Html.text text ]
 
 
-buttonCreateContradictionFirstNode : Zipper.Zipper -> Html.Html Msg
-buttonCreateContradictionFirstNode zipper =
-    myButton (ZipperCreateContradictionFirstNode zipper) Button.outlineSuccess "+"
+buttonCreateContradictionFormulaNode : Zipper.Zipper -> Html.Html Msg
+buttonCreateContradictionFormulaNode zipper =
+    buttonAddHelper (ZipperCreateContradictionFormulaNode zipper)
+
+
+buttonCreateContradictionCasesNode : Zipper.Zipper -> Html.Html Msg
+buttonCreateContradictionCasesNode zipper =
+    buttonAddCasesHelper (ZipperCreateContradictionCasesNode zipper)
 
 
 buttonAddHelper : Msg -> Html.Html Msg
@@ -248,34 +257,37 @@ renderCases zipper case1 case2 =
                             [ buttonAddCasesHelper addBetaCallback ]
                    )
     in
-    [ Html.p [ Html.Attributes.class "text-right" ]
-        [ Html.text "Delete the 2 cases bellow"
-        , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
+    [ Grid.row []
+        [ Grid.col [ Col.sm11 ]
+            [ Html.p [ Html.Attributes.class "text-right" ]
+                [ Html.text "Delete the 2 cases bellow"
+                , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
+                ]
+            , Html.div [ Html.Attributes.class "inner-style" ]
+                (renderCase case1
+                    "Case 1"
+                    Zipper.enterCase1
+                    (ZipperAddStepToCase1 zipper)
+                    (ZipperAddBetaStepToCase1 zipper)
+                    (ZipperEditCase1 zipper)
+                )
+            , Html.div [ Html.Attributes.class "inner-style" ]
+                (renderCase case2
+                    "Case 2"
+                    Zipper.enterCase2
+                    (ZipperAddStepToCase2 zipper)
+                    (ZipperAddBetaStepToCase2 zipper)
+                    (ZipperEditCase2 zipper)
+                )
+            ]
         ]
-    , Html.div [ Html.Attributes.class "inner-style" ]
-        (renderCase case1
-            "Case 1"
-            Zipper.enterCase1
-            (ZipperAddStepToCase1 zipper)
-            (ZipperAddBetaStepToCase1 zipper)
-            (ZipperEditCase1 zipper)
-        )
-    , Html.div [ Html.Attributes.class "inner-style" ]
-        (renderCase case2
-            "Case 2"
-            Zipper.enterCase2
-            (ZipperAddStepToCase2 zipper)
-            (ZipperAddBetaStepToCase2 zipper)
-            (ZipperEditCase2 zipper)
-        )
     ]
 
 
 validationNode : String -> String -> Html.Html Msg
 validationNode text class =
     Html.div
-        [ Html.Attributes.class class
-        , Html.Attributes.class "block"
+        [ Html.Attributes.classList [ ( "block", True ), ( class, True ) ]
         ]
         [ Html.text text ]
 
@@ -299,11 +311,11 @@ renderFormulaNode zipper explanation formulaStep =
     let
         ( validationStatus, validationNode ) =
             case Proof.getStatus explanation formulaStep of
-                Err errMsg ->
-                    invalidNode errMsg
+                Err msg ->
+                    invalidNode msg
 
-                Ok okMsg ->
-                    validNode okMsg
+                Ok msg ->
+                    validNode msg
 
         ( inputGroup, subProof ) =
             case explanation of
@@ -339,7 +351,9 @@ renderFormulaNode zipper explanation formulaStep =
                                     renderStep (Zipper.enterContradiction zipper)
 
                                 Nothing ->
-                                    [ buttonCreateContradictionFirstNode zipper ]
+                                    [ buttonCreateContradictionFormulaNode zipper
+                                    , buttonCreateContradictionCasesNode zipper
+                                    ]
                     in
                     ( InputGroup.config
                         (InputGroup.text

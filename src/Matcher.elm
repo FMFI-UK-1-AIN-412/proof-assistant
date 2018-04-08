@@ -14,6 +14,7 @@ module Matcher
         , matcherHypotheticalSyllogism
         , matcherModusPonens
         , matcherModusTolens
+        , matcherSameFormula
         , matcherSimplification
         )
 
@@ -41,6 +42,11 @@ matcherAxiom1 toProve =
 
         _ ->
             False
+
+
+matcherSameFormula : UnaryMatcher
+matcherSameFormula from toProve =
+    from == toProve
 
 
 matcherAddition : UnaryMatcher
