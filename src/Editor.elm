@@ -220,7 +220,13 @@ buttonsList zipper explanation includeCasesButton =
 
 render : Model -> Html.Html Msg
 render model =
-    model.zipper |> Zipper.root |> Zipper.reindexAll |> Zipper.matchAll |> renderProof
+    model.zipper
+        |> Zipper.root
+        |> Zipper.reindexAll
+        |> Zipper.matchAll
+        |> Zipper.reindexAll
+        |> Zipper.matchAll
+        |> renderProof
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
@@ -242,20 +248,29 @@ renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (H
 renderCases zipper case1 case2 =
     let
         renderCase selectedCase text enterCaseFunction addCallback addBetaCallback editCallback =
-            [ Html.h2 [] [ Html.text text ]
-            , Input.text
-                [ Input.value selectedCase.text
-                , Input.onInput editCallback
-                ]
-            , buttonAddHelper addCallback
-            ]
-                ++ (case selectedCase.next of
+            let
+                ( casesButton, subProof ) =
+                    case selectedCase.next of
                         Just _ ->
-                            renderStep (enterCaseFunction zipper)
+                            ( emptyNode, renderStep <| enterCaseFunction zipper )
 
                         Nothing ->
-                            [ buttonAddCasesHelper addBetaCallback ]
-                   )
+                            ( buttonAddCasesHelper addBetaCallback, [] )
+            in
+            [ Html.h2 [] [ Html.text text ]
+            , Grid.row []
+                [ Grid.col [ Col.sm11 ]
+                    [ Input.text
+                        [ Input.value selectedCase.text
+                        , Input.onInput editCallback
+                        ]
+                    , buttonAddHelper addCallback
+                    , casesButton
+                    ]
+                , Grid.col [ Col.sm1 ] [ showIndex selectedCase.index ]
+                ]
+            ]
+                ++ subProof
     in
     [ Grid.row []
         [ Grid.col [ Col.sm11 ]
@@ -406,15 +421,16 @@ renderFormulaNode zipper explanation formulaStep =
              ]
                 ++ subProof
             )
-        , Grid.col
-            [ Col.sm1 ]
-            [ Html.p
-                [ Html.Attributes.class "index-text" ]
-                [ Html.text <| "(" ++ toString formulaStep.index ++ ")" ]
-            ]
+        , Grid.col [ Col.sm1 ] [ showIndex formulaStep.index ]
         ]
     ]
         ++ nextNode
+
+
+showIndex index =
+    Html.p
+        [ Html.Attributes.class "index-text" ]
+        [ Html.text <| "(" ++ toString index ++ ")" ]
 
 
 

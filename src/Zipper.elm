@@ -386,11 +386,12 @@ editValueCase2 value zipper =
     { zipper | proof = newProof }
 
 
-reindexAll : Zipper -> Zipper
-reindexAll zipper =
+applyAll : (Zipper -> Zipper) -> Zipper -> Zipper
+applyAll function zipper =
     let
+        -- WARNING: Close your eyes, otherwise you'll have an heart attack!!!
         newZipper1 =
-            reindex zipper
+            function zipper
 
         newZipper2 =
             case downOrNothing newZipper1 of
@@ -398,7 +399,7 @@ reindexAll zipper =
                     newZipper1
 
                 Just childrenZipper ->
-                    up (reindexAll childrenZipper)
+                    up (applyAll function childrenZipper)
 
         newZipper3 =
             case enterContradictionOrNothing newZipper2 of
@@ -406,7 +407,7 @@ reindexAll zipper =
                     newZipper2
 
                 Just childrenZipper ->
-                    up (reindexAll childrenZipper)
+                    up (applyAll function childrenZipper)
 
         newZipper4 =
             case enterCase1OrNothing newZipper3 of
@@ -414,7 +415,7 @@ reindexAll zipper =
                     newZipper3
 
                 Just childrenZipper ->
-                    up (reindexAll childrenZipper)
+                    up (applyAll function childrenZipper)
 
         newZipper5 =
             case enterCase2OrNothing newZipper4 of
@@ -422,9 +423,48 @@ reindexAll zipper =
                     newZipper4
 
                 Just childrenZipper ->
-                    up (reindexAll childrenZipper)
+                    up (applyAll function childrenZipper)
     in
+    -- See, I warned you.
     newZipper5
+
+
+reindexAll : Zipper -> Zipper
+reindexAll zipper =
+    applyAll reindex zipper
+
+
+getMaxValue : Int -> Maybe Zipper -> Int
+getMaxValue default maybeZipper =
+    case maybeZipper of
+        Nothing ->
+            default
+
+        Just zipper ->
+            let
+                val1 =
+                    max default
+                        (case zipper.proof of
+                            Proof.FormulaNode _ data ->
+                                data.index
+
+                            Proof.CasesNode case1 case2 ->
+                                max case1.index case2.index
+                        )
+
+                val2 =
+                    zipper |> downOrNothing |> getMaxValue val1
+
+                val3 =
+                    zipper |> enterCase1OrNothing |> getMaxValue val2
+
+                val4 =
+                    zipper |> enterCase2OrNothing |> getMaxValue val3
+
+                val5 =
+                    zipper |> enterContradictionOrNothing |> getMaxValue val4
+            in
+            val5
 
 
 reindex : Zipper -> Zipper
@@ -439,69 +479,36 @@ reindex zipper =
                     { zipper | proof = Proof.CasesNode { case1 | index = 1 } { case2 | index = 2 } }
 
         Just breadcrumb ->
-            case breadcrumb of
-                GoDown parentExpl parentFormulaStep ->
+            let
+                getNewZipper newIndex1 =
                     case zipper.proof of
                         Proof.FormulaNode expl formStep ->
-                            { zipper | proof = Proof.FormulaNode expl { formStep | index = parentFormulaStep.index + 1 } }
+                            { zipper | proof = Proof.FormulaNode expl { formStep | index = newIndex1 } }
 
-                        Proof.CasesNode _ _ ->
-                            Debug.log "Not sure wether implemented correctly!" zipper
+                        Proof.CasesNode case1 case2 ->
+                            let
+                                newIndex2 =
+                                    (zipper |> enterCase1OrNothing |> getMaxValue newIndex1) + 1
+                            in
+                            { zipper | proof = Proof.CasesNode { case1 | index = newIndex1 } { case2 | index = newIndex2 } }
+            in
+            case breadcrumb of
+                GoDown _ data ->
+                    getNewZipper <| data.index + 1
 
-                GoCase1 _ formulaStep ->
-                    -- todo: fixme
-                    zipper
+                GoContradiction data ->
+                    getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
 
-                GoCase2 formulaStep _ ->
-                    -- todo: fixme
-                    zipper
+                GoCase1 data _ ->
+                    getNewZipper <| data.index + 1
 
-                GoContradiction formulaStep ->
-                    -- todo: fixme
-                    zipper
+                GoCase2 _ data ->
+                    getNewZipper <| (zipper |> up |> enterCase1OrNothing |> getMaxValue data.index) + 1
 
 
 matchAll : Zipper -> Zipper
 matchAll zipper =
-    -- WARNING: Close your eyes, otherwise you'll have an heart attack!!!
-    let
-        newZipper1 =
-            match zipper
-
-        newZipper2 =
-            case downOrNothing newZipper1 of
-                Nothing ->
-                    newZipper1
-
-                Just childrenZipper ->
-                    up (matchAll childrenZipper)
-
-        newZipper3 =
-            case enterContradictionOrNothing newZipper2 of
-                Nothing ->
-                    newZipper2
-
-                Just childrenZipper ->
-                    up (matchAll childrenZipper)
-
-        newZipper4 =
-            case enterCase1OrNothing newZipper3 of
-                Nothing ->
-                    newZipper3
-
-                Just childrenZipper ->
-                    up (matchAll childrenZipper)
-
-        newZipper5 =
-            case enterCase2OrNothing newZipper4 of
-                Nothing ->
-                    newZipper4
-
-                Just childrenZipper ->
-                    up (matchAll childrenZipper)
-    in
-    -- See, I warned you.
-    newZipper5
+    applyAll match zipper
 
 
 match : Zipper -> Zipper

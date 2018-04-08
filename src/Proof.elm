@@ -307,7 +307,7 @@ matcherToStr matched =
             "Justification by: Simplification from formula " ++ toString index
 
         SameFormula index ->
-            "This formula alredy appears on step " ++ toString index
+            "This formula already appears on step " ++ toString index
 
         Axiom ->
             "Justification by: Axiom"
