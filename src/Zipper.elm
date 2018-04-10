@@ -25,10 +25,15 @@ module Zipper
         , root
         , setButtonsAppearance
         , up
+        , validateCases
         )
 
 import Formula
 import Proof
+
+
+type alias Zipper =
+    { proof : Proof.Proof, breadcrumbs : List Breadcrumb }
 
 
 type Breadcrumb
@@ -36,10 +41,6 @@ type Breadcrumb
     | GoCase1 Proof.FormulaStep Proof.FormulaStep
     | GoCase2 Proof.FormulaStep Proof.FormulaStep
     | GoContradiction Proof.FormulaStep
-
-
-type alias Zipper =
-    { proof : Proof.Proof, breadcrumbs : List Breadcrumb }
 
 
 create : Proof.FormulaStep -> Zipper
@@ -294,54 +295,42 @@ delete zipper =
                     { child | breadcrumbs = [] }
 
         breadcrumb :: rest ->
-            case breadcrumb of
-                GoDown parentExpl parentFormulaStep ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ data ->
-                            { proof = Proof.FormulaNode parentExpl { parentFormulaStep | next = data.next }
-                            , breadcrumbs = rest
-                            }
+            let
+                newProof =
+                    case breadcrumb of
+                        GoDown parentExpl parentFormulaStep ->
+                            case zipper.proof of
+                                Proof.FormulaNode _ data ->
+                                    Proof.FormulaNode parentExpl { parentFormulaStep | next = data.next }
 
-                        Proof.CasesNode _ _ ->
-                            { proof = Proof.FormulaNode parentExpl { parentFormulaStep | next = Nothing }
-                            , breadcrumbs = rest
-                            }
+                                Proof.CasesNode _ _ ->
+                                    Proof.FormulaNode parentExpl { parentFormulaStep | next = Nothing }
 
-                GoCase1 case1 case2 ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ data ->
-                            { proof = Proof.CasesNode { case1 | next = data.next } case2
-                            , breadcrumbs = rest
-                            }
+                        GoCase1 case1 case2 ->
+                            case zipper.proof of
+                                Proof.FormulaNode _ data ->
+                                    Proof.CasesNode { case1 | next = data.next } case2
 
-                        Proof.CasesNode _ _ ->
-                            { proof = Proof.CasesNode { case1 | next = Nothing } case2
-                            , breadcrumbs = rest
-                            }
+                                Proof.CasesNode _ _ ->
+                                    Proof.CasesNode { case1 | next = Nothing } case2
 
-                GoCase2 case1 case2 ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ data ->
-                            { proof = Proof.CasesNode case1 { case2 | next = data.next }
-                            , breadcrumbs = rest
-                            }
+                        GoCase2 case1 case2 ->
+                            case zipper.proof of
+                                Proof.FormulaNode _ data ->
+                                    Proof.CasesNode case1 { case2 | next = data.next }
 
-                        Proof.CasesNode _ _ ->
-                            { proof = Proof.CasesNode case1 { case2 | next = Nothing }
-                            , breadcrumbs = rest
-                            }
+                                Proof.CasesNode _ _ ->
+                                    Proof.CasesNode case1 { case2 | next = Nothing }
 
-                GoContradiction parentFormulaStep ->
-                    case zipper.proof of
-                        Proof.FormulaNode _ data ->
-                            { proof = Proof.FormulaNode (Proof.Contradiction data.next) parentFormulaStep
-                            , breadcrumbs = rest
-                            }
+                        GoContradiction parentFormulaStep ->
+                            case zipper.proof of
+                                Proof.FormulaNode _ data ->
+                                    Proof.FormulaNode (Proof.Contradiction data.next) parentFormulaStep
 
-                        Proof.CasesNode _ _ ->
-                            { proof = Proof.FormulaNode (Proof.Contradiction Nothing) parentFormulaStep
-                            , breadcrumbs = rest
-                            }
+                                Proof.CasesNode _ _ ->
+                                    Proof.FormulaNode (Proof.Contradiction Nothing) parentFormulaStep
+            in
+            { proof = newProof, breadcrumbs = rest }
 
 
 editValue : String -> Zipper -> Zipper
@@ -576,3 +565,13 @@ findFormulas zipper =
 
                 Just parentZipper ->
                     findFormulas parentZipper
+
+
+validateCases : Proof.FormulaStep -> Proof.FormulaStep -> Zipper -> Result String String
+validateCases case1 case2 zipper =
+    case ( case1.formula, case2.formula ) of
+        ( Ok formula1, Ok formula2 ) ->
+            Proof.validatorCases formula1 formula2 (findFormulas zipper)
+
+        _ ->
+            Err "Invalid cases! This is not valid from any formula above"

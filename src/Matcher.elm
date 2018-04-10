@@ -12,6 +12,7 @@ module Matcher
         , matcherGrimaldi1
         , matcherGrimaldi2
         , matcherHypotheticalSyllogism
+        , matcherImplicationRemoval
         , matcherModusPonens
         , matcherModusTolens
         , matcherSameFormula
@@ -47,6 +48,17 @@ matcherAxiom1 toProve =
 matcherSameFormula : UnaryMatcher
 matcherSameFormula from toProve =
     from == toProve
+
+
+matcherImplicationRemoval : UnaryMatcher
+matcherImplicationRemoval from toProve =
+    -- (a->b) <=> (-a->b)
+    case ( from, toProve ) of
+        ( Formula.Impl a1 b1, Formula.Disj (Formula.Neg a2) b2 ) ->
+            a1 == a2 && b1 == b2
+
+        _ ->
+            False
 
 
 matcherAddition : UnaryMatcher

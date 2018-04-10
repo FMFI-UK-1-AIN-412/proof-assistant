@@ -16,7 +16,9 @@ module Proof
         , createFormulaStep
         , getStatus
         , setShowButtons
+        , tryParseFormula
         , validator
+        , validatorCases
         )
 
 import Formula
@@ -192,6 +194,7 @@ type Justification
     | Addition Int
     | SameFormula Int
     | Simplification Int
+    | ImplicationRemoval Int
     | ConstructiveDilemma Int Int
     | DestructiveDilemma Int Int
     | Grimaldi1 Int Int
@@ -241,6 +244,7 @@ unaryValidator step branch =
         [ runValidator1 Matcher.matcherAddition Addition
         , runValidator1 Matcher.matcherSimplification Simplification
         , runValidator1 Matcher.matcherSameFormula SameFormula
+        , runValidator1 Matcher.matcherImplicationRemoval ImplicationRemoval
         ]
 
 
@@ -309,35 +313,48 @@ matcherToStr matched =
         SameFormula index ->
             "This formula already appears on step " ++ toString index
 
+        ImplicationRemoval index ->
+            "Implication removed from formula " ++ toString index
+
         Axiom ->
             "Justification by: Axiom"
 
 
-getStatus : Explanation -> FormulaStep -> Result String String
-getStatus explanation formulaStep =
+tryParseFormula : FormulaStep -> Maybe String
+tryParseFormula formulaStep =
     if formulaStep.text == "" then
-        Err <| "Formula should not be empty"
+        Just "Formula should not be empty"
     else
         case formulaStep.formula of
             Err error ->
-                Err <| "Could not parse: " ++ toString error
+                Just <| "Could not parse: " ++ toString error
 
             Ok _ ->
-                case explanation of
-                    Premise ->
-                        Ok ""
+                Nothing
 
-                    Rule maybeJustification ->
-                        case maybeJustification of
-                            Nothing ->
-                                Err "Could not match for any rule"
 
-                            Just matched ->
-                                Ok <| matcherToStr matched
+getStatus : Explanation -> FormulaStep -> Result String String
+getStatus explanation formulaStep =
+    case tryParseFormula formulaStep of
+        Just errorMsg ->
+            Err errorMsg
 
-                    Contradiction _ ->
-                        -- todo
-                        Err "This is not implemented yet!"
+        Nothing ->
+            case explanation of
+                Premise ->
+                    Ok ""
+
+                Rule maybeJustification ->
+                    case maybeJustification of
+                        Nothing ->
+                            Err "Could not match for any rule"
+
+                        Just matched ->
+                            Ok <| matcherToStr matched
+
+                Contradiction _ ->
+                    -- todo
+                    Err "This is not implemented yet!"
 
 
 
@@ -476,3 +493,25 @@ helper2 func from1 from2 toProve answer =
 
         _ ->
             Nothing
+
+
+
+-- Cases validator
+
+
+validatorCases : Formula.Formula -> Formula.Formula -> List FormulaStep -> Result String String
+validatorCases formula1 formula2 branch =
+    case branch of
+        [] ->
+            Err "Invalid cases! This is not valid from any formula above"
+
+        this :: rest ->
+            case this.formula of
+                Ok (Formula.Disj a b) ->
+                    if (formula1 == a && formula2 == b) || (formula1 == b && formula2 == a) then
+                        Ok <| "This is valid from formula " ++ toString this.index
+                    else
+                        validatorCases formula1 formula2 rest
+
+                _ ->
+                    validatorCases formula1 formula2 rest

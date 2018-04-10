@@ -256,6 +256,14 @@ renderCases zipper case1 case2 =
 
                         Nothing ->
                             ( buttonAddCasesHelper addBetaCallback, [] )
+
+                ( inputType, validationNode ) =
+                    case Proof.tryParseFormula selectedCase of
+                        Just errMsg ->
+                            invalidNode errMsg
+
+                        Nothing ->
+                            validNode ""
             in
             [ Html.h2 [] [ Html.text text ]
             , Grid.row []
@@ -263,7 +271,9 @@ renderCases zipper case1 case2 =
                     [ Input.text
                         [ Input.value selectedCase.text
                         , Input.onInput editCallback
+                        , inputType
                         ]
+                    , validationNode
                     , buttonAddHelper addCallback
                     , casesButton
                     ]
@@ -271,6 +281,14 @@ renderCases zipper case1 case2 =
                 ]
             ]
                 ++ subProof
+
+        ( _, validationNode ) =
+            case Zipper.validateCases case1 case2 zipper of
+                Ok msg ->
+                    validNode msg
+
+                Err msg ->
+                    invalidNode msg
     in
     [ Grid.row []
         [ Grid.col [ Col.sm11 ]
@@ -278,6 +296,7 @@ renderCases zipper case1 case2 =
                 [ Html.text "Delete the 2 cases bellow"
                 , Html.span [ Html.Attributes.class "ml-2" ] [ buttonDelete zipper ]
                 ]
+            , validationNode
             , Html.div [ Html.Attributes.class "inner-style" ]
                 (renderCase case1
                     "Case 1"
