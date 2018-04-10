@@ -48,7 +48,7 @@ createFormulaStep text =
     , formula = Formula.parse text
     , index = 0
     , next = Nothing
-    , gui = { showButtons = False }
+    , gui = { showButtons = True }
     }
 
 
@@ -59,6 +59,7 @@ changeFormulaStepText text formulaStep =
 
 type Explanation
     = Premise
+    | Goal
     | Rule (Maybe Justification)
     | Contradiction (Maybe Proof)
 
@@ -195,6 +196,7 @@ type Justification
     | SameFormula Int
     | Simplification Int
     | ImplicationRemoval Int
+    | DoubleNegation Int
     | ConstructiveDilemma Int Int
     | DestructiveDilemma Int Int
     | Grimaldi1 Int Int
@@ -245,6 +247,7 @@ unaryValidator step branch =
         , runValidator1 Matcher.matcherSimplification Simplification
         , runValidator1 Matcher.matcherSameFormula SameFormula
         , runValidator1 Matcher.matcherImplicationRemoval ImplicationRemoval
+        , runValidator1 Matcher.matcherDoubleNegation DoubleNegation
         ]
 
 
@@ -316,6 +319,9 @@ matcherToStr matched =
         ImplicationRemoval index ->
             "Implication removed from formula " ++ toString index
 
+        DoubleNegation index ->
+            "Double negation removed from formula " ++ toString index
+
         Axiom ->
             "Justification by: Axiom"
 
@@ -343,6 +349,10 @@ getStatus explanation formulaStep =
             case explanation of
                 Premise ->
                     Ok ""
+
+                Goal ->
+                    -- todo: toto ma byt OK iba ak je Goal niekde oznacny za validny
+                    Err "This is not implemented yet!"
 
                 Rule maybeJustification ->
                     case maybeJustification of

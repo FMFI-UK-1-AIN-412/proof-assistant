@@ -78,6 +78,7 @@ setButtonsAppearance value zipper =
 add : Proof.FormulaStep -> Zipper -> Zipper
 add formulaStep zipper =
     { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
+        |> setButtonsAppearance False
 
 
 addStepToCase1 : Proof.FormulaStep -> Zipper -> Zipper
@@ -93,6 +94,7 @@ addStepToCase2 formulaStep zipper =
 addCases : Zipper -> Zipper
 addCases zipper =
     { zipper | proof = Proof.addCases zipper.proof |> Maybe.withDefault zipper.proof }
+        |> setButtonsAppearance False
 
 
 addCasesToCase1 : Zipper -> Zipper
@@ -182,6 +184,9 @@ createContradictionNodeHelper node zipper =
                 Proof.Premise ->
                     zipper
 
+                Proof.Goal ->
+                    zipper
+
                 Proof.Rule _ ->
                     zipper
 
@@ -221,6 +226,9 @@ enterContradictionOrNothing zipper =
         Proof.FormulaNode explanation formulaStep ->
             case explanation of
                 Proof.Premise ->
+                    Nothing
+
+                Proof.Goal ->
                     Nothing
 
                 Proof.Rule _ ->
@@ -516,6 +524,9 @@ match zipper =
                         Proof.Contradiction _ ->
                             expl
 
+                        Proof.Goal ->
+                            expl
+
                 matched =
                     callMatcher <| findFormulas zipper
 
@@ -543,8 +554,14 @@ findFormulas zipper =
     let
         this =
             case zipper.proof of
+                -- todo: zoli
                 Proof.FormulaNode expl formulaStep ->
-                    Just formulaStep
+                    case expl of
+                        Proof.Contradiction _ ->
+                            Just <| Proof.changeFormulaStepText ("-" ++ formulaStep.text) formulaStep
+
+                        _ ->
+                            Just formulaStep
 
                 Proof.CasesNode _ _ ->
                     Nothing

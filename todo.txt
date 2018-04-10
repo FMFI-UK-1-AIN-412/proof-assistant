@@ -1,5 +1,8 @@
+todo: 
+- fix contradiction (v kazdej vetve najdem spor)
+- fix goal (v kazdej vetve najdem spor)
+- sript +/Beta button za sipku dole aj v Cases node/Contradiciton node
+- goal ma mat vlastnu podvetvu?
+- pridat undo button
 
-
-Otazky:
-- cases, ako ma fungovat? [VID SCREENSHOT]
-- ukazat nejake jednoduche dokazy co by sa mali vediet dat dokazat
+- prvoradova logika

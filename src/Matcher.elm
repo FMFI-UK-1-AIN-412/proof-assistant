@@ -9,6 +9,7 @@ module Matcher
         , matcherConstructiveDilemma
         , matcherDestructiveDilemma
         , matcherDisjunctiveSyllogism
+        , matcherDoubleNegation
         , matcherGrimaldi1
         , matcherGrimaldi2
         , matcherHypotheticalSyllogism
@@ -48,6 +49,17 @@ matcherAxiom1 toProve =
 matcherSameFormula : UnaryMatcher
 matcherSameFormula from toProve =
     from == toProve
+
+
+matcherDoubleNegation : UnaryMatcher
+matcherDoubleNegation from toProve =
+    -- (--a) <=> a
+    case from of
+        Formula.Neg (Formula.Neg a) ->
+            toProve == a
+
+        _ ->
+            False
 
 
 matcherImplicationRemoval : UnaryMatcher
