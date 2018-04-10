@@ -7,6 +7,7 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
+import History
 import Html
 import Html.Attributes
 import Html.Events
@@ -18,23 +19,26 @@ import Zipper
 
 
 type alias Model =
-    { zipper : Zipper.Zipper }
+    { history : History.History }
 
 
 initialModel : Model
 initialModel =
-    { zipper =
-        (Zipper.create <| Proof.createFormulaStep "(a->b)")
-            |> Zipper.changeExplanation Proof.Premise
-            |> Zipper.add (Proof.createFormulaStep "(b->-c)")
-            |> Zipper.down
-            |> Zipper.changeExplanation Proof.Premise
-            |> Zipper.add (Proof.createFormulaStep "a")
-            |> Zipper.down
-            |> Zipper.changeExplanation Proof.Premise
-            |> Zipper.down
-            |> Zipper.addCases
-            |> Zipper.root
+    { history =
+        History.new
+            { zipper =
+                (Zipper.create <| Proof.createFormulaStep "(a->b)")
+                    |> Zipper.changeExplanation Proof.Premise
+                    |> Zipper.add (Proof.createFormulaStep "(b->-c)")
+                    |> Zipper.down
+                    |> Zipper.changeExplanation Proof.Premise
+                    |> Zipper.add (Proof.createFormulaStep "a")
+                    |> Zipper.down
+                    |> Zipper.changeExplanation Proof.Premise
+                    |> Zipper.down
+                    |> Zipper.addCases
+                    |> Zipper.root
+            }
     }
 
 
@@ -57,52 +61,70 @@ type Msg
     | ZipperAddStepToCase2 Zipper.Zipper
     | ZipperAddBetaStepToCase1 Zipper.Zipper
     | ZipperAddBetaStepToCase2 Zipper.Zipper
+    | HistoryBack
+    | HistoryForward
 
 
 update : Msg -> Model -> Model
 update msg model =
-    case msg of
-        ZipperEdit zipper value ->
-            { model | zipper = Zipper.editValue value zipper }
+    let
+        changeZipper needSave newZipper =
+            if needSave then
+                History.save { zipper = newZipper } model.history
+            else
+                History.replace { zipper = newZipper } model.history
 
-        ZipperEditCase1 zipper value ->
-            { model | zipper = Zipper.editValueCase1 value zipper }
+        newHistory =
+            case msg of
+                ZipperEdit zipper value ->
+                    changeZipper False (Zipper.editValue value zipper)
 
-        ZipperEditCase2 zipper value ->
-            { model | zipper = Zipper.editValueCase2 value zipper }
+                ZipperEditCase1 zipper value ->
+                    changeZipper False (Zipper.editValueCase1 value zipper)
 
-        ZipperAdd zipper ->
-            { model | zipper = Zipper.add (Proof.createFormulaStep "") zipper }
+                ZipperEditCase2 zipper value ->
+                    changeZipper False (Zipper.editValueCase2 value zipper)
 
-        ZipperAddStepToCase1 zipper ->
-            { model | zipper = Zipper.addStepToCase1 (Proof.createFormulaStep "") zipper }
+                ZipperAdd zipper ->
+                    changeZipper True (Zipper.add (Proof.createFormulaStep "") zipper)
 
-        ZipperAddStepToCase2 zipper ->
-            { model | zipper = Zipper.addStepToCase2 (Proof.createFormulaStep "") zipper }
+                ZipperAddStepToCase1 zipper ->
+                    changeZipper True (Zipper.addStepToCase1 (Proof.createFormulaStep "") zipper)
 
-        ZipperAddBetaStepToCase1 zipper ->
-            { model | zipper = Zipper.addCasesToCase1 zipper }
+                ZipperAddStepToCase2 zipper ->
+                    changeZipper True (Zipper.addStepToCase2 (Proof.createFormulaStep "") zipper)
 
-        ZipperAddBetaStepToCase2 zipper ->
-            { model | zipper = Zipper.addCasesToCase2 zipper }
+                ZipperAddBetaStepToCase1 zipper ->
+                    changeZipper True (Zipper.addCasesToCase1 zipper)
 
-        ZipperAddCases zipper ->
-            { model | zipper = Zipper.addCases zipper }
+                ZipperAddBetaStepToCase2 zipper ->
+                    changeZipper True (Zipper.addCasesToCase2 zipper)
 
-        ZipperExplanation zipper explanation ->
-            { model | zipper = Zipper.changeExplanation explanation zipper }
+                ZipperAddCases zipper ->
+                    changeZipper True (Zipper.addCases zipper)
 
-        ZipperDelete zipper ->
-            { model | zipper = Zipper.delete zipper }
+                ZipperExplanation zipper explanation ->
+                    changeZipper True (Zipper.changeExplanation explanation zipper)
 
-        ZipperShowButtons zipper value ->
-            { model | zipper = Zipper.setButtonsAppearance value zipper }
+                ZipperDelete zipper ->
+                    changeZipper True (Zipper.delete zipper)
 
-        ZipperCreateContradictionFormulaNode zipper ->
-            { model | zipper = Zipper.createContradictionFormulaNode zipper }
+                ZipperShowButtons zipper value ->
+                    changeZipper False (Zipper.setButtonsAppearance value zipper)
 
-        ZipperCreateContradictionCasesNode zipper ->
-            { model | zipper = Zipper.createContradictionCasesNode zipper }
+                ZipperCreateContradictionFormulaNode zipper ->
+                    changeZipper True (Zipper.createContradictionFormulaNode zipper)
+
+                ZipperCreateContradictionCasesNode zipper ->
+                    changeZipper True (Zipper.createContradictionCasesNode zipper)
+
+                HistoryBack ->
+                    History.prev model.history
+
+                HistoryForward ->
+                    History.next model.history
+    in
+    { model | history = newHistory }
 
 
 
@@ -227,13 +249,24 @@ buttonsList zipper explanation includeCasesButton =
 
 render : Model -> Html.Html Msg
 render model =
-    model.zipper
-        |> Zipper.root
-        |> Zipper.reindexAll
-        |> Zipper.matchAll
-        |> Zipper.reindexAll
-        |> Zipper.matchAll
-        |> renderProof
+    Html.div []
+        [ if History.hasNext model.history then
+            Button.button [ Button.secondary, Button.onClick HistoryForward ] [ Html.text "Step forward" ]
+          else
+            emptyNode
+        , if History.hasPrev model.history then
+            Button.button [ Button.primary, Button.onClick HistoryBack ] [ Html.text "Step back" ]
+          else
+            emptyNode
+        , Html.hr [] []
+        , (History.get model.history).zipper
+            |> Zipper.root
+            |> Zipper.reindexAll
+            |> Zipper.matchAll
+            |> Zipper.reindexAll
+            |> Zipper.matchAll
+            |> renderProof
+        ]
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg
