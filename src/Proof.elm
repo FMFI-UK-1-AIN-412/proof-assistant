@@ -59,8 +59,8 @@ changeFormulaStepText text formulaStep =
 
 type Explanation
     = Premise
-    | Goal
     | Rule (Maybe Justification)
+    | Goal (Maybe Proof)
     | Contradiction (Maybe Proof)
 
 
@@ -350,7 +350,7 @@ getStatus explanation formulaStep =
                 Premise ->
                     Ok ""
 
-                Goal ->
+                Goal proof ->
                     -- todo: toto ma byt OK iba ak je Goal niekde oznacny za validny
                     Err "This is not implemented yet!"
 

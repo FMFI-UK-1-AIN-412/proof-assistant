@@ -11,6 +11,8 @@ module Zipper
         , create
         , createContradictionCasesNode
         , createContradictionFormulaNode
+        , createGoalCasesNode
+        , createGoalFormulaNode
         , delete
         , down
         , downOrNothing
@@ -20,10 +22,13 @@ module Zipper
         , enterCase1
         , enterCase2
         , enterContradiction
+        , enterGoalProof
         , matchAll
         , reindexAll
         , root
         , setButtonsAppearance
+        , setButtonsAppearanceCase1
+        , setButtonsAppearanceCase2
         , up
         , validateCases
         )
@@ -41,6 +46,7 @@ type Breadcrumb
     | GoCase1 Proof.FormulaStep Proof.FormulaStep
     | GoCase2 Proof.FormulaStep Proof.FormulaStep
     | GoContradiction Proof.FormulaStep
+    | GoGoalProof Proof.FormulaStep
 
 
 create : Proof.FormulaStep -> Zipper
@@ -75,6 +81,34 @@ setButtonsAppearance value zipper =
     { zipper | proof = newProof }
 
 
+setButtonsAppearanceCase1 : Bool -> Zipper -> Zipper
+setButtonsAppearanceCase1 value zipper =
+    let
+        newProof =
+            case zipper.proof of
+                Proof.CasesNode case1 case2 ->
+                    Proof.CasesNode { case1 | gui = { showButtons = value } } case2
+
+                Proof.FormulaNode _ _ ->
+                    zipper.proof
+    in
+    { zipper | proof = newProof }
+
+
+setButtonsAppearanceCase2 : Bool -> Zipper -> Zipper
+setButtonsAppearanceCase2 value zipper =
+    let
+        newProof =
+            case zipper.proof of
+                Proof.CasesNode case1 case2 ->
+                    Proof.CasesNode case1 { case2 | gui = { showButtons = value } }
+
+                Proof.FormulaNode _ _ ->
+                    zipper.proof
+    in
+    { zipper | proof = newProof }
+
+
 add : Proof.FormulaStep -> Zipper -> Zipper
 add formulaStep zipper =
     { zipper | proof = Proof.addFormulaStep formulaStep zipper.proof }
@@ -84,11 +118,13 @@ add formulaStep zipper =
 addStepToCase1 : Proof.FormulaStep -> Zipper -> Zipper
 addStepToCase1 formulaStep zipper =
     { zipper | proof = Proof.addFormulaStepCase1 formulaStep zipper.proof }
+        |> setButtonsAppearanceCase1 False
 
 
 addStepToCase2 : Proof.FormulaStep -> Zipper -> Zipper
 addStepToCase2 formulaStep zipper =
     { zipper | proof = Proof.addFormulaStepCase2 formulaStep zipper.proof }
+        |> setButtonsAppearanceCase2 False
 
 
 addCases : Zipper -> Zipper
@@ -100,11 +136,13 @@ addCases zipper =
 addCasesToCase1 : Zipper -> Zipper
 addCasesToCase1 zipper =
     { zipper | proof = Proof.addCasesToCase1 zipper.proof |> Maybe.withDefault zipper.proof }
+        |> setButtonsAppearanceCase1 False
 
 
 addCasesToCase2 : Zipper -> Zipper
 addCasesToCase2 zipper =
     { zipper | proof = Proof.addCasesToCase2 zipper.proof |> Maybe.withDefault zipper.proof }
+        |> setButtonsAppearanceCase2 False
 
 
 downOrNothing : Zipper -> Maybe Zipper
@@ -184,7 +222,7 @@ createContradictionNodeHelper node zipper =
                 Proof.Premise ->
                     zipper
 
-                Proof.Goal ->
+                Proof.Goal _ ->
                     zipper
 
                 Proof.Rule _ ->
@@ -217,6 +255,50 @@ createContradictionCasesNode zipper =
     createContradictionNodeHelper node zipper
 
 
+createGoalNodeHelper : Proof.Proof -> Zipper -> Zipper
+createGoalNodeHelper node zipper =
+    case zipper.proof of
+        Proof.CasesNode _ _ ->
+            zipper
+
+        Proof.FormulaNode expl formStep ->
+            case expl of
+                Proof.Premise ->
+                    zipper
+
+                Proof.Goal goalNode ->
+                    case goalNode of
+                        Just _ ->
+                            zipper
+
+                        Nothing ->
+                            { zipper | proof = Proof.FormulaNode (Proof.Goal <| Just node) formStep }
+
+                Proof.Rule _ ->
+                    zipper
+
+                Proof.Contradiction _ ->
+                    zipper
+
+
+createGoalFormulaNode : Zipper -> Zipper
+createGoalFormulaNode zipper =
+    let
+        node =
+            Proof.FormulaNode (Proof.Rule Nothing) (Proof.createFormulaStep "")
+    in
+    createGoalNodeHelper node zipper
+
+
+createGoalCasesNode : Zipper -> Zipper
+createGoalCasesNode zipper =
+    let
+        node =
+            Proof.CasesNode (Proof.createFormulaStep "") (Proof.createFormulaStep "")
+    in
+    createGoalNodeHelper node zipper
+
+
 enterContradictionOrNothing : Zipper -> Maybe Zipper
 enterContradictionOrNothing zipper =
     case zipper.proof of
@@ -228,7 +310,7 @@ enterContradictionOrNothing zipper =
                 Proof.Premise ->
                     Nothing
 
-                Proof.Goal ->
+                Proof.Goal _ ->
                     Nothing
 
                 Proof.Rule _ ->
@@ -251,6 +333,40 @@ enterContradiction zipper =
     enterContradictionOrNothing zipper |> Maybe.withDefault zipper
 
 
+enterGoalProofOrNothing : Zipper -> Maybe Zipper
+enterGoalProofOrNothing zipper =
+    case zipper.proof of
+        Proof.CasesNode _ _ ->
+            Nothing
+
+        Proof.FormulaNode explanation formulaStep ->
+            case explanation of
+                Proof.Premise ->
+                    Nothing
+
+                Proof.Goal maybeProof ->
+                    Maybe.map
+                        (\nextProof ->
+                            let
+                                breadcrumb =
+                                    GoGoalProof formulaStep
+                            in
+                            { zipper | proof = nextProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                        )
+                        maybeProof
+
+                Proof.Rule _ ->
+                    Nothing
+
+                Proof.Contradiction _ ->
+                    Nothing
+
+
+enterGoalProof : Zipper -> Zipper
+enterGoalProof zipper =
+    enterGoalProofOrNothing zipper |> Maybe.withDefault zipper
+
+
 upOrNothing : Zipper -> Maybe Zipper
 upOrNothing zipper =
     case zipper.breadcrumbs of
@@ -269,6 +385,13 @@ upOrNothing zipper =
                     Just
                         { zipper
                             | proof = Proof.FormulaNode (Proof.Contradiction <| Just zipper.proof) formulaStep
+                            , breadcrumbs = rest
+                        }
+
+                GoGoalProof formulaStep ->
+                    Just
+                        { zipper
+                            | proof = Proof.FormulaNode (Proof.Goal <| Just zipper.proof) formulaStep
                             , breadcrumbs = rest
                         }
 
@@ -337,6 +460,14 @@ delete zipper =
 
                                 Proof.CasesNode _ _ ->
                                     Proof.FormulaNode (Proof.Contradiction Nothing) parentFormulaStep
+
+                        GoGoalProof parentFormulaStep ->
+                            case zipper.proof of
+                                Proof.FormulaNode _ data ->
+                                    Proof.FormulaNode (Proof.Goal data.next) parentFormulaStep
+
+                                Proof.CasesNode _ _ ->
+                                    Proof.FormulaNode (Proof.Goal Nothing) parentFormulaStep
             in
             { proof = newProof, breadcrumbs = rest }
 
@@ -421,9 +552,17 @@ applyAll function zipper =
 
                 Just childrenZipper ->
                     up (applyAll function childrenZipper)
+
+        newZipper6 =
+            case enterGoalProofOrNothing newZipper5 of
+                Nothing ->
+                    newZipper5
+
+                Just childrenZipper ->
+                    up (applyAll function childrenZipper)
     in
     -- See, I warned you.
-    newZipper5
+    newZipper6
 
 
 reindexAll : Zipper -> Zipper
@@ -460,8 +599,11 @@ getMaxValue default maybeZipper =
 
                 val5 =
                     zipper |> enterContradictionOrNothing |> getMaxValue val4
+
+                val6 =
+                    zipper |> enterGoalProofOrNothing |> getMaxValue val5
             in
-            val5
+            val6
 
 
 reindex : Zipper -> Zipper
@@ -502,6 +644,9 @@ reindex zipper =
                 GoCase2 _ data ->
                     getNewZipper <| (zipper |> up |> enterCase1OrNothing |> getMaxValue data.index) + 1
 
+                GoGoalProof data ->
+                    getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
+
 
 matchAll : Zipper -> Zipper
 matchAll zipper =
@@ -524,7 +669,7 @@ match zipper =
                         Proof.Contradiction _ ->
                             expl
 
-                        Proof.Goal ->
+                        Proof.Goal _ ->
                             expl
 
                 matched =

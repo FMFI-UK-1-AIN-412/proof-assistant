@@ -55,12 +55,16 @@ type Msg
     | ZipperExplanation Zipper.Zipper Proof.Explanation
     | ZipperDelete Zipper.Zipper
     | ZipperShowButtons Zipper.Zipper Bool
+    | ZipperSetButtonAppearanceCase1 Zipper.Zipper Bool
+    | ZipperSetButtonAppearanceCase2 Zipper.Zipper Bool
     | ZipperCreateContradictionFormulaNode Zipper.Zipper
     | ZipperCreateContradictionCasesNode Zipper.Zipper
     | ZipperAddStepToCase1 Zipper.Zipper
     | ZipperAddStepToCase2 Zipper.Zipper
     | ZipperAddBetaStepToCase1 Zipper.Zipper
     | ZipperAddBetaStepToCase2 Zipper.Zipper
+    | ZipperCreateGoalFormulaNode Zipper.Zipper
+    | ZipperCreateGoalCasesNode Zipper.Zipper
     | HistoryBack
     | HistoryForward
 
@@ -112,11 +116,23 @@ update msg model =
                 ZipperShowButtons zipper value ->
                     changeZipper False (Zipper.setButtonsAppearance value zipper)
 
+                ZipperSetButtonAppearanceCase1 zipper value ->
+                    changeZipper False (Zipper.setButtonsAppearanceCase1 value zipper)
+
+                ZipperSetButtonAppearanceCase2 zipper value ->
+                    changeZipper False (Zipper.setButtonsAppearanceCase2 value zipper)
+
                 ZipperCreateContradictionFormulaNode zipper ->
                     changeZipper True (Zipper.createContradictionFormulaNode zipper)
 
                 ZipperCreateContradictionCasesNode zipper ->
                     changeZipper True (Zipper.createContradictionCasesNode zipper)
+
+                ZipperCreateGoalFormulaNode zipper ->
+                    changeZipper True (Zipper.createGoalFormulaNode zipper)
+
+                ZipperCreateGoalCasesNode zipper ->
+                    changeZipper True (Zipper.createGoalCasesNode zipper)
 
                 HistoryBack ->
                     History.prev model.history
@@ -154,6 +170,16 @@ buttonCreateContradictionFormulaNode zipper =
 buttonCreateContradictionCasesNode : Zipper.Zipper -> Html.Html Msg
 buttonCreateContradictionCasesNode zipper =
     buttonAddCasesHelper (ZipperCreateContradictionCasesNode zipper)
+
+
+buttonCreateGoalFormulaNode : Zipper.Zipper -> Html.Html Msg
+buttonCreateGoalFormulaNode zipper =
+    buttonAddHelper (ZipperCreateGoalFormulaNode zipper)
+
+
+buttonCreateGoalCasesNode : Zipper.Zipper -> Html.Html Msg
+buttonCreateGoalCasesNode zipper =
+    buttonAddCasesHelper (ZipperCreateGoalCasesNode zipper)
 
 
 buttonAddHelper : Msg -> Html.Html Msg
@@ -194,7 +220,7 @@ explanationButtons zipper explanation =
                 Proof.Premise ->
                     ( True, False, False, False )
 
-                Proof.Goal ->
+                Proof.Goal _ ->
                     ( False, True, False, False )
 
                 Proof.Rule _ ->
@@ -210,7 +236,7 @@ explanationButtons zipper explanation =
             [ Html.text "Premise" ]
         , ButtonGroup.radioButton
             isGoal
-            [ Button.info, Button.onClick <| ZipperExplanation zipper Proof.Goal ]
+            [ Button.info, Button.onClick <| ZipperExplanation zipper (Proof.Goal Nothing) ]
             [ Html.text "Goal" ]
         , ButtonGroup.radioButton
             isRule
@@ -287,7 +313,7 @@ renderStep zipper =
 renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (Html.Html Msg)
 renderCases zipper case1 case2 =
     let
-        renderCase selectedCase text enterCaseFunction addCallback addBetaCallback editCallback =
+        renderCase selectedCase text enterCaseFunction addCallback addBetaCallback editCallback buttonAppearance =
             let
                 ( casesButton, subProof ) =
                     case selectedCase.next of
@@ -304,18 +330,42 @@ renderCases zipper case1 case2 =
 
                         Nothing ->
                             validNode ""
+
+                ( buttons, inputButtonDesign ) =
+                    if selectedCase.gui.showButtons then
+                        ( Html.div []
+                            [ buttonAddHelper addCallback
+                            , casesButton
+                            ]
+                        , Button.info
+                        )
+                    else
+                        ( emptyNode, Button.outlineInfo )
+
+                buttonDown =
+                    -- todo zoli
+                    InputGroup.button
+                        [ inputButtonDesign
+                        , Button.onClick <| buttonAppearance (not selectedCase.gui.showButtons)
+                        ]
+                        [ Html.text "↓" ]
             in
             [ Html.h2 [] [ Html.text text ]
             , Grid.row []
                 [ Grid.col [ Col.sm11 ]
-                    [ Input.text
-                        [ Input.value selectedCase.text
-                        , Input.onInput editCallback
-                        , inputType
-                        ]
+                    [ InputGroup.config
+                        -- todo: zoli
+                        (InputGroup.text
+                            [ Input.value selectedCase.text
+                            , Input.onInput editCallback
+                            , Input.placeholder "Formula"
+                            , inputType
+                            ]
+                        )
+                        |> InputGroup.predecessors [ buttonDown ]
+                        |> InputGroup.view
                     , validationNode
-                    , buttonAddHelper addCallback
-                    , casesButton
+                    , buttons
                     ]
                 , Grid.col [ Col.sm1 ] [ showIndex selectedCase.index ]
                 ]
@@ -344,6 +394,7 @@ renderCases zipper case1 case2 =
                     (ZipperAddStepToCase1 zipper)
                     (ZipperAddBetaStepToCase1 zipper)
                     (ZipperEditCase1 zipper)
+                    (ZipperSetButtonAppearanceCase1 zipper)
                 )
             , Html.div [ Html.Attributes.class "inner-style" ]
                 (renderCase case2
@@ -352,6 +403,7 @@ renderCases zipper case1 case2 =
                     (ZipperAddStepToCase2 zipper)
                     (ZipperAddBetaStepToCase2 zipper)
                     (ZipperEditCase2 zipper)
+                    (ZipperSetButtonAppearanceCase2 zipper)
                 )
             ]
         ]
@@ -424,7 +476,18 @@ renderFormulaNode zipper explanation formulaStep =
                     , []
                     )
 
-                Proof.Goal ->
+                Proof.Goal proof ->
+                    let
+                        elements =
+                            case proof of
+                                Just _ ->
+                                    renderStep (Zipper.enterGoalProof zipper)
+
+                                Nothing ->
+                                    [ buttonCreateGoalFormulaNode zipper
+                                    , buttonCreateGoalCasesNode zipper
+                                    ]
+                    in
                     ( InputGroup.config
                         (InputGroup.text
                             [ Input.placeholder "Formula"
@@ -433,7 +496,11 @@ renderFormulaNode zipper explanation formulaStep =
                             ]
                         )
                         |> InputGroup.predecessors [ buttonDown, InputGroup.span [] [ Html.text "Goal:" ] ]
-                    , []
+                    , [ Html.div [ Html.Attributes.class "inner-style" ]
+                            ([ Html.h4 [] [ Html.text "Prove the goal here" ] ]
+                                ++ elements
+                            )
+                      ]
                     )
 
                 Proof.Contradiction proof ->
