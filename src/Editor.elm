@@ -361,8 +361,7 @@ renderCases zipper case1 case2 =
 validationNode : String -> String -> Html.Html Msg
 validationNode text class =
     Html.div
-        [ Html.Attributes.classList [ ( "block", True ), ( class, True ) ]
-        ]
+        [ Html.Attributes.classList [ ( "block", True ), ( class, True ) ] ]
         [ Html.text text ]
 
 

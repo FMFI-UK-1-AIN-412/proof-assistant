@@ -1,10 +1,20 @@
-module History exposing (History, get, hasNext, hasPrev, new, next, prev, replace, save)
+module History
+    exposing
+        ( History
+        , get
+        , hasNext
+        , hasPrev
+        , new
+        , next
+        , prev
+        , replace
+        , save
+        )
 
 import Zipper
 
 
 type alias Model =
-    -- Equal with Editor.Model
     { zipper : Zipper.Zipper }
 
 
@@ -40,7 +50,11 @@ replace model history =
 
 save : Model -> History -> History
 save model history =
-    { history | prev = history.current :: history.prev, current = model, next = [] }
+    { history
+        | prev = history.current :: history.prev
+        , current = model
+        , next = []
+    }
 
 
 get : History -> Model
@@ -55,7 +69,11 @@ next history =
             history
 
         head :: tail ->
-            { history | prev = history.current :: history.prev, current = head, next = tail }
+            { history
+                | prev = history.current :: history.prev
+                , current = head
+                , next = tail
+            }
 
 
 prev : History -> History
@@ -65,4 +83,8 @@ prev history =
             history
 
         head :: tail ->
-            { history | prev = tail, current = head, next = history.current :: history.next }
+            { history
+                | prev = tail
+                , current = head
+                , next = history.current :: history.next
+            }
