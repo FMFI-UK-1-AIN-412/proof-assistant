@@ -38,24 +38,35 @@ initialModel =
                 --    |> Zipper.down
                 --    |> Zipper.addCases
                 --    |> Zipper.root
-                (Zipper.create <| Proof.createFormulaStep "(a|a)")
+                --
+                --
+                --(Zipper.create <| Proof.createFormulaStep "(a|a)")
+                --    |> Zipper.changeExplanation Proof.Premise
+                --    |> Zipper.add (Proof.createFormulaStep "a")
+                --    |> Zipper.down
+                --    |> Zipper.changeExplanation (Proof.Goal Nothing)
+                --    |> Zipper.down
+                --    |> Zipper.enterGoalProof
+                --    |> Zipper.down
+                --    |> Zipper.createGoalCasesNode
+                --    |> Zipper.enterGoalProof
+                --    |> Zipper.editValueCase1 "a"
+                --    |> Zipper.editValueCase2 "a"
+                (Zipper.create <| Proof.createFormulaStep "(a->b)")
                     |> Zipper.changeExplanation Proof.Premise
-                    |> Zipper.add (Proof.createFormulaStep "a")
+                    |> Zipper.add (Proof.createFormulaStep "(a->-b)")
                     |> Zipper.down
-                    |> Zipper.changeExplanation (Proof.Goal Nothing)
+                    |> Zipper.changeExplanation Proof.Premise
+                    |> Zipper.add (Proof.createFormulaStep "-a")
                     |> Zipper.down
-                    |> Zipper.enterGoalProof
+                    |> Zipper.changeExplanation (Proof.Contradiction Nothing)
                     |> Zipper.down
-                    |> Zipper.createGoalCasesNode
-                    |> Zipper.enterGoalProof
-                    |> Zipper.editValueCase1 "a"
-                    |> Zipper.editValueCase2 "a"
-
-            --|> Zipper.down
-            --|> Zipper.changeExplanation Proof.Premise
-            --|> Zipper.down
-            --|> Zipper.addCases
-            --|> Zipper.root
+                    |> Zipper.createContradictionFormulaNode
+                    |> Zipper.enterContradiction
+                    |> Zipper.editValue "a"
+                    |> Zipper.add (Proof.createFormulaStep "b")
+                    |> Zipper.down
+                    |> Zipper.add (Proof.createFormulaStep "-b")
             }
     }
 
@@ -455,7 +466,12 @@ renderFormulaNode zipper explanation formulaStep =
         ( validationStatus, validationNode ) =
             case explanation of
                 Proof.Premise ->
-                    validNode ""
+                    case Proof.getStatusPremise formulaStep of
+                        Err msg ->
+                            invalidNode msg
+
+                        Ok msg ->
+                            validNode msg
 
                 Proof.Rule maybeJustification ->
                     case Proof.getStatusRule formulaStep maybeJustification of
@@ -473,8 +489,13 @@ renderFormulaNode zipper explanation formulaStep =
                         Ok msg ->
                             validNode msg
 
-                Proof.Contradiction _ ->
-                    invalidNode "tODO"
+                Proof.Contradiction contradiction ->
+                    case Proof.getStatusContradiction (Zipper.getBranchAbove zipper) formulaStep contradiction of
+                        Err msg ->
+                            invalidNode msg
+
+                        Ok msg ->
+                            validNode msg
 
         buttonDown =
             InputGroup.button

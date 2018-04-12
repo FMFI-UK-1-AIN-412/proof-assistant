@@ -23,6 +23,7 @@ module Zipper
         , enterCase2
         , enterContradiction
         , enterGoalProof
+        , getBranchAbove
         , matchAll
         , reindexAll
         , root
@@ -737,3 +738,31 @@ validateCases case1 case2 zipper =
 
         _ ->
             Err "Invalid cases! This is not valid from any formula above"
+
+
+getBranchAbove : Zipper -> List Proof.FormulaStep
+getBranchAbove zipper =
+    case List.head zipper.breadcrumbs of
+        Nothing ->
+            []
+
+        Just breadcrumb ->
+            let
+                this =
+                    case breadcrumb of
+                        GoDown expl data ->
+                            data
+
+                        GoCase1 data _ ->
+                            data
+
+                        GoCase2 _ data ->
+                            data
+
+                        GoContradiction data ->
+                            data
+
+                        GoGoalProof data ->
+                            data
+            in
+            this :: (zipper |> up |> getBranchAbove)

@@ -1,4 +1,2 @@
 todo: 
-- fix contradiction (v kazdej vetve najdem spor)
-
 - prvoradova logika

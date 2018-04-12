@@ -14,7 +14,9 @@ module Proof
         , addFormulaStepToFromulaStep
         , changeFormulaStepText
         , createFormulaStep
+        , getStatusContradiction
         , getStatusGoal
+        , getStatusPremise
         , getStatusRule
         , setShowButtons
         , tryParseFormula
@@ -340,6 +342,16 @@ tryParseFormula formulaStep =
                 Nothing
 
 
+getStatusPremise : FormulaStep -> Result String String
+getStatusPremise formulaStep =
+    case tryParseFormula formulaStep of
+        Just errorMsg ->
+            Err errorMsg
+
+        Nothing ->
+            Ok ""
+
+
 getStatusRule : FormulaStep -> Maybe Justification -> Result String String
 getStatusRule formulaStep maybeJustification =
     case tryParseFormula formulaStep of
@@ -385,6 +397,61 @@ getStatusGoal formulaStep maybeProof =
                         Ok "The goal was proven"
                     else
                         Err "Goal is not in all branches"
+
+
+getStatusContradiction : List FormulaStep -> FormulaStep -> Maybe Proof -> Result String String
+getStatusContradiction branchAbove formulaStep maybeProof =
+    case tryParseFormula formulaStep of
+        Just errorMsg ->
+            Err errorMsg
+
+        Nothing ->
+            case maybeProof of
+                Nothing ->
+                    Err "Contradiction not found"
+
+                Just proof ->
+                    let
+                        _ =
+                            Debug.log "above" branchAbove
+
+                        allBranches =
+                            List.map (\brach -> branchAbove ++ brach) (getAllBranches proof)
+
+                        function branch =
+                            let
+                                valid =
+                                    List.filterMap
+                                        (\data ->
+                                            case data.formula of
+                                                Err _ ->
+                                                    Nothing
+
+                                                Ok val ->
+                                                    Just val
+                                        )
+                                        branch
+
+                                splited =
+                                    List.Extra.select valid
+
+                                iterate elem lst =
+                                    case lst of
+                                        [] ->
+                                            False
+
+                                        head :: tail ->
+                                            if Formula.Neg elem == head || elem == Formula.Neg head then
+                                                True
+                                            else
+                                                iterate elem tail
+                            in
+                            List.any (\( x, xs ) -> iterate x xs) splited
+                    in
+                    if List.all function allBranches then
+                        Ok "Contradiction is valid"
+                    else
+                        Err "Contradiction not found"
 
 
 getAllBranches : Proof -> List (List FormulaStep)
