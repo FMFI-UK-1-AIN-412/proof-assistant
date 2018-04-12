@@ -258,7 +258,7 @@ binaryValidator : Validator
 binaryValidator step branch =
     matchAnyFunctions2
         step
-        (flatten <| List.Extra.select branch)
+        (cartesian branch branch)
         [ runValidator2 Matcher.matcherModusPonens ModusPonens
         , runValidator2 Matcher.matcherModusTolens ModusTolens
         , runValidator2 Matcher.matcherHypotheticalSyllogism HypotheticalSyllogism
@@ -271,9 +271,11 @@ binaryValidator step branch =
         ]
 
 
-flatten : List ( FormulaStep, List FormulaStep ) -> List ( FormulaStep, FormulaStep )
-flatten original =
-    List.foldl (\( x, xs ) final -> List.map ((,) x) xs ++ final) [] original
+cartesian : List a -> List b -> List ( a, b )
+cartesian xs ys =
+    List.concatMap
+        (\x -> List.map (\y -> ( x, y )) ys)
+        xs
 
 
 
@@ -376,22 +378,23 @@ getStatusGoal formulaStep maybeProof =
         Nothing ->
             case maybeProof of
                 Nothing ->
-                    Err "Goal is not in all branches"
+                    Err "Goal is not in not proven branches"
 
                 Just proof ->
                     let
                         function branch =
-                            case branch of
-                                [] ->
-                                    False
+                            List.any (\id -> id)
+                                (List.map
+                                    (\this ->
+                                        case ( formulaStep.formula, this.formula ) of
+                                            ( Ok formula1, Ok formula2 ) ->
+                                                formula1 == formula2
 
-                                head :: tail ->
-                                    case ( formulaStep.formula, head.formula ) of
-                                        ( Ok formula1, Ok formula2 ) ->
-                                            formula1 == formula2
-
-                                        _ ->
-                                            function tail
+                                            _ ->
+                                                False
+                                    )
+                                    branch
+                                )
                     in
                     if List.all function (getAllBranches proof) then
                         Ok "The goal was proven"
@@ -412,11 +415,11 @@ getStatusContradiction branchAbove formulaStep maybeProof =
 
                 Just proof ->
                     let
-                        _ =
-                            Debug.log "above" branchAbove
+                        zneguj data =
+                            changeFormulaStepText ("-" ++ data.text) data
 
                         allBranches =
-                            List.map (\brach -> branchAbove ++ brach) (getAllBranches proof)
+                            List.map (\brach -> branchAbove ++ [ zneguj formulaStep ] ++ brach) (getAllBranches proof)
 
                         function branch =
                             let
@@ -454,6 +457,16 @@ getStatusContradiction branchAbove formulaStep maybeProof =
                         Err "Contradiction not found"
 
 
+printBranches : List (List FormulaStep) -> String
+printBranches branches =
+    "[" ++ String.join ", " (List.map printBranch branches) ++ "]"
+
+
+printBranch : List FormulaStep -> String
+printBranch branch =
+    "[" ++ String.join ", " (List.map .text branch) ++ "]"
+
+
 getAllBranches : Proof -> List (List FormulaStep)
 getAllBranches proof =
     let
@@ -462,30 +475,24 @@ getAllBranches proof =
                 FormulaNode _ data ->
                     case data.next of
                         Nothing ->
-                            [ [ data ] ]
+                            [ [] ]
 
                         Just next ->
                             getAllBranches next
 
                 CasesNode case1 case2 ->
-                    let
-                        others1 =
-                            case case1.next of
-                                Nothing ->
-                                    [ [ case1 ] ]
+                    case ( case1.next, case2.next ) of
+                        ( Nothing, Nothing ) ->
+                            [ [] ]
 
-                                Just next ->
-                                    getAllBranches next
+                        ( Just next1, Nothing ) ->
+                            getAllBranches next1
 
-                        others2 =
-                            case case2.next of
-                                Nothing ->
-                                    [ [ case2 ] ]
+                        ( Nothing, Just next2 ) ->
+                            getAllBranches next2
 
-                                Just next ->
-                                    getAllBranches next
-                    in
-                    others1 ++ others2
+                        ( Just next1, Just next2 ) ->
+                            getAllBranches next1 ++ getAllBranches next2
     in
     case proof of
         FormulaNode _ data ->

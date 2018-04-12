@@ -7,11 +7,13 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
+import Formula exposing (..)
 import History
 import Html
 import Html.Attributes
 import Html.Events
-import Proof
+import Parser exposing (..)
+import Proof exposing (..)
 import Zipper
 
 
@@ -27,46 +29,13 @@ initialModel =
     { history =
         History.new
             { zipper =
-                --(Zipper.create <| Proof.createFormulaStep "(a->b)")
-                --    |> Zipper.changeExplanation Proof.Premise
-                --    |> Zipper.add (Proof.createFormulaStep "(b->-c)")
-                --    |> Zipper.down
-                --    |> Zipper.changeExplanation Proof.Premise
-                --    |> Zipper.add (Proof.createFormulaStep "a")
-                --    |> Zipper.down
-                --    |> Zipper.changeExplanation Proof.Premise
-                --    |> Zipper.down
-                --    |> Zipper.addCases
-                --    |> Zipper.root
-                --
-                --
-                --(Zipper.create <| Proof.createFormulaStep "(a|a)")
-                --    |> Zipper.changeExplanation Proof.Premise
-                --    |> Zipper.add (Proof.createFormulaStep "a")
-                --    |> Zipper.down
-                --    |> Zipper.changeExplanation (Proof.Goal Nothing)
-                --    |> Zipper.down
-                --    |> Zipper.enterGoalProof
-                --    |> Zipper.down
-                --    |> Zipper.createGoalCasesNode
-                --    |> Zipper.enterGoalProof
-                --    |> Zipper.editValueCase1 "a"
-                --    |> Zipper.editValueCase2 "a"
-                (Zipper.create <| Proof.createFormulaStep "(a->b)")
-                    |> Zipper.changeExplanation Proof.Premise
-                    |> Zipper.add (Proof.createFormulaStep "(a->-b)")
-                    |> Zipper.down
-                    |> Zipper.changeExplanation Proof.Premise
-                    |> Zipper.add (Proof.createFormulaStep "-a")
-                    |> Zipper.down
-                    |> Zipper.changeExplanation (Proof.Contradiction Nothing)
-                    |> Zipper.down
-                    |> Zipper.createContradictionFormulaNode
-                    |> Zipper.enterContradiction
-                    |> Zipper.editValue "a"
-                    |> Zipper.add (Proof.createFormulaStep "b")
-                    |> Zipper.down
-                    |> Zipper.add (Proof.createFormulaStep "-b")
+                -- Empty
+                --Zipper.create <| Proof.createFormulaStep ""
+                -- Cases proof
+                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
+
+            -- Contradiction Proof
+            --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = True } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
             }
     }
 
@@ -304,6 +273,10 @@ buttonsList zipper explanation includeCasesButton =
 
 render : Model -> Html.Html Msg
 render model =
+    let
+        _ =
+            Debug.log "TODO:" <| ((History.get model.history).zipper |> Zipper.root)
+    in
     Html.div []
         [ if History.hasNext model.history then
             Button.button [ Button.secondary, Button.onClick HistoryForward ] [ Html.text "Step forward" ]

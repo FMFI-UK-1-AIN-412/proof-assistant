@@ -659,10 +659,13 @@ match zipper =
     case zipper.proof of
         Proof.FormulaNode expl formulaStep ->
             let
+                maybeMatched =
+                    Proof.validator formulaStep (getBranchAbove zipper)
+
                 newExpl =
                     case expl of
                         Proof.Rule _ ->
-                            Proof.Rule matched
+                            Proof.Rule maybeMatched
 
                         Proof.Premise ->
                             expl
@@ -673,9 +676,6 @@ match zipper =
                         Proof.Goal _ ->
                             expl
 
-                matched =
-                    callMatcher <| findFormulas zipper
-
                 newProof =
                     Proof.FormulaNode newExpl formulaStep
             in
@@ -685,56 +685,11 @@ match zipper =
             zipper
 
 
-callMatcher : List Proof.FormulaStep -> Maybe Proof.Justification
-callMatcher formulaSteps =
-    case formulaSteps of
-        toProve :: from ->
-            Proof.validator toProve from
-
-        [] ->
-            Nothing
-
-
-findFormulas : Zipper -> List Proof.FormulaStep
-findFormulas zipper =
-    let
-        this =
-            case zipper.proof of
-                -- todo: zoli
-                Proof.FormulaNode expl formulaStep ->
-                    case expl of
-                        Proof.Contradiction _ ->
-                            Just <| Proof.changeFormulaStepText ("-" ++ formulaStep.text) formulaStep
-
-                        _ ->
-                            Just formulaStep
-
-                Proof.CasesNode _ _ ->
-                    Nothing
-    in
-    case this of
-        Just formulaStep ->
-            case upOrNothing zipper of
-                Nothing ->
-                    [ formulaStep ]
-
-                Just parentZipper ->
-                    formulaStep :: findFormulas parentZipper
-
-        Nothing ->
-            case upOrNothing zipper of
-                Nothing ->
-                    []
-
-                Just parentZipper ->
-                    findFormulas parentZipper
-
-
 validateCases : Proof.FormulaStep -> Proof.FormulaStep -> Zipper -> Result String String
 validateCases case1 case2 zipper =
     case ( case1.formula, case2.formula ) of
         ( Ok formula1, Ok formula2 ) ->
-            Proof.validatorCases formula1 formula2 (findFormulas zipper)
+            Proof.validatorCases formula1 formula2 (getBranchAbove zipper)
 
         _ ->
             Err "Invalid cases! This is not valid from any formula above"
@@ -751,18 +706,18 @@ getBranchAbove zipper =
                 this =
                     case breadcrumb of
                         GoDown expl data ->
-                            data
+                            [ data ]
 
                         GoCase1 data _ ->
-                            data
+                            [ data ]
 
                         GoCase2 _ data ->
-                            data
+                            [ data ]
 
                         GoContradiction data ->
-                            data
+                            [ Proof.changeFormulaStepText ("-" ++ data.text) data ]
 
                         GoGoalProof data ->
-                            data
+                            []
             in
-            this :: (zipper |> up |> getBranchAbove)
+            this ++ (zipper |> up |> getBranchAbove)
