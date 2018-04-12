@@ -1,8 +1,4 @@
 todo: 
 - fix contradiction (v kazdej vetve najdem spor)
-- fix goal (v kazdej vetve najdem spor)
-- skryt +/Beta button za sipku dole aj v Cases node/Contradiciton node
-- goal ma mat vlastnu podvetvu?
-
 
 - prvoradova logika

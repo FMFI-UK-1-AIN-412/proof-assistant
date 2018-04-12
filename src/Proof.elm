@@ -14,7 +14,8 @@ module Proof
         , addFormulaStepToFromulaStep
         , changeFormulaStepText
         , createFormulaStep
-        , getStatus
+        , getStatusGoal
+        , getStatusRule
         , setShowButtons
         , tryParseFormula
         , validator
@@ -339,32 +340,93 @@ tryParseFormula formulaStep =
                 Nothing
 
 
-getStatus : Explanation -> FormulaStep -> Result String String
-getStatus explanation formulaStep =
+getStatusRule : FormulaStep -> Maybe Justification -> Result String String
+getStatusRule formulaStep maybeJustification =
     case tryParseFormula formulaStep of
         Just errorMsg ->
             Err errorMsg
 
         Nothing ->
-            case explanation of
-                Premise ->
-                    Ok ""
+            case maybeJustification of
+                Nothing ->
+                    Err "Could not match for any rule"
 
-                Goal proof ->
-                    -- todo: toto ma byt OK iba ak je Goal niekde oznacny za validny
-                    Err "This is not implemented yet!"
+                Just matched ->
+                    Ok <| matcherToStr matched
 
-                Rule maybeJustification ->
-                    case maybeJustification of
+
+getStatusGoal : FormulaStep -> Maybe Proof -> Result String String
+getStatusGoal formulaStep maybeProof =
+    case tryParseFormula formulaStep of
+        Just errorMsg ->
+            Err errorMsg
+
+        Nothing ->
+            case maybeProof of
+                Nothing ->
+                    Err "Goal is not in all branches"
+
+                Just proof ->
+                    let
+                        function branch =
+                            case branch of
+                                [] ->
+                                    False
+
+                                head :: tail ->
+                                    case ( formulaStep.formula, head.formula ) of
+                                        ( Ok formula1, Ok formula2 ) ->
+                                            formula1 == formula2
+
+                                        _ ->
+                                            function tail
+                    in
+                    if List.all function (getAllBranches proof) then
+                        Ok "The goal was proven"
+                    else
+                        Err "Goal is not in all branches"
+
+
+getAllBranches : Proof -> List (List FormulaStep)
+getAllBranches proof =
+    let
+        others =
+            case proof of
+                FormulaNode _ data ->
+                    case data.next of
                         Nothing ->
-                            Err "Could not match for any rule"
+                            [ [ data ] ]
 
-                        Just matched ->
-                            Ok <| matcherToStr matched
+                        Just next ->
+                            getAllBranches next
 
-                Contradiction _ ->
-                    -- todo
-                    Err "This is not implemented yet!"
+                CasesNode case1 case2 ->
+                    let
+                        others1 =
+                            case case1.next of
+                                Nothing ->
+                                    [ [ case1 ] ]
+
+                                Just next ->
+                                    getAllBranches next
+
+                        others2 =
+                            case case2.next of
+                                Nothing ->
+                                    [ [ case2 ] ]
+
+                                Just next ->
+                                    getAllBranches next
+                    in
+                    others1 ++ others2
+    in
+    case proof of
+        FormulaNode _ data ->
+            List.map (\lst -> data :: lst) others
+
+        CasesNode case1 case2 ->
+            List.map (\lst -> case1 :: lst) others
+                ++ List.map (\lst -> case2 :: lst) others
 
 
 

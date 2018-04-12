@@ -27,17 +27,35 @@ initialModel =
     { history =
         History.new
             { zipper =
-                (Zipper.create <| Proof.createFormulaStep "(a->b)")
-                    |> Zipper.changeExplanation Proof.Premise
-                    |> Zipper.add (Proof.createFormulaStep "(b->-c)")
-                    |> Zipper.down
+                --(Zipper.create <| Proof.createFormulaStep "(a->b)")
+                --    |> Zipper.changeExplanation Proof.Premise
+                --    |> Zipper.add (Proof.createFormulaStep "(b->-c)")
+                --    |> Zipper.down
+                --    |> Zipper.changeExplanation Proof.Premise
+                --    |> Zipper.add (Proof.createFormulaStep "a")
+                --    |> Zipper.down
+                --    |> Zipper.changeExplanation Proof.Premise
+                --    |> Zipper.down
+                --    |> Zipper.addCases
+                --    |> Zipper.root
+                (Zipper.create <| Proof.createFormulaStep "(a|a)")
                     |> Zipper.changeExplanation Proof.Premise
                     |> Zipper.add (Proof.createFormulaStep "a")
                     |> Zipper.down
-                    |> Zipper.changeExplanation Proof.Premise
+                    |> Zipper.changeExplanation (Proof.Goal Nothing)
                     |> Zipper.down
-                    |> Zipper.addCases
-                    |> Zipper.root
+                    |> Zipper.enterGoalProof
+                    |> Zipper.down
+                    |> Zipper.createGoalCasesNode
+                    |> Zipper.enterGoalProof
+                    |> Zipper.editValueCase1 "a"
+                    |> Zipper.editValueCase2 "a"
+
+            --|> Zipper.down
+            --|> Zipper.changeExplanation Proof.Premise
+            --|> Zipper.down
+            --|> Zipper.addCases
+            --|> Zipper.root
             }
     }
 
@@ -435,12 +453,28 @@ renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> L
 renderFormulaNode zipper explanation formulaStep =
     let
         ( validationStatus, validationNode ) =
-            case Proof.getStatus explanation formulaStep of
-                Err msg ->
-                    invalidNode msg
+            case explanation of
+                Proof.Premise ->
+                    validNode ""
 
-                Ok msg ->
-                    validNode msg
+                Proof.Rule maybeJustification ->
+                    case Proof.getStatusRule formulaStep maybeJustification of
+                        Err msg ->
+                            invalidNode msg
+
+                        Ok msg ->
+                            validNode msg
+
+                Proof.Goal maybeProof ->
+                    case Proof.getStatusGoal formulaStep maybeProof of
+                        Err msg ->
+                            invalidNode msg
+
+                        Ok msg ->
+                            validNode msg
+
+                Proof.Contradiction _ ->
+                    invalidNode "tODO"
 
         buttonDown =
             InputGroup.button
