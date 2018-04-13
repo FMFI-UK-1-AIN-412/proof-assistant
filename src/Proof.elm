@@ -5,19 +5,13 @@ module Proof
         , GUI
         , Justification(..)
         , Proof(..)
+        , Where(..)
         , addCases
-        , addCasesToCase1
-        , addCasesToCase2
         , addFormulaStep
-        , addFormulaStepCase1
-        , addFormulaStepCase2
-        , addFormulaStepToFromulaStep
+        , applyFunction
         , changeFormulaStepText
         , createFormulaStep
-        , getStatusContradiction
-        , getStatusGoal
-        , getStatusPremise
-        , getStatusRule
+        , getStatus
         , setShowButtons
         , tryParseFormula
         , validator
@@ -32,8 +26,7 @@ import Parser exposing (Parser)
 
 
 type alias GUI =
-    { showButtons : Bool
-    }
+    { showButtons : Bool }
 
 
 type alias FormulaStep =
@@ -43,6 +36,28 @@ type alias FormulaStep =
     , index : Int
     , gui : GUI
     }
+
+
+type Explanation
+    = Premise
+    | Rule (Maybe Justification)
+    | Goal (Maybe Proof)
+    | Contradiction (Maybe Proof)
+
+
+type Proof
+    = FormulaNode Explanation FormulaStep
+    | CasesNode FormulaStep FormulaStep
+
+
+type Where
+    = OnNode
+    | OnCase1
+    | OnCase2
+
+
+
+-- Editing FormulaStep
 
 
 createFormulaStep : String -> FormulaStep
@@ -60,18 +75,6 @@ changeFormulaStepText text formulaStep =
     { formulaStep | text = text, formula = Formula.parse text }
 
 
-type Explanation
-    = Premise
-    | Rule (Maybe Justification)
-    | Goal (Maybe Proof)
-    | Contradiction (Maybe Proof)
-
-
-type Proof
-    = FormulaNode Explanation FormulaStep
-    | CasesNode FormulaStep FormulaStep
-
-
 setShowButtons : Bool -> FormulaStep -> FormulaStep
 setShowButtons bool formulaStep =
     let
@@ -84,105 +87,62 @@ setShowButtons bool formulaStep =
     { formulaStep | gui = newGui }
 
 
-addFormulaStepToFromulaStep : FormulaStep -> FormulaStep -> FormulaStep
-addFormulaStepToFromulaStep toAdd original =
-    case original.next of
-        Nothing ->
-            { original | next = Just <| FormulaNode (Rule Nothing) toAdd }
 
-        Just nextStep ->
-            let
-                newNext =
-                    FormulaNode (Rule Nothing) { toAdd | next = Just nextStep }
-            in
-            { original | next = Just newNext }
+-- Editing Proof
 
 
-addFormulaStep : FormulaStep -> Proof -> Proof
-addFormulaStep formulaStep proof =
+applyFunction : Where -> (FormulaStep -> FormulaStep) -> Proof -> Proof
+applyFunction whr function proof =
     case proof of
-        FormulaNode expl oldFormulaStep ->
-            FormulaNode expl (addFormulaStepToFromulaStep formulaStep oldFormulaStep)
-
-        CasesNode _ _ ->
-            proof
-
-
-addFormulaStepCase1 : FormulaStep -> Proof -> Proof
-addFormulaStepCase1 formulaStep proof =
-    case proof of
-        FormulaNode _ _ ->
-            proof
-
         CasesNode case1 case2 ->
-            CasesNode (addFormulaStepToFromulaStep formulaStep case1) case2
+            case whr of
+                OnNode ->
+                    Debug.crash "This was not supposed to be called!" proof
+
+                OnCase1 ->
+                    CasesNode (function case1) case2
+
+                OnCase2 ->
+                    CasesNode case1 (function case2)
+
+        FormulaNode expl data ->
+            case whr of
+                OnNode ->
+                    FormulaNode expl (function data)
+
+                OnCase1 ->
+                    Debug.crash "This was not supposed to be called!" proof
+
+                OnCase2 ->
+                    Debug.crash "This was not supposed to be called!" proof
 
 
-addFormulaStepCase2 : FormulaStep -> Proof -> Proof
-addFormulaStepCase2 formulaStep proof =
-    case proof of
-        FormulaNode _ _ ->
-            proof
+addFormulaStep : Where -> FormulaStep -> Proof -> Proof
+addFormulaStep whr toAdd proof =
+    let
+        function original =
+            case original.next of
+                Nothing ->
+                    { original | next = Just <| FormulaNode (Rule Nothing) toAdd }
 
-        CasesNode case1 case2 ->
-            CasesNode case1 (addFormulaStepToFromulaStep formulaStep case2)
+                Just nextStep ->
+                    { original | next = Just <| FormulaNode (Rule Nothing) { toAdd | next = Just nextStep } }
+    in
+    applyFunction whr function proof
 
 
-addCases : Proof -> Maybe Proof
-addCases proof =
-    case proof of
-        FormulaNode expl formulaStep ->
-            case formulaStep.next of
+addCases : Where -> Proof -> Proof
+addCases whr proof =
+    let
+        function data =
+            case data.next of
                 Just _ ->
-                    Nothing
+                    data
 
                 Nothing ->
-                    let
-                        newFormulaStep =
-                            { formulaStep | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
-                    in
-                    Just <| FormulaNode expl newFormulaStep
-
-        CasesNode _ _ ->
-            Nothing
-
-
-addCasesToCase1 : Proof -> Maybe Proof
-addCasesToCase1 proof =
-    case proof of
-        FormulaNode _ _ ->
-            Nothing
-
-        CasesNode case1 case2 ->
-            case case1.next of
-                Just _ ->
-                    Nothing
-
-                Nothing ->
-                    let
-                        newCase1 =
-                            { case1 | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
-                    in
-                    Just <| CasesNode newCase1 case2
-
-
-addCasesToCase2 : Proof -> Maybe Proof
-addCasesToCase2 proof =
-    case proof of
-        FormulaNode _ _ ->
-            Nothing
-
-        CasesNode case1 case2 ->
-            case case2.next of
-                Just _ ->
-                    Nothing
-
-                Nothing ->
-                    let
-                        newCase2 =
-                            { case2 | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
-                    in
-                    Just <| CasesNode case1 newCase2
+                    { data | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
+    in
+    applyFunction whr function proof
 
 
 
@@ -273,9 +233,7 @@ binaryValidator step branch =
 
 cartesian : List a -> List b -> List ( a, b )
 cartesian xs ys =
-    List.concatMap
-        (\x -> List.map (\y -> ( x, y )) ys)
-        xs
+    List.concatMap (\x -> List.map (\y -> ( x, y )) ys) xs
 
 
 
@@ -331,140 +289,119 @@ matcherToStr matched =
             "Justification by: Axiom"
 
 
-tryParseFormula : FormulaStep -> Maybe String
-tryParseFormula formulaStep =
+
+-- Get Proof status
+
+
+getErrorOrFormula : FormulaStep -> Result String Formula.Formula
+getErrorOrFormula formulaStep =
     if formulaStep.text == "" then
-        Just "Formula should not be empty"
+        Err "Formula should not be empty"
     else
         case formulaStep.formula of
             Err error ->
-                Just <| "Could not parse: " ++ toString error
+                Err <| "Could not parse: " ++ toString error
 
-            Ok _ ->
-                Nothing
+            Ok formula ->
+                Ok formula
 
 
-getStatusPremise : FormulaStep -> Result String String
-getStatusPremise formulaStep =
-    case tryParseFormula formulaStep of
-        Just errorMsg ->
-            Err errorMsg
+tryParseFormula : FormulaStep -> Maybe String
+tryParseFormula data =
+    case getErrorOrFormula data of
+        Ok _ ->
+            Nothing
 
+        Err err ->
+            Just err
+
+
+getStatus : Explanation -> FormulaStep -> List FormulaStep -> Result String String
+getStatus explanation data branchAbove =
+    case getErrorOrFormula data of
+        Err err ->
+            Err err
+
+        Ok formula ->
+            case explanation of
+                Premise ->
+                    Ok ""
+
+                Rule maybeJustification ->
+                    getStatusRule maybeJustification
+
+                Goal maybeProof ->
+                    getStatusGoal formula maybeProof
+
+                Contradiction contradiction ->
+                    getStatusContradiction branchAbove data contradiction
+
+
+getStatusRule : Maybe Justification -> Result String String
+getStatusRule maybeJustification =
+    case maybeJustification of
         Nothing ->
-            Ok ""
+            Err "Could not match for any rule"
+
+        Just matched ->
+            Ok <| matcherToStr matched
 
 
-getStatusRule : FormulaStep -> Maybe Justification -> Result String String
-getStatusRule formulaStep maybeJustification =
-    case tryParseFormula formulaStep of
-        Just errorMsg ->
-            Err errorMsg
-
+getStatusGoal : Formula.Formula -> Maybe Proof -> Result String String
+getStatusGoal formula maybeProof =
+    case maybeProof of
         Nothing ->
-            case maybeJustification of
-                Nothing ->
-                    Err "Could not match for any rule"
+            Err "Goal is not in not proven branches"
 
-                Just matched ->
-                    Ok <| matcherToStr matched
+        Just proof ->
+            let
+                equal this =
+                    case this.formula of
+                        Ok thisFormula ->
+                            formula == thisFormula
 
+                        Err _ ->
+                            False
 
-getStatusGoal : FormulaStep -> Maybe Proof -> Result String String
-getStatusGoal formulaStep maybeProof =
-    case tryParseFormula formulaStep of
-        Just errorMsg ->
-            Err errorMsg
-
-        Nothing ->
-            case maybeProof of
-                Nothing ->
-                    Err "Goal is not in not proven branches"
-
-                Just proof ->
-                    let
-                        function branch =
-                            List.any (\id -> id)
-                                (List.map
-                                    (\this ->
-                                        case ( formulaStep.formula, this.formula ) of
-                                            ( Ok formula1, Ok formula2 ) ->
-                                                formula1 == formula2
-
-                                            _ ->
-                                                False
-                                    )
-                                    branch
-                                )
-                    in
-                    if List.all function (getAllBranches proof) then
-                        Ok "The goal was proven"
-                    else
-                        Err "Goal is not in all branches"
+                function branch =
+                    List.any identity (List.map equal branch)
+            in
+            if List.all function <| getAllBranches proof then
+                Ok "The goal was proven"
+            else
+                Err "Goal is not in all branches"
 
 
 getStatusContradiction : List FormulaStep -> FormulaStep -> Maybe Proof -> Result String String
 getStatusContradiction branchAbove formulaStep maybeProof =
-    case tryParseFormula formulaStep of
-        Just errorMsg ->
-            Err errorMsg
-
+    case maybeProof of
         Nothing ->
-            case maybeProof of
-                Nothing ->
-                    Err "Contradiction not found"
+            Err "Contradiction not found"
 
-                Just proof ->
-                    let
-                        zneguj data =
-                            changeFormulaStepText ("-" ++ data.text) data
+        Just proof ->
+            let
+                zneguj data =
+                    changeFormulaStepText ("-" ++ data.text) data
 
-                        allBranches =
-                            List.map (\brach -> branchAbove ++ [ zneguj formulaStep ] ++ brach) (getAllBranches proof)
+                allBranches =
+                    List.map (\brach -> branchAbove ++ [ zneguj formulaStep ] ++ brach) (getAllBranches proof)
 
-                        function branch =
-                            let
-                                valid =
-                                    List.filterMap
-                                        (\data ->
-                                            case data.formula of
-                                                Err _ ->
-                                                    Nothing
+                equal first second =
+                    Formula.Neg first == second || first == Formula.Neg second
 
-                                                Ok val ->
-                                                    Just val
-                                        )
-                                        branch
+                iterate elem lst =
+                    List.any identity (List.map (equal elem) lst)
 
-                                splited =
-                                    List.Extra.select valid
+                splited branch =
+                    List.Extra.select <| List.filterMap (.formula >> Result.toMaybe) branch
 
-                                iterate elem lst =
-                                    case lst of
-                                        [] ->
-                                            False
-
-                                        head :: tail ->
-                                            if Formula.Neg elem == head || elem == Formula.Neg head then
-                                                True
-                                            else
-                                                iterate elem tail
-                            in
-                            List.any (\( x, xs ) -> iterate x xs) splited
-                    in
-                    if List.all function allBranches then
-                        Ok "Contradiction is valid"
-                    else
-                        Err "Contradiction not found"
-
-
-printBranches : List (List FormulaStep) -> String
-printBranches branches =
-    "[" ++ String.join ", " (List.map printBranch branches) ++ "]"
-
-
-printBranch : List FormulaStep -> String
-printBranch branch =
-    "[" ++ String.join ", " (List.map .text branch) ++ "]"
+                function branch =
+                    List.any (\( x, xs ) -> iterate x xs) (splited branch)
+            in
+            if List.all function allBranches then
+                Ok "Contradiction is valid"
+            else
+                Err "Contradiction not found"
 
 
 getAllBranches : Proof -> List (List FormulaStep)
@@ -661,3 +598,17 @@ validatorCases formula1 formula2 branch =
 
                 _ ->
                     validatorCases formula1 formula2 rest
+
+
+
+-- Debuging functions
+
+
+printBranches : List (List FormulaStep) -> String
+printBranches branches =
+    "[" ++ String.join ", " (List.map printBranch branches) ++ "]"
+
+
+printBranch : List FormulaStep -> String
+printBranch branch =
+    "[" ++ String.join ", " (List.map .text branch) ++ "]"

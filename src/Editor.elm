@@ -32,10 +32,9 @@ initialModel =
                 -- Empty
                 --Zipper.create <| Proof.createFormulaStep ""
                 -- Cases proof
-                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
-
-            -- Contradiction Proof
-            --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = True } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
+                --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
+                -- Contradiction Proof
+                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = True } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
             }
     }
 
@@ -45,24 +44,14 @@ initialModel =
 
 
 type Msg
-    = ZipperEdit Zipper.Zipper String
-    | ZipperEditCase1 Zipper.Zipper String
-    | ZipperEditCase2 Zipper.Zipper String
-    | ZipperAdd Zipper.Zipper
-    | ZipperAddCases Zipper.Zipper
+    = ZipperEdit Proof.Where Zipper.Zipper String
+    | ZipperAdd Proof.Where Zipper.Zipper
+    | ZipperAddCases Proof.Where Zipper.Zipper
     | ZipperExplanation Zipper.Zipper Proof.Explanation
     | ZipperDelete Zipper.Zipper
-    | ZipperShowButtons Zipper.Zipper Bool
-    | ZipperSetButtonAppearanceCase1 Zipper.Zipper Bool
-    | ZipperSetButtonAppearanceCase2 Zipper.Zipper Bool
-    | ZipperCreateContradictionFormulaNode Zipper.Zipper
-    | ZipperCreateContradictionCasesNode Zipper.Zipper
-    | ZipperAddStepToCase1 Zipper.Zipper
-    | ZipperAddStepToCase2 Zipper.Zipper
-    | ZipperAddBetaStepToCase1 Zipper.Zipper
-    | ZipperAddBetaStepToCase2 Zipper.Zipper
-    | ZipperCreateGoalFormulaNode Zipper.Zipper
-    | ZipperCreateGoalCasesNode Zipper.Zipper
+    | ZipperSetButtonsAppearance Proof.Where Zipper.Zipper Bool
+    | ZipperCreateSubFormulaNode Zipper.Zipper
+    | ZipperCreateSubCasesNode Zipper.Zipper
     | HistoryBack
     | HistoryForward
 
@@ -78,32 +67,14 @@ update msg model =
 
         newHistory =
             case msg of
-                ZipperEdit zipper value ->
-                    changeZipper False (Zipper.editValue value zipper)
+                ZipperEdit whr zipper value ->
+                    changeZipper False (Zipper.editValue whr value zipper)
 
-                ZipperEditCase1 zipper value ->
-                    changeZipper False (Zipper.editValueCase1 value zipper)
+                ZipperAdd whr zipper ->
+                    changeZipper True (Zipper.add whr (Proof.createFormulaStep "") zipper)
 
-                ZipperEditCase2 zipper value ->
-                    changeZipper False (Zipper.editValueCase2 value zipper)
-
-                ZipperAdd zipper ->
-                    changeZipper True (Zipper.add (Proof.createFormulaStep "") zipper)
-
-                ZipperAddStepToCase1 zipper ->
-                    changeZipper True (Zipper.addStepToCase1 (Proof.createFormulaStep "") zipper)
-
-                ZipperAddStepToCase2 zipper ->
-                    changeZipper True (Zipper.addStepToCase2 (Proof.createFormulaStep "") zipper)
-
-                ZipperAddBetaStepToCase1 zipper ->
-                    changeZipper True (Zipper.addCasesToCase1 zipper)
-
-                ZipperAddBetaStepToCase2 zipper ->
-                    changeZipper True (Zipper.addCasesToCase2 zipper)
-
-                ZipperAddCases zipper ->
-                    changeZipper True (Zipper.addCases zipper)
+                ZipperAddCases whr zipper ->
+                    changeZipper True (Zipper.addCases whr zipper)
 
                 ZipperExplanation zipper explanation ->
                     changeZipper True (Zipper.changeExplanation explanation zipper)
@@ -111,26 +82,14 @@ update msg model =
                 ZipperDelete zipper ->
                     changeZipper True (Zipper.delete zipper)
 
-                ZipperShowButtons zipper value ->
-                    changeZipper False (Zipper.setButtonsAppearance value zipper)
+                ZipperSetButtonsAppearance whr zipper value ->
+                    changeZipper False (Zipper.setButtonsAppearance whr value zipper)
 
-                ZipperSetButtonAppearanceCase1 zipper value ->
-                    changeZipper False (Zipper.setButtonsAppearanceCase1 value zipper)
+                ZipperCreateSubFormulaNode zipper ->
+                    changeZipper True (Zipper.createSubFormulaNode zipper)
 
-                ZipperSetButtonAppearanceCase2 zipper value ->
-                    changeZipper False (Zipper.setButtonsAppearanceCase2 value zipper)
-
-                ZipperCreateContradictionFormulaNode zipper ->
-                    changeZipper True (Zipper.createContradictionFormulaNode zipper)
-
-                ZipperCreateContradictionCasesNode zipper ->
-                    changeZipper True (Zipper.createContradictionCasesNode zipper)
-
-                ZipperCreateGoalFormulaNode zipper ->
-                    changeZipper True (Zipper.createGoalFormulaNode zipper)
-
-                ZipperCreateGoalCasesNode zipper ->
-                    changeZipper True (Zipper.createGoalCasesNode zipper)
+                ZipperCreateSubCasesNode zipper ->
+                    changeZipper True (Zipper.createSubCasesNode zipper)
 
                 HistoryBack ->
                     History.prev model.history
@@ -162,22 +121,22 @@ myButton onClick buttonStyle text =
 
 buttonCreateContradictionFormulaNode : Zipper.Zipper -> Html.Html Msg
 buttonCreateContradictionFormulaNode zipper =
-    buttonAddHelper (ZipperCreateContradictionFormulaNode zipper)
+    buttonAddHelper (ZipperCreateSubFormulaNode zipper)
 
 
 buttonCreateContradictionCasesNode : Zipper.Zipper -> Html.Html Msg
 buttonCreateContradictionCasesNode zipper =
-    buttonAddCasesHelper (ZipperCreateContradictionCasesNode zipper)
+    buttonAddCasesHelper (ZipperCreateSubCasesNode zipper)
 
 
 buttonCreateGoalFormulaNode : Zipper.Zipper -> Html.Html Msg
 buttonCreateGoalFormulaNode zipper =
-    buttonAddHelper (ZipperCreateGoalFormulaNode zipper)
+    buttonAddHelper (ZipperCreateSubFormulaNode zipper)
 
 
 buttonCreateGoalCasesNode : Zipper.Zipper -> Html.Html Msg
 buttonCreateGoalCasesNode zipper =
-    buttonAddCasesHelper (ZipperCreateGoalCasesNode zipper)
+    buttonAddCasesHelper (ZipperCreateSubCasesNode zipper)
 
 
 buttonAddHelper : Msg -> Html.Html Msg
@@ -187,7 +146,7 @@ buttonAddHelper function =
 
 buttonAdd : Zipper.Zipper -> Html.Html Msg
 buttonAdd zipper =
-    buttonAddHelper (ZipperAdd zipper)
+    buttonAddHelper (ZipperAdd Proof.OnNode zipper)
 
 
 buttonAddCasesHelper : Msg -> Html.Html Msg
@@ -197,7 +156,7 @@ buttonAddCasesHelper function =
 
 buttonAddCases : Zipper.Zipper -> Html.Html Msg
 buttonAddCases zipper =
-    buttonAddCasesHelper (ZipperAddCases zipper)
+    buttonAddCasesHelper (ZipperAddCases Proof.OnNode zipper)
 
 
 buttonExplanation : Zipper.Zipper -> String -> Proof.Explanation -> Html.Html Msg
@@ -393,19 +352,19 @@ renderCases zipper case1 case2 =
                 (renderCase case1
                     "Case 1"
                     Zipper.enterCase1
-                    (ZipperAddStepToCase1 zipper)
-                    (ZipperAddBetaStepToCase1 zipper)
-                    (ZipperEditCase1 zipper)
-                    (ZipperSetButtonAppearanceCase1 zipper)
+                    (ZipperAdd Proof.OnCase1 zipper)
+                    (ZipperAddCases Proof.OnCase1 zipper)
+                    (ZipperEdit Proof.OnCase1 zipper)
+                    (ZipperSetButtonsAppearance Proof.OnCase1 zipper)
                 )
             , Html.div [ Html.Attributes.class "inner-style" ]
                 (renderCase case2
                     "Case 2"
                     Zipper.enterCase2
-                    (ZipperAddStepToCase2 zipper)
-                    (ZipperAddBetaStepToCase2 zipper)
-                    (ZipperEditCase2 zipper)
-                    (ZipperSetButtonAppearanceCase2 zipper)
+                    (ZipperAdd Proof.OnCase2 zipper)
+                    (ZipperAddCases Proof.OnCase2 zipper)
+                    (ZipperEdit Proof.OnCase2 zipper)
+                    (ZipperSetButtonsAppearance Proof.OnCase2 zipper)
                 )
             ]
         ]
@@ -437,43 +396,17 @@ renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> L
 renderFormulaNode zipper explanation formulaStep =
     let
         ( validationStatus, validationNode ) =
-            case explanation of
-                Proof.Premise ->
-                    case Proof.getStatusPremise formulaStep of
-                        Err msg ->
-                            invalidNode msg
+            case Proof.getStatus explanation formulaStep (Zipper.getBranchAbove zipper) of
+                Err msg ->
+                    invalidNode msg
 
-                        Ok msg ->
-                            validNode msg
-
-                Proof.Rule maybeJustification ->
-                    case Proof.getStatusRule formulaStep maybeJustification of
-                        Err msg ->
-                            invalidNode msg
-
-                        Ok msg ->
-                            validNode msg
-
-                Proof.Goal maybeProof ->
-                    case Proof.getStatusGoal formulaStep maybeProof of
-                        Err msg ->
-                            invalidNode msg
-
-                        Ok msg ->
-                            validNode msg
-
-                Proof.Contradiction contradiction ->
-                    case Proof.getStatusContradiction (Zipper.getBranchAbove zipper) formulaStep contradiction of
-                        Err msg ->
-                            invalidNode msg
-
-                        Ok msg ->
-                            validNode msg
+                Ok msg ->
+                    validNode msg
 
         buttonDown =
             InputGroup.button
                 [ inputButtonDesign
-                , Button.onClick <| ZipperShowButtons zipper (not formulaStep.gui.showButtons)
+                , Button.onClick <| ZipperSetButtonsAppearance Proof.OnNode zipper (not formulaStep.gui.showButtons)
                 ]
                 [ Html.text "↓" ]
 
@@ -484,7 +417,7 @@ renderFormulaNode zipper explanation formulaStep =
                         (InputGroup.text
                             [ Input.placeholder "Formula"
                             , Input.value formulaStep.text
-                            , Input.onInput <| ZipperEdit zipper
+                            , Input.onInput <| ZipperEdit Proof.OnNode zipper
                             , validationStatus
                             ]
                         )
@@ -497,7 +430,7 @@ renderFormulaNode zipper explanation formulaStep =
                         (InputGroup.text
                             [ Input.placeholder "Formula"
                             , Input.value formulaStep.text
-                            , Input.onInput <| ZipperEdit zipper
+                            , Input.onInput <| ZipperEdit Proof.OnNode zipper
                             ]
                         )
                         |> InputGroup.predecessors [ buttonDown, InputGroup.span [] [ Html.text "Premise:" ] ]
@@ -509,7 +442,7 @@ renderFormulaNode zipper explanation formulaStep =
                         elements =
                             case proof of
                                 Just _ ->
-                                    renderStep (Zipper.enterGoalProof zipper)
+                                    renderStep (Zipper.enterSub zipper)
 
                                 Nothing ->
                                     [ buttonCreateGoalFormulaNode zipper
@@ -520,7 +453,7 @@ renderFormulaNode zipper explanation formulaStep =
                         (InputGroup.text
                             [ Input.placeholder "Formula"
                             , Input.value formulaStep.text
-                            , Input.onInput <| ZipperEdit zipper
+                            , Input.onInput <| ZipperEdit Proof.OnNode zipper
                             ]
                         )
                         |> InputGroup.predecessors [ buttonDown, InputGroup.span [] [ Html.text "Goal:" ] ]
@@ -536,7 +469,7 @@ renderFormulaNode zipper explanation formulaStep =
                         elements =
                             case proof of
                                 Just _ ->
-                                    renderStep (Zipper.enterContradiction zipper)
+                                    renderStep (Zipper.enterSub zipper)
 
                                 Nothing ->
                                     [ buttonCreateContradictionFormulaNode zipper
