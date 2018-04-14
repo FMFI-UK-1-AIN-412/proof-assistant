@@ -12,6 +12,7 @@ module Proof
         , changeFormulaStepText
         , createFormulaStep
         , getStatus
+        , setCollapsed
         , setShowButtons
         , tryParseFormula
         , validator
@@ -26,7 +27,7 @@ import Parser exposing (Parser)
 
 
 type alias GUI =
-    { showButtons : Bool }
+    { showButtons : Bool, collapsed : Bool }
 
 
 type alias FormulaStep =
@@ -66,7 +67,7 @@ createFormulaStep text =
     , formula = Formula.parse text
     , index = 0
     , next = Nothing
-    , gui = { showButtons = True }
+    , gui = { showButtons = True, collapsed = False }
     }
 
 
@@ -83,6 +84,18 @@ setShowButtons bool formulaStep =
 
         newGui =
             { gui | showButtons = bool }
+    in
+    { formulaStep | gui = newGui }
+
+
+setCollapsed : Bool -> FormulaStep -> FormulaStep
+setCollapsed bool formulaStep =
+    let
+        gui =
+            formulaStep.gui
+
+        newGui =
+            { gui | collapsed = bool }
     in
     { formulaStep | gui = newGui }
 

@@ -19,6 +19,7 @@ module Zipper
         , reindexAll
         , root
         , setButtonsAppearance
+        , setCollapsed
         , up
         , validateCases
         )
@@ -269,6 +270,11 @@ editValue whr value zipper =
 setButtonsAppearance : Proof.Where -> Bool -> Zipper -> Zipper
 setButtonsAppearance whr value zipper =
     { zipper | proof = Proof.applyFunction whr (Proof.setShowButtons value) zipper.proof }
+
+
+setCollapsed : Proof.Where -> Bool -> Zipper -> Zipper
+setCollapsed whr value zipper =
+    { zipper | proof = Proof.applyFunction whr (Proof.setCollapsed value) zipper.proof }
 
 
 add : Proof.Where -> Proof.FormulaStep -> Zipper -> Zipper

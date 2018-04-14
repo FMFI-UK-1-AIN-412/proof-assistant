@@ -32,10 +32,10 @@ initialModel =
                 -- Empty
                 --Zipper.create <| Proof.createFormulaStep ""
                 -- Cases proof
-                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
+                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
 
             -- Contradiction Proof
-            --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = True } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False } }), gui = { showButtons = False } }), gui = { showButtons = False } }, breadcrumbs = [] }
+            --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
             }
     }
 
@@ -51,6 +51,7 @@ type Msg
     | ZipperExplanation Zipper.Zipper Proof.Explanation
     | ZipperDelete Zipper.Zipper
     | ZipperSetButtonsAppearance Proof.Where Zipper.Zipper Bool
+    | ZipperSetCollpased Proof.Where Zipper.Zipper Bool
     | ZipperCreateSubFormulaNode Zipper.Zipper
     | ZipperCreateSubCasesNode Zipper.Zipper
     | HistoryBack
@@ -85,6 +86,9 @@ update msg model =
 
                 ZipperSetButtonsAppearance whr zipper value ->
                     changeZipper False <| Zipper.setButtonsAppearance whr value zipper
+
+                ZipperSetCollpased whr zipper value ->
+                    changeZipper False <| Zipper.setCollapsed whr value zipper
 
                 ZipperCreateSubFormulaNode zipper ->
                     changeZipper True <| Zipper.createSubFormulaNode zipper
@@ -200,7 +204,15 @@ buttonsList zipper explanation includeCasesButton =
 buttonDown buttonType callback =
     InputGroup.button
         [ buttonType, Button.onClick callback ]
-        [ Html.text "↓" ]
+        [ Html.text "▼" ]
+
+
+collapseButton : Bool -> Proof.Where -> Zipper.Zipper -> Html.Html Msg
+collapseButton value whr zipper =
+    if value then
+        myButton (ZipperSetCollpased whr zipper value) Button.outlineInfo "🡅"
+    else
+        myButton (ZipperSetCollpased whr zipper value) Button.info "🡇"
 
 
 
@@ -343,17 +355,23 @@ renderCases zipper case1 case2 =
 
                 downButton =
                     buttonDown inputButtonDesign (ZipperSetButtonsAppearance whr zipper (not selectedCase.gui.showButtons))
+
+                localCollapseButton =
+                    collapseButton (not selectedCase.gui.collapsed) whr zipper
             in
-            Html.h2 [] [ Html.text text ]
-                :: Html.div []
-                    [ Form.group []
-                        [ inptGrp False (Just inputType) [ downButton ] selectedCase editCallback
-                            |> InputGroup.view
-                        , validationNode
-                        , buttons
+            if selectedCase.gui.collapsed then
+                [ Html.h4 [] [ localCollapseButton, Html.text text ] ]
+            else
+                Html.h4 [] [ localCollapseButton, Html.text text ]
+                    :: Html.div []
+                        [ Form.group []
+                            [ inptGrp False (Just inputType) [ downButton ] selectedCase editCallback
+                                |> InputGroup.view
+                            , validationNode
+                            , buttons
+                            ]
                         ]
-                    ]
-                :: subProof
+                    :: subProof
 
         ( _, validationNode ) =
             case Zipper.validateCases case1 case2 zipper of
@@ -395,14 +413,20 @@ renderFormulaNode zipper explanation formulaStep =
             ZipperEdit Proof.OnNode zipper
 
         subElements proof =
-            case proof of
-                Just _ ->
-                    renderStep (Zipper.enterSub zipper)
+            if not formulaStep.gui.collapsed then
+                case proof of
+                    Just _ ->
+                        renderStep (Zipper.enterSub zipper)
 
-                Nothing ->
-                    [ buttonAddHelper (ZipperCreateSubFormulaNode zipper)
-                    , buttonAddCasesHelper (ZipperCreateSubCasesNode zipper)
-                    ]
+                    Nothing ->
+                        [ buttonAddHelper (ZipperCreateSubFormulaNode zipper)
+                        , buttonAddCasesHelper (ZipperCreateSubCasesNode zipper)
+                        ]
+            else
+                []
+
+        localCollapseButton =
+            collapseButton (not formulaStep.gui.collapsed) Proof.OnNode zipper
 
         ( inputGroup, subProof ) =
             case explanation of
@@ -415,7 +439,7 @@ renderFormulaNode zipper explanation formulaStep =
                 Proof.Goal proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ Html.text "Prove the goal here" ]
+                            (Html.h4 [] [ localCollapseButton, Html.text "Prove the goal here" ]
                                 :: subElements proof
                             )
                       ]
@@ -424,7 +448,7 @@ renderFormulaNode zipper explanation formulaStep =
                 Proof.Contradiction proof ->
                     ( inptGrp True Nothing [ buttonDownLocal ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ Html.text "Prove the formula above by assuming this formula" ]
+                            (Html.h4 [] [ localCollapseButton, Html.text "Prove the formula above by assuming this formula" ]
                                 :: Input.text
                                     [ Input.disabled True
                                     , Input.value <| "-" ++ formulaStep.text
