@@ -1,3 +1,0 @@
-todo: 
-- prvoradova logika
-- presunut boxy (contradiction/goal) nech formula je v boxe

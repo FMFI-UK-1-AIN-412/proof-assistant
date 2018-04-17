@@ -24,6 +24,7 @@ import List.Extra
 import Matcher
 import Maybe.Extra as MaybeExtra
 import Parser exposing (Parser)
+import Set
 
 
 type alias GUI =
@@ -177,6 +178,9 @@ type Justification
     | DestructiveDilemma Int Int
     | Grimaldi1 Int Int
     | Grimaldi2 Int Int
+    | FirstOrderRemoveUniversalQunatifier Int
+    | FirstOrderRemoveExistentialQunatifier Int
+    | FirstOrderAddExistentialQunatifier Int
     | Axiom
 
 
@@ -205,6 +209,7 @@ validator step branch =
     binaryValidator step branch
         |> MaybeExtra.orElseLazy (\() -> unaryValidator step branch)
         |> MaybeExtra.orElseLazy (\() -> nullaryValidator step branch)
+        |> MaybeExtra.orElseLazy (\() -> speciallFirstOrderLogicValidator step branch)
 
 
 nullaryValidator : Validator
@@ -224,7 +229,66 @@ unaryValidator step branch =
         , runValidator1 Matcher.matcherSameFormula SameFormula
         , runValidator1 Matcher.matcherImplicationRemoval ImplicationRemoval
         , runValidator1 Matcher.matcherDoubleNegation DoubleNegation
+        , runValidator1 Matcher.matcherAddExistentialQuantifier FirstOrderAddExistentialQunatifier
+        , runValidator1 Matcher.matcherRemoveUniversalQuantifier FirstOrderRemoveUniversalQunatifier
         ]
+
+
+speciallFirstOrderLogicValidator : Validator
+speciallFirstOrderLogicValidator step branch =
+    let
+        freeVariablesInFormulas =
+            List.map
+                (\s ->
+                    case s.formula of
+                        Ok formula ->
+                            Formula.freeFormula formula
+
+                        Err _ ->
+                            Set.empty
+                )
+                branch
+
+        freeVariables =
+            Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
+
+        function formula branch =
+            case branch of
+                [] ->
+                    Nothing
+
+                head :: tail ->
+                    case head.formula of
+                        Ok formula2 ->
+                            if Matcher.matcherRemoveExistentialQuantifier formula2 formula freeVariables then
+                                Just <| FirstOrderRemoveExistentialQunatifier head.index
+                            else
+                                function formula tail
+
+                        Err _ ->
+                            function formula tail
+    in
+    case step.formula of
+        Ok formula ->
+            function formula branch
+
+        Err _ ->
+            Nothing
+
+
+matcherRemoveExistentialQuantifier : FormulaStep -> List FormulaStep -> List UnaryMatcherHelper -> Maybe Justification
+matcherRemoveExistentialQuantifier toProve allCombinations functions =
+    case functions of
+        [] ->
+            Nothing
+
+        function :: rest ->
+            case matchFirst1 toProve allCombinations function of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    matchAnyFunctions1 toProve allCombinations rest
 
 
 binaryValidator : Validator
@@ -297,6 +361,15 @@ matcherToStr matched =
 
         DoubleNegation index ->
             "Double negation removed from formula " ++ toString index
+
+        FirstOrderRemoveUniversalQunatifier index ->
+            "Universal quantifier removed from formula " ++ toString index
+
+        FirstOrderRemoveExistentialQunatifier index ->
+            "Existential quantifier removed from formula " ++ toString index
+
+        FirstOrderAddExistentialQunatifier index ->
+            "Existential quantifier added from formula " ++ toString index
 
         Axiom ->
             "Justification by: Axiom"

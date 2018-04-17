@@ -3,6 +3,7 @@ module Matcher
         ( BinaryMatcher
         , NullaryMatcher
         , UnaryMatcher
+        , matcherAddExistentialQuantifier
         , matcherAddition
         , matcherAxiom1
         , matcherConjunction
@@ -16,10 +17,13 @@ module Matcher
         , matcherImplicationRemoval
         , matcherModusPonens
         , matcherModusTolens
+        , matcherRemoveExistentialQuantifier
+        , matcherRemoveUniversalQuantifier
         , matcherSameFormula
         , matcherSimplification
         )
 
+import Dict
 import Formula
 
 
@@ -90,6 +94,129 @@ matcherSimplification from toProve =
     case from of
         Formula.Conj a b ->
             (toProve == a) || (toProve == b)
+
+        _ ->
+            False
+
+
+
+-- tmp
+
+
+getTerms : Formula.Formula -> List Formula.Term
+getTerms formula =
+    case formula of
+        Formula.Atom str terms ->
+            terms
+
+        Formula.Neg form ->
+            getTerms form
+
+        Formula.Disj form1 form2 ->
+            getTerms form1 ++ getTerms form2
+
+        Formula.Conj form1 form2 ->
+            getTerms form1 ++ getTerms form2
+
+        Formula.Impl form1 form2 ->
+            getTerms form1 ++ getTerms form2
+
+        Formula.ForAll _ form ->
+            getTerms form
+
+        Formula.Exists _ form ->
+            getTerms form
+
+        Formula.FF ->
+            []
+
+        Formula.FT ->
+            []
+
+
+firstOrderMatcherHelper : String -> Formula.Formula -> Formula.Formula -> Bool
+firstOrderMatcherHelper var rest toProve =
+    let
+        substitutions =
+            List.map (\elem -> Dict.fromList [ ( var, elem ) ]) (getTerms toProve)
+
+        afterSubstitution =
+            List.map (\elem -> Formula.substitute elem rest) substitutions
+
+        equal other =
+            case other of
+                Err _ ->
+                    False
+
+                Ok subsituted ->
+                    subsituted == toProve
+    in
+    List.any equal afterSubstitution
+
+
+matcherRemoveUniversalQuantifier : UnaryMatcher
+matcherRemoveUniversalQuantifier from toProve =
+    -- \forall x P(x) => P(t)
+    case from of
+        Formula.ForAll var rest ->
+            firstOrderMatcherHelper var rest toProve
+
+        _ ->
+            False
+
+
+matcherAddExistentialQuantifier : UnaryMatcher
+matcherAddExistentialQuantifier from toProve =
+    -- P(t) => \exists x P(x)
+    case toProve of
+        Formula.Exists var rest ->
+            firstOrderMatcherHelper var rest from
+
+        _ ->
+            False
+
+
+matcherRemoveExistentialQuantifier : Formula.Formula -> Formula.Formula -> List String -> Bool
+matcherRemoveExistentialQuantifier from toProve freeVariables =
+    case from of
+        Formula.Exists var rest ->
+            let
+                substitutions =
+                    List.map
+                        (\term ->
+                            case term of
+                                Formula.Var str ->
+                                    if not <| List.member str freeVariables then
+                                        Just <| Dict.fromList [ ( var, term ) ]
+                                    else
+                                        Nothing
+
+                                _ ->
+                                    Nothing
+                        )
+                        (getTerms toProve)
+
+                afterSubstitution =
+                    List.map
+                        (\elem ->
+                            case elem of
+                                Just sub ->
+                                    Formula.substitute sub rest
+
+                                Nothing ->
+                                    Err ""
+                        )
+                        substitutions
+
+                equal other =
+                    case other of
+                        Err _ ->
+                            False
+
+                        Ok subsituted ->
+                            subsituted == toProve
+            in
+            List.any equal afterSubstitution
 
         _ ->
             False
