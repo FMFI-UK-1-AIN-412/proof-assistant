@@ -12,6 +12,7 @@ import History
 import Html
 import Html.Attributes
 import Html.Events
+import Json.Encode
 import Parser exposing (..)
 import Proof exposing (..)
 import Zipper
@@ -32,10 +33,9 @@ initialModel =
                 -- Empty
                 --Zipper.create <| Proof.createFormulaStep ""
                 -- Cases proof
-                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
-
-            -- Contradiction Proof
-            --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
+                --{ proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ImplicationRemoval 1))) { text = "(-a|-b)", formula = Ok (Disj (Neg (Atom "a" [])) (Neg (Atom "b" []))), index = 3, next = Just (CasesNode { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Rule (Just (Conjuction 4 4))) { text = "(-a&-a)", formula = Ok (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))), index = 5, next = Just (FormulaNode (Rule (Just (Addition 5))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 6, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } } { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Just (FormulaNode (Rule (Just (Addition 7))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 8, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "((-a&-a)|-b)", formula = Ok (Disj (Conj (Neg (Atom "a" [])) (Neg (Atom "a" []))) (Neg (Atom "b" []))), index = 2, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
+                -- Contradiction Proof
+                { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 4))) { text = "a", formula = Ok (Atom "a" []), index = 5, next = Just (FormulaNode (Rule (Just (ModusPonens 2 5))) { text = "b", formula = Ok (Atom "b" []), index = 6, next = Just (FormulaNode (Rule (Just (ModusPonens 1 5))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 7, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Nothing, gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 3, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
             }
     }
 
@@ -428,27 +428,28 @@ renderFormulaNode zipper explanation formulaStep =
         localCollapseButton =
             collapseButton (not formulaStep.gui.collapsed) Proof.OnNode zipper
 
-        ( inputGroup, subProof ) =
+        ( inputGroup, subProof, someClass ) =
             case explanation of
                 Proof.Rule _ ->
-                    ( inptGrp False (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback, [] )
+                    ( inptGrp False (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback, [], "" )
 
                 Proof.Premise ->
-                    ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [] )
+                    ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [], "" )
 
                 Proof.Goal proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
-                    , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text "Prove the goal here" ]
+                    , [ Html.div []
+                            (Html.h4 [] [ localCollapseButton, Html.text "Proof" ]
                                 :: subElements proof
                             )
                       ]
+                    , "inner-style"
                     )
 
                 Proof.Contradiction proof ->
                     ( inptGrp True Nothing [ buttonDownLocal ] formulaStep editCallback
-                    , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text "Prove the formula above by assuming this formula" ]
+                    , [ Html.div []
+                            (Html.h4 [] [ localCollapseButton, Html.text "Proof by contradiction" ]
                                 :: Input.text
                                     [ Input.disabled True
                                     , Input.value <| "-" ++ formulaStep.text
@@ -457,6 +458,7 @@ renderFormulaNode zipper explanation formulaStep =
                                 :: subElements proof
                             )
                       ]
+                    , "inner-style"
                     )
 
         ( nextNodes, isLast ) =
@@ -473,7 +475,7 @@ renderFormulaNode zipper explanation formulaStep =
             else
                 ( emptyNode, Button.outlineInfo )
     in
-    Html.div []
+    Html.div [ Html.Attributes.class someClass ]
         (Form.group []
             [ inputGroup |> InputGroup.view
             , validationNode
