@@ -478,6 +478,7 @@ renderFormulaNode zipper explanation formulaStep =
                                 :: subElements proof
                             )
                       ]
+                    , "inner-style"
                     )
 
         ( nextNodes, isLast ) =
