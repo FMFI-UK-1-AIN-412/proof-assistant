@@ -14,6 +14,7 @@ module Zipper
         , enterCase1
         , enterCase2
         , enterSub
+        , generateNewFreeVariable
         , getBranchAbove
         , matchAll
         , reindexAll
@@ -38,6 +39,7 @@ type Breadcrumb
     | GoCase2 Proof.FormulaStep Proof.FormulaStep
     | GoContradiction Proof.FormulaStep
     | GoGoalProof Proof.FormulaStep
+    | GoAddUniversal Proof.FormulaStep String
 
 
 
@@ -140,6 +142,14 @@ createSubNodeHelper node zipper =
                         Nothing ->
                             { zipper | proof = Proof.FormulaNode (Proof.Contradiction <| Just node) formStep }
 
+                Proof.AddUniversalQuantifier str proof ->
+                    case proof of
+                        Just _ ->
+                            zipper
+
+                        Nothing ->
+                            { zipper | proof = Proof.FormulaNode (Proof.AddUniversalQuantifier str <| Just node) formStep }
+
 
 createSubFormulaNode : Zipper -> Zipper
 createSubFormulaNode zipper =
@@ -187,6 +197,17 @@ enterSubOrNothing zipper =
                         )
                         maybeProof
 
+                Proof.AddUniversalQuantifier str maybeProof ->
+                    Maybe.map
+                        (\nextProof ->
+                            let
+                                breadcrumb =
+                                    GoAddUniversal formulaStep str
+                            in
+                            { zipper | proof = nextProof, breadcrumbs = breadcrumb :: zipper.breadcrumbs }
+                        )
+                        maybeProof
+
 
 enterSub : Zipper -> Zipper
 enterSub zipper =
@@ -218,6 +239,13 @@ upOrNothing zipper =
                     Just
                         { zipper
                             | proof = Proof.FormulaNode (Proof.Goal <| Just zipper.proof) formulaStep
+                            , breadcrumbs = rest
+                        }
+
+                GoAddUniversal formulaStep str ->
+                    Just
+                        { zipper
+                            | proof = Proof.FormulaNode (Proof.AddUniversalQuantifier str <| Just zipper.proof) formulaStep
                             , breadcrumbs = rest
                         }
 
@@ -343,6 +371,14 @@ delete zipper =
 
                                 Proof.CasesNode _ _ ->
                                     Proof.FormulaNode (Proof.Goal Nothing) parentFormulaStep
+
+                        GoAddUniversal parentFormulaStep str ->
+                            case zipper.proof of
+                                Proof.FormulaNode _ data ->
+                                    Proof.FormulaNode (Proof.AddUniversalQuantifier str data.next) parentFormulaStep
+
+                                Proof.CasesNode _ _ ->
+                                    Proof.FormulaNode (Proof.AddUniversalQuantifier str Nothing) parentFormulaStep
             in
             { proof = newProof, breadcrumbs = rest }
 
@@ -473,6 +509,9 @@ reindex zipper =
                 GoGoalProof data ->
                     getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
 
+                GoAddUniversal data _ ->
+                    getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
+
 
 matchAll : Zipper -> Zipper
 matchAll zipper =
@@ -499,6 +538,9 @@ match zipper =
                             expl
 
                         Proof.Goal _ ->
+                            expl
+
+                        Proof.AddUniversalQuantifier _ _ ->
                             expl
 
                 newProof =
@@ -544,5 +586,17 @@ getBranchAbove zipper =
 
                         GoGoalProof data ->
                             []
+
+                        GoAddUniversal data _ ->
+                            []
             in
             this ++ (zipper |> up |> getBranchAbove)
+
+
+generateNewFreeVariable : Zipper -> String
+generateNewFreeVariable zipper =
+    let
+        freeVars =
+            Proof.getFreeVariables (getBranchAbove zipper)
+    in
+    Proof.generateNewFreeVariable freeVars

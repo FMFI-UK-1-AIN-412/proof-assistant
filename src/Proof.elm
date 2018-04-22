@@ -11,6 +11,8 @@ module Proof
         , applyFunction
         , changeFormulaStepText
         , createFormulaStep
+        , generateNewFreeVariable
+        , getFreeVariables
         , getStatus
         , setCollapsed
         , setShowButtons
@@ -19,6 +21,7 @@ module Proof
         , validatorCases
         )
 
+import Dict
 import Formula
 import List.Extra
 import Matcher
@@ -45,6 +48,7 @@ type Explanation
     | Rule (Maybe Justification)
     | Goal (Maybe Proof)
     | Contradiction (Maybe Proof)
+    | AddUniversalQuantifier String (Maybe Proof)
 
 
 type Proof
@@ -234,8 +238,21 @@ unaryValidator step branch =
         ]
 
 
-speciallFirstOrderLogicValidator : Validator
-speciallFirstOrderLogicValidator step branch =
+generateNewFreeVariable freeVariables =
+    let
+        newName num =
+            "x" ++ toString num
+
+        getNewFree last =
+            if List.member (newName last) freeVariables then
+                getNewFree (last + 1)
+            else
+                newName last
+    in
+    getNewFree 0
+
+
+getFreeVariables branch =
     let
         freeVariablesInFormulas =
             List.map
@@ -248,10 +265,13 @@ speciallFirstOrderLogicValidator step branch =
                             Set.empty
                 )
                 branch
+    in
+    Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
 
-        freeVariables =
-            Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
 
+speciallFirstOrderLogicValidator : Validator
+speciallFirstOrderLogicValidator step branch =
+    let
         function formula branch =
             case branch of
                 [] ->
@@ -260,7 +280,7 @@ speciallFirstOrderLogicValidator step branch =
                 head :: tail ->
                     case head.formula of
                         Ok formula2 ->
-                            if Matcher.matcherRemoveExistentialQuantifier formula2 formula freeVariables then
+                            if Matcher.matcherRemoveExistentialQuantifier formula2 formula (getFreeVariables branch) then
                                 Just <| FirstOrderRemoveExistentialQunatifier head.index
                             else
                                 function formula tail
@@ -421,6 +441,51 @@ getStatus explanation data branchAbove =
 
                 Contradiction contradiction ->
                     getStatusContradiction branchAbove data contradiction
+
+                AddUniversalQuantifier newVariable proof ->
+                    getStatusAddUniversal formula proof newVariable
+
+
+getStatusAddUniversal : Formula.Formula -> Maybe Proof -> String -> Result String String
+getStatusAddUniversal formula maybeProof newVariable =
+    case maybeProof of
+        Nothing ->
+            Err "Universal quantifier was not proven"
+
+        Just proof ->
+            let
+                toBeMatched =
+                    case formula of
+                        Formula.ForAll premenna f ->
+                            let
+                                sub =
+                                    Dict.fromList [ ( premenna, Formula.Var newVariable ) ]
+                            in
+                            case Formula.substitute sub f of
+                                Ok formula ->
+                                    Just <| formula
+
+                                Err _ ->
+                                    Nothing
+
+                        _ ->
+                            Nothing
+
+                equal this =
+                    case this.formula of
+                        Ok thisFormula ->
+                            toBeMatched == Just thisFormula
+
+                        Err _ ->
+                            False
+
+                function branch =
+                    List.any identity (List.map equal branch)
+            in
+            if List.all function <| getAllBranches proof then
+                Ok "Universal quantifier was proven"
+            else
+                Err "Universal quantifier not proven in all branches"
 
 
 getStatusRule : Maybe Justification -> Result String String
