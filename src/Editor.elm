@@ -1,4 +1,4 @@
-module Editor exposing (Model, Msg(..), initialModel, render, subscriptions, update)
+module Editor exposing (Model, Msg(..), getProof, initialModel, render, setProof, subscriptions, update)
 
 import Bootstrap.Button as Button
 import Bootstrap.ButtonGroup as ButtonGroup
@@ -67,8 +67,6 @@ type Msg
     | ZipperCreateSubCasesNode Zipper.Zipper
     | HistoryBack
     | HistoryForward
-    | JsonSelected
-    | LoadFromJson String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -114,24 +112,6 @@ update msg model =
 
                 HistoryForward ->
                     ( History.next model.history, Cmd.none )
-
-                JsonSelected ->
-                    ( model.history, Exporting.Ports.fileSelected "HEEY-ZOLI" )
-
-                LoadFromJson content ->
-                    case Exporting.Json.Decode.decode content of
-                        Ok proof ->
-                            let
-                                newZipper =
-                                    Zipper.create <| Proof.createFormulaStep ""
-
-                                zipperWithData =
-                                    { newZipper | proof = proof }
-                            in
-                            changeZipper True zipperWithData
-
-                        Err e ->
-                            Debug.log (toString e) ( model.history, Cmd.none )
     in
     ( { model | history = newHistory }, command )
 
@@ -275,6 +255,28 @@ invalidNode text =
     )
 
 
+getZipper : Model -> Zipper.Zipper
+getZipper model =
+    (History.get model.history).zipper |> Zipper.root
+
+
+getProof : Model -> Proof.Proof
+getProof model =
+    (getZipper model).proof
+
+
+setProof : Proof.Proof -> Model -> Model
+setProof proof model =
+    let
+        zipper =
+            { proof = proof, breadcrumbs = [] }
+
+        history =
+            History.save { zipper = zipper } model.history
+    in
+    { model | history = history }
+
+
 
 -- Render functions
 
@@ -283,13 +285,10 @@ render : Model -> Html.Html Msg
 render model =
     let
         zipper =
-            (History.get model.history).zipper
-
-        tree =
-            (zipper |> Zipper.root).proof
+            getZipper model
 
         _ =
-            Debug.log "MODEL:" <| ((History.get model.history).zipper |> Zipper.root)
+            Debug.log "MODEL:" <| zipper
 
         forwardButton =
             Button.button [ Button.secondary, Button.onClick HistoryForward ] [ Html.text "Step forward" ]
@@ -310,28 +309,9 @@ render model =
 
                 ( False, False ) ->
                     []
-
-        saveStateButton =
-            Html.a
-                [ Html.Attributes.href <| Exporting.Json.Encode.jsonDataUri <| Exporting.Json.Encode.encode 4 tree
-                , Html.Attributes.downloadAs "data.json"
-                ]
-                [ Html.text "Save" ]
-
-        loadStateButton =
-            Html.input
-                [ Html.Attributes.type_ "file"
-                , Html.Attributes.id "HEEY-ZOLI"
-                , Html.Attributes.accept "application/json"
-                , Html.Events.on "change"
-                    (Json.Decode.succeed JsonSelected)
-                ]
-                []
     in
     Html.div []
-        (saveStateButton
-            :: loadStateButton
-            :: historyButtons
+        (historyButtons
             ++ [ zipper
                     |> Zipper.root
                     |> Zipper.reindexAll
@@ -562,4 +542,4 @@ renderFormulaNode zipper explanation formulaStep =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Exporting.Ports.fileContentRead LoadFromJson
+    Sub.none
