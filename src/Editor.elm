@@ -16,6 +16,7 @@ import Http
 import Json.Decode
 import Json.Encode
 import Parser exposing (..)
+import Ports
 import Proof exposing (..)
 import Zipper
 
@@ -64,8 +65,8 @@ type Msg
     | ZipperCreateSubCasesNode Zipper.Zipper
     | HistoryBack
     | HistoryForward
-    | SaveToJson
-    | LoadFromJson
+    | JsonSelected
+    | LoadFromJson Ports.FileReaderPortData
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -112,13 +113,23 @@ update msg model =
                 HistoryForward ->
                     ( History.next model.history, Cmd.none )
 
-                SaveToJson ->
-                    -- todo: save
-                    ( model.history, Cmd.none )
+                JsonSelected ->
+                    ( model.history, Ports.fileSelected "HEEY-ZOLI" )
 
-                LoadFromJson ->
-                    -- todo: save
-                    ( model.history, Cmd.none )
+                LoadFromJson { content } ->
+                    case decode content of
+                        Ok proof ->
+                            let
+                                newZipper =
+                                    Zipper.create <| Proof.createFormulaStep ""
+
+                                zipperWithData =
+                                    { newZipper | proof = proof }
+                            in
+                            changeZipper True zipperWithData
+
+                        Err e ->
+                            Debug.log (toString e) ( model.history, Cmd.none )
     in
     ( { model | history = newHistory }, command )
 
@@ -352,6 +363,92 @@ encode indentation proof =
 
 -----------------------
 -----------------------
+
+
+formulaStepDecoder : Json.Decode.Decoder Proof.FormulaStep
+formulaStepDecoder =
+    Json.Decode.map2 Proof.createFormulaStepForDecoder
+        (Json.Decode.field "text" Json.Decode.string)
+        (Json.Decode.maybe <| Json.Decode.field "next" (Json.Decode.lazy (\_ -> proofDecoder)))
+
+
+explanationTypeDecoder type_ =
+    case type_ of
+        "premise" ->
+            Json.Decode.succeed Proof.Premise
+
+        "rule" ->
+            Json.Decode.succeed <| Proof.Rule Nothing
+
+        "goal" ->
+            Json.Decode.map Proof.Goal
+                (Json.Decode.field "proof" <| Json.Decode.maybe <| Json.Decode.lazy (\_ -> proofDecoder))
+
+        "contradiction" ->
+            Json.Decode.map Proof.Contradiction
+                (Json.Decode.field "proof" <| Json.Decode.maybe <| Json.Decode.lazy (\_ -> proofDecoder))
+
+        "addUniversal" ->
+            Json.Decode.map2 Proof.AddUniversalQuantifier
+                (Json.Decode.field "freeVariableName" Json.Decode.string)
+                (Json.Decode.field "proof" <| Json.Decode.maybe <| Json.Decode.lazy (\_ -> proofDecoder))
+
+        _ ->
+            Json.Decode.fail ("'" ++ type_ ++ "' is not a correct node type")
+
+
+explDecoder : Json.Decode.Decoder Proof.Explanation
+explDecoder =
+    Json.Decode.lazy
+        (\_ ->
+            Json.Decode.field "type" Json.Decode.string
+                |> Json.Decode.andThen explanationTypeDecoder
+        )
+
+
+formulaNodeDecoder : Json.Decode.Decoder Proof.Proof
+formulaNodeDecoder =
+    Json.Decode.map2 Proof.FormulaNode
+        (Json.Decode.field "expl" <| Json.Decode.lazy (\_ -> explDecoder))
+        (Json.Decode.field "data" <| Json.Decode.lazy (\_ -> formulaStepDecoder))
+
+
+casesNodeDecoder : Json.Decode.Decoder Proof.Proof
+casesNodeDecoder =
+    Json.Decode.map2 Proof.CasesNode
+        (Json.Decode.field "case1" formulaStepDecoder)
+        (Json.Decode.field "case2" formulaStepDecoder)
+
+
+proofTypeDecoder type_ =
+    case type_ of
+        "formulaNode" ->
+            formulaNodeDecoder
+
+        "casesNode" ->
+            casesNodeDecoder
+
+        _ ->
+            Json.Decode.fail ("'" ++ type_ ++ "' is not a correct node type")
+
+
+proofDecoder : Json.Decode.Decoder Proof.Proof
+proofDecoder =
+    Json.Decode.lazy
+        (\_ ->
+            Json.Decode.field "type" Json.Decode.string
+                |> Json.Decode.andThen proofTypeDecoder
+        )
+
+
+decode : String -> Result String Proof.Proof
+decode data =
+    Json.Decode.decodeString proofDecoder data
+
+
+
+-----------------------
+-----------------------
 -----------------------
 -----------------------
 -- Render functions
@@ -395,9 +492,20 @@ render model =
                 , Html.Attributes.downloadAs "data.json"
                 ]
                 [ Html.text "Save" ]
+
+        loadStateButton =
+            Html.input
+                [ Html.Attributes.type_ "file"
+                , Html.Attributes.id "HEEY-ZOLI"
+                , Html.Attributes.accept "application/json"
+                , Html.Events.on "change"
+                    (Json.Decode.succeed JsonSelected)
+                ]
+                []
     in
     Html.div []
         (saveStateButton
+            :: loadStateButton
             :: historyButtons
             ++ [ zipper
                     |> Zipper.root
@@ -629,4 +737,4 @@ renderFormulaNode zipper explanation formulaStep =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Ports.fileContentRead LoadFromJson

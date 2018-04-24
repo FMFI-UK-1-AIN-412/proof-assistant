@@ -11,6 +11,7 @@ module Proof
         , applyFunction
         , changeFormulaStepText
         , createFormulaStep
+        , createFormulaStepForDecoder
         , generateNewFreeVariable
         , getFreeVariables
         , getStatus
@@ -41,6 +42,14 @@ type alias FormulaStep =
     , index : Int
     , gui : GUI
     }
+
+
+createFormulaStepForDecoder text next =
+    let
+        data =
+            createFormulaStep text
+    in
+    { data | next = next, gui = { showButtons = False, collapsed = False } }
 
 
 type Explanation
