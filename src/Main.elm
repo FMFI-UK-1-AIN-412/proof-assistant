@@ -37,7 +37,11 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         EditorMsg editorMsg ->
-            ( { model | editor = Editor.update editorMsg model.editor }, Cmd.none )
+            let
+                ( editor, command ) =
+                    Editor.update editorMsg model.editor
+            in
+            ( { model | editor = editor }, Cmd.map EditorMsg command )
 
 
 subscriptions : Model -> Sub Msg

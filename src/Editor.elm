@@ -12,6 +12,8 @@ import History
 import Html
 import Html.Attributes
 import Html.Events
+import Http
+import Json.Decode
 import Json.Encode
 import Parser exposing (..)
 import Proof exposing (..)
@@ -62,18 +64,20 @@ type Msg
     | ZipperCreateSubCasesNode Zipper.Zipper
     | HistoryBack
     | HistoryForward
+    | SaveToJson
+    | LoadFromJson
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         changeZipper needSave newZipper =
             if needSave then
-                History.save { zipper = newZipper } model.history
+                ( History.save { zipper = newZipper } model.history, Cmd.none )
             else
-                History.replace { zipper = newZipper } model.history
+                ( History.replace { zipper = newZipper } model.history, Cmd.none )
 
-        newHistory =
+        ( newHistory, command ) =
             case msg of
                 ZipperEdit whr zipper value ->
                     changeZipper False <| Zipper.editValue whr value zipper
@@ -103,12 +107,20 @@ update msg model =
                     changeZipper True <| Zipper.createSubCasesNode zipper
 
                 HistoryBack ->
-                    History.prev model.history
+                    ( History.prev model.history, Cmd.none )
 
                 HistoryForward ->
-                    History.next model.history
+                    ( History.next model.history, Cmd.none )
+
+                SaveToJson ->
+                    -- todo: save
+                    ( model.history, Cmd.none )
+
+                LoadFromJson ->
+                    -- todo: save
+                    ( model.history, Cmd.none )
     in
-    { model | history = newHistory }
+    ( { model | history = newHistory }, command )
 
 
 
@@ -251,12 +263,109 @@ invalidNode text =
 
 
 
+-----------------------
+-----------------------
+-----------------------
+-----------------------
+
+
+jsonDataUri : String -> String
+jsonDataUri data =
+    "data:application/json;charset=utf-8," ++ Http.encodeUri data
+
+
+jsonFormulaStep : Proof.FormulaStep -> List ( String, Json.Encode.Value )
+jsonFormulaStep data =
+    [ ( "text", Json.Encode.string data.text )
+    , ( "next", jsonMaybeProof data.next )
+    ]
+
+
+jsonExpl : Proof.Explanation -> List ( String, Json.Encode.Value )
+jsonExpl explanation =
+    let
+        ( type_, children ) =
+            case explanation of
+                Proof.Premise ->
+                    ( "premise", [] )
+
+                Proof.Rule _ ->
+                    ( "rule", [] )
+
+                Proof.Goal proof ->
+                    ( "goal", [ ( "proof", jsonMaybeProof proof ) ] )
+
+                Proof.Contradiction proof ->
+                    ( "contradiction", [ ( "proof", jsonMaybeProof proof ) ] )
+
+                Proof.AddUniversalQuantifier str proof ->
+                    ( "addUniversal"
+                    , ( "freeVariableName", Json.Encode.string str )
+                        :: [ ( "proof", jsonMaybeProof proof ) ]
+                    )
+    in
+    ( "type", Json.Encode.string type_ ) :: children
+
+
+jsonMaybeProof : Maybe Proof.Proof -> Json.Encode.Value
+jsonMaybeProof maybeProof =
+    case maybeProof of
+        Just proof ->
+            Json.Encode.object <| jsonProofList proof
+
+        Nothing ->
+            Json.Encode.null
+
+
+jsonProofList : Proof.Proof -> List ( String, Json.Encode.Value )
+jsonProofList proof =
+    let
+        ( type_, children ) =
+            case proof of
+                Proof.FormulaNode explanation data ->
+                    ( "formulaNode"
+                    , [ ( "expl", Json.Encode.object <| jsonExpl explanation )
+                      , ( "data", Json.Encode.object <| jsonFormulaStep data )
+                      ]
+                    )
+
+                Proof.CasesNode case1 case2 ->
+                    ( "casesNode"
+                    , [ ( "case1", Json.Encode.object <| jsonFormulaStep case1 )
+                      , ( "case2", Json.Encode.object <| jsonFormulaStep case2 )
+                      ]
+                    )
+    in
+    ( "type", Json.Encode.string type_ ) :: children
+
+
+jsonProof : Proof.Proof -> Json.Encode.Value
+jsonProof proof =
+    Json.Encode.object <| jsonProofList <| proof
+
+
+encode : Int -> Proof.Proof -> String
+encode indentation proof =
+    Json.Encode.encode indentation (jsonProof proof) ++ "\n"
+
+
+
+-----------------------
+-----------------------
+-----------------------
+-----------------------
 -- Render functions
 
 
 render : Model -> Html.Html Msg
 render model =
     let
+        zipper =
+            (History.get model.history).zipper
+
+        tree =
+            (zipper |> Zipper.root).proof
+
         _ =
             Debug.log "MODEL:" <| ((History.get model.history).zipper |> Zipper.root)
 
@@ -264,7 +373,7 @@ render model =
             Button.button [ Button.secondary, Button.onClick HistoryForward ] [ Html.text "Step forward" ]
 
         backwardButton =
-            Button.button [ Button.primary, Button.onClick HistoryBack ] [ Html.text "Step back" ]
+            Button.button [ Button.secondary, Button.onClick HistoryBack ] [ Html.text "Step back" ]
 
         historyButtons =
             case ( History.hasNext model.history, History.hasPrev model.history ) of
@@ -279,10 +388,18 @@ render model =
 
                 ( False, False ) ->
                     []
+
+        saveStateButton =
+            Html.a
+                [ Html.Attributes.href <| jsonDataUri <| encode 4 tree
+                , Html.Attributes.downloadAs "data.json"
+                ]
+                [ Html.text "Save" ]
     in
     Html.div []
-        (historyButtons
-            ++ [ (History.get model.history).zipper
+        (saveStateButton
+            :: historyButtons
+            ++ [ zipper
                     |> Zipper.root
                     |> Zipper.reindexAll
                     |> Zipper.matchAll
