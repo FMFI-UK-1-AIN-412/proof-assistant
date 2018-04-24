@@ -18,28 +18,21 @@
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
     }
-    var app = Elm.Main.fullscreen();
+    const app = Elm.Main.fullscreen();
     app.ports.fileSelected.subscribe(function (id) {
-        var node = document.getElementById(id);
+        const node = document.getElementById(id);
         if (node === null) {
             return;
         }
-        var file = node.files[0];
+        const file = node.files[0];
         if (!file)
             return;
-        var reader = new FileReader();
+        const reader = new FileReader();
         reader.onload = (function(event) {
-            var dataUri = event.target.result;
-            var base64encoded = dataUri.replace(/^[^,]*,/,"");
-            var data = b64DecodeUnicode(base64encoded);
-            var portData = {
-                content: data,
-                // filename: file.name,
-                // jsonImporting: false,
-                // jsonImportError: "",
-                // jsonImportId : "importJson"
-            };
-            app.ports.fileContentRead.send(portData);
+            const dataUri = event.target.result;
+            const base64encoded = dataUri.replace(/^[^,]*,/,"");
+            const data = b64DecodeUnicode(base64encoded);
+            app.ports.fileContentRead.send(data);
         });
         reader.readAsDataURL(file);
     });

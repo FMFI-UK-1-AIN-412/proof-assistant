@@ -7,6 +7,9 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
+import Exporting.Json.Decode
+import Exporting.Json.Encode
+import Exporting.Ports
 import Formula exposing (..)
 import History
 import Html
@@ -16,7 +19,6 @@ import Http
 import Json.Decode
 import Json.Encode
 import Parser exposing (..)
-import Ports
 import Proof exposing (..)
 import Zipper
 
@@ -66,7 +68,7 @@ type Msg
     | HistoryBack
     | HistoryForward
     | JsonSelected
-    | LoadFromJson Ports.FileReaderPortData
+    | LoadFromJson String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -114,10 +116,10 @@ update msg model =
                     ( History.next model.history, Cmd.none )
 
                 JsonSelected ->
-                    ( model.history, Ports.fileSelected "HEEY-ZOLI" )
+                    ( model.history, Exporting.Ports.fileSelected "HEEY-ZOLI" )
 
-                LoadFromJson { content } ->
-                    case decode content of
+                LoadFromJson content ->
+                    case Exporting.Json.Decode.decode content of
                         Ok proof ->
                             let
                                 newZipper =
@@ -274,183 +276,6 @@ invalidNode text =
 
 
 
------------------------
------------------------
------------------------
------------------------
-
-
-jsonDataUri : String -> String
-jsonDataUri data =
-    "data:application/json;charset=utf-8," ++ Http.encodeUri data
-
-
-jsonFormulaStep : Proof.FormulaStep -> List ( String, Json.Encode.Value )
-jsonFormulaStep data =
-    [ ( "text", Json.Encode.string data.text )
-    , ( "next", jsonMaybeProof data.next )
-    ]
-
-
-jsonExpl : Proof.Explanation -> List ( String, Json.Encode.Value )
-jsonExpl explanation =
-    let
-        ( type_, children ) =
-            case explanation of
-                Proof.Premise ->
-                    ( "premise", [] )
-
-                Proof.Rule _ ->
-                    ( "rule", [] )
-
-                Proof.Goal proof ->
-                    ( "goal", [ ( "proof", jsonMaybeProof proof ) ] )
-
-                Proof.Contradiction proof ->
-                    ( "contradiction", [ ( "proof", jsonMaybeProof proof ) ] )
-
-                Proof.AddUniversalQuantifier str proof ->
-                    ( "addUniversal"
-                    , ( "freeVariableName", Json.Encode.string str )
-                        :: [ ( "proof", jsonMaybeProof proof ) ]
-                    )
-    in
-    ( "type", Json.Encode.string type_ ) :: children
-
-
-jsonMaybeProof : Maybe Proof.Proof -> Json.Encode.Value
-jsonMaybeProof maybeProof =
-    case maybeProof of
-        Just proof ->
-            Json.Encode.object <| jsonProofList proof
-
-        Nothing ->
-            Json.Encode.null
-
-
-jsonProofList : Proof.Proof -> List ( String, Json.Encode.Value )
-jsonProofList proof =
-    let
-        ( type_, children ) =
-            case proof of
-                Proof.FormulaNode explanation data ->
-                    ( "formulaNode"
-                    , [ ( "expl", Json.Encode.object <| jsonExpl explanation )
-                      , ( "data", Json.Encode.object <| jsonFormulaStep data )
-                      ]
-                    )
-
-                Proof.CasesNode case1 case2 ->
-                    ( "casesNode"
-                    , [ ( "case1", Json.Encode.object <| jsonFormulaStep case1 )
-                      , ( "case2", Json.Encode.object <| jsonFormulaStep case2 )
-                      ]
-                    )
-    in
-    ( "type", Json.Encode.string type_ ) :: children
-
-
-jsonProof : Proof.Proof -> Json.Encode.Value
-jsonProof proof =
-    Json.Encode.object <| jsonProofList <| proof
-
-
-encode : Int -> Proof.Proof -> String
-encode indentation proof =
-    Json.Encode.encode indentation (jsonProof proof) ++ "\n"
-
-
-
------------------------
------------------------
-
-
-formulaStepDecoder : Json.Decode.Decoder Proof.FormulaStep
-formulaStepDecoder =
-    Json.Decode.map2 Proof.createFormulaStepForDecoder
-        (Json.Decode.field "text" Json.Decode.string)
-        (Json.Decode.maybe <| Json.Decode.field "next" (Json.Decode.lazy (\_ -> proofDecoder)))
-
-
-explanationTypeDecoder type_ =
-    case type_ of
-        "premise" ->
-            Json.Decode.succeed Proof.Premise
-
-        "rule" ->
-            Json.Decode.succeed <| Proof.Rule Nothing
-
-        "goal" ->
-            Json.Decode.map Proof.Goal
-                (Json.Decode.field "proof" <| Json.Decode.maybe <| Json.Decode.lazy (\_ -> proofDecoder))
-
-        "contradiction" ->
-            Json.Decode.map Proof.Contradiction
-                (Json.Decode.field "proof" <| Json.Decode.maybe <| Json.Decode.lazy (\_ -> proofDecoder))
-
-        "addUniversal" ->
-            Json.Decode.map2 Proof.AddUniversalQuantifier
-                (Json.Decode.field "freeVariableName" Json.Decode.string)
-                (Json.Decode.field "proof" <| Json.Decode.maybe <| Json.Decode.lazy (\_ -> proofDecoder))
-
-        _ ->
-            Json.Decode.fail ("'" ++ type_ ++ "' is not a correct node type")
-
-
-explDecoder : Json.Decode.Decoder Proof.Explanation
-explDecoder =
-    Json.Decode.lazy
-        (\_ ->
-            Json.Decode.field "type" Json.Decode.string
-                |> Json.Decode.andThen explanationTypeDecoder
-        )
-
-
-formulaNodeDecoder : Json.Decode.Decoder Proof.Proof
-formulaNodeDecoder =
-    Json.Decode.map2 Proof.FormulaNode
-        (Json.Decode.field "expl" <| Json.Decode.lazy (\_ -> explDecoder))
-        (Json.Decode.field "data" <| Json.Decode.lazy (\_ -> formulaStepDecoder))
-
-
-casesNodeDecoder : Json.Decode.Decoder Proof.Proof
-casesNodeDecoder =
-    Json.Decode.map2 Proof.CasesNode
-        (Json.Decode.field "case1" formulaStepDecoder)
-        (Json.Decode.field "case2" formulaStepDecoder)
-
-
-proofTypeDecoder type_ =
-    case type_ of
-        "formulaNode" ->
-            formulaNodeDecoder
-
-        "casesNode" ->
-            casesNodeDecoder
-
-        _ ->
-            Json.Decode.fail ("'" ++ type_ ++ "' is not a correct node type")
-
-
-proofDecoder : Json.Decode.Decoder Proof.Proof
-proofDecoder =
-    Json.Decode.lazy
-        (\_ ->
-            Json.Decode.field "type" Json.Decode.string
-                |> Json.Decode.andThen proofTypeDecoder
-        )
-
-
-decode : String -> Result String Proof.Proof
-decode data =
-    Json.Decode.decodeString proofDecoder data
-
-
-
------------------------
------------------------
------------------------
------------------------
 -- Render functions
 
 
@@ -488,7 +313,7 @@ render model =
 
         saveStateButton =
             Html.a
-                [ Html.Attributes.href <| jsonDataUri <| encode 4 tree
+                [ Html.Attributes.href <| Exporting.Json.Encode.jsonDataUri <| Exporting.Json.Encode.encode 4 tree
                 , Html.Attributes.downloadAs "data.json"
                 ]
                 [ Html.text "Save" ]
@@ -737,4 +562,4 @@ renderFormulaNode zipper explanation formulaStep =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Ports.fileContentRead LoadFromJson
+    Exporting.Ports.fileContentRead LoadFromJson
