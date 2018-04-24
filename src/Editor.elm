@@ -19,15 +19,20 @@ import Http
 import Json.Decode
 import Json.Encode
 import Parser exposing (..)
-import Proof exposing (..)
+import Proof
+import Types exposing (..)
 import Zipper
 
 
 -- Model
 
 
+type alias OldModel =
+    { zipper : Zipper.Zipper }
+
+
 type alias Model =
-    { history : History.History }
+    { history : History.History OldModel }
 
 
 initialModel : Model
@@ -59,7 +64,7 @@ type Msg
     = ZipperEdit Proof.Where Zipper.Zipper String
     | ZipperAdd Proof.Where Zipper.Zipper
     | ZipperAddCases Proof.Where Zipper.Zipper
-    | ZipperExplanation Zipper.Zipper Proof.Explanation
+    | ZipperExplanation Zipper.Zipper Explanation
     | ZipperDelete Zipper.Zipper
     | ZipperSetButtonsAppearance Proof.Where Zipper.Zipper Bool
     | ZipperSetCollpased Proof.Where Zipper.Zipper Bool
@@ -164,24 +169,24 @@ buttonDelete zipper =
     myButton (ZipperDelete zipper) Button.outlineDanger "x"
 
 
-buttonsList : Zipper.Zipper -> Proof.Explanation -> Bool -> Html.Html Msg
+buttonsList : Zipper.Zipper -> Explanation -> Bool -> Html.Html Msg
 buttonsList zipper explanation includeCasesButton =
     let
         ( isPremise, isGoal, isRule, isContradiction, isAddUniversal ) =
             case explanation of
-                Proof.Premise ->
+                Premise ->
                     ( True, False, False, False, False )
 
-                Proof.Goal _ ->
+                Goal _ ->
                     ( False, True, False, False, False )
 
-                Proof.Rule _ ->
+                Rule _ ->
                     ( False, False, True, False, False )
 
-                Proof.Contradiction _ ->
+                Contradiction _ ->
                     ( False, False, False, True, False )
 
-                Proof.AddUniversalQuantifier _ _ ->
+                AddUniversalQuantifier _ _ ->
                     ( False, False, False, False, True )
 
         radioButton isActive text explanationType =
@@ -192,11 +197,11 @@ buttonsList zipper explanation includeCasesButton =
 
         explanationButtons =
             [ ButtonGroup.radioButtonGroup []
-                [ radioButton isPremise "Premise" Proof.Premise
-                , radioButton isGoal "Goal" (Proof.Goal Nothing)
-                , radioButton isRule "Consequence" (Proof.Rule Nothing)
-                , radioButton isContradiction "Contradiction" (Proof.Contradiction Nothing)
-                , radioButton isAddUniversal "Add universal quantifier" (Proof.AddUniversalQuantifier (Zipper.generateNewFreeVariable zipper) Nothing)
+                [ radioButton isPremise "Premise" Premise
+                , radioButton isGoal "Goal" (Goal Nothing)
+                , radioButton isRule "Consequence" (Rule Nothing)
+                , radioButton isContradiction "Contradiction" (Contradiction Nothing)
+                , radioButton isAddUniversal "Add universal quantifier" (AddUniversalQuantifier (Zipper.generateNewFreeVariable zipper) Nothing)
                 ]
             ]
 
@@ -260,12 +265,12 @@ getZipper model =
     (History.get model.history).zipper |> Zipper.root
 
 
-getProof : Model -> Proof.Proof
+getProof : Model -> Proof
 getProof model =
     (getZipper model).proof
 
 
-setProof : Proof.Proof -> Model -> Model
+setProof : Proof -> Model -> Model
 setProof proof model =
     let
         zipper =
@@ -331,10 +336,10 @@ renderProof zipper =
 renderStep : Zipper.Zipper -> List (Html.Html Msg)
 renderStep zipper =
     case zipper.proof of
-        Proof.FormulaNode explanation formulaStep ->
+        FormulaNode explanation formulaStep ->
             renderFormulaNode zipper explanation formulaStep
 
-        Proof.CasesNode case1 case2 ->
+        CasesNode case1 case2 ->
             renderCases zipper case1 case2
 
 
@@ -358,7 +363,7 @@ inptGrp disabled maybeValidationStatus predecessors data editCallback =
         |> InputGroup.successors [ InputGroup.span [] [ Html.text <| "(" ++ toString data.index ++ ")" ] ]
 
 
-renderCases : Zipper.Zipper -> Proof.FormulaStep -> Proof.FormulaStep -> List (Html.Html Msg)
+renderCases : Zipper.Zipper -> FormulaStep -> FormulaStep -> List (Html.Html Msg)
 renderCases zipper case1 case2 =
     let
         renderCase selectedCase text enterCaseFunction whr zipper =
@@ -433,7 +438,7 @@ renderCases zipper case1 case2 =
     ]
 
 
-renderFormulaNode : Zipper.Zipper -> Proof.Explanation -> Proof.FormulaStep -> List (Html.Html Msg)
+renderFormulaNode : Zipper.Zipper -> Explanation -> FormulaStep -> List (Html.Html Msg)
 renderFormulaNode zipper explanation formulaStep =
     let
         ( validationStatus, validationNode ) =
@@ -470,13 +475,13 @@ renderFormulaNode zipper explanation formulaStep =
 
         ( inputGroup, subProof, someClass ) =
             case explanation of
-                Proof.Rule _ ->
+                Rule _ ->
                     ( inptGrp False (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback, [], "" )
 
-                Proof.Premise ->
+                Premise ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [], "" )
 
-                Proof.Goal proof ->
+                Goal proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
                     , [ Html.div []
                             (Html.h4 [] [ localCollapseButton, Html.text "Proof" ]
@@ -486,7 +491,7 @@ renderFormulaNode zipper explanation formulaStep =
                     , "inner-style"
                     )
 
-                Proof.Contradiction proof ->
+                Contradiction proof ->
                     ( inptGrp True Nothing [ buttonDownLocal ] formulaStep editCallback
                     , [ Html.div []
                             (Html.h4 [] [ localCollapseButton, Html.text "Proof by contradiction" ]
@@ -501,7 +506,7 @@ renderFormulaNode zipper explanation formulaStep =
                     , "inner-style"
                     )
 
-                Proof.AddUniversalQuantifier str proof ->
+                AddUniversalQuantifier str proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Add universal:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text ("Assume " ++ str ++ " is a new free variable. Prove it. todo") ]

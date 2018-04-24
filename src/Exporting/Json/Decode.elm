@@ -2,11 +2,20 @@ module Exporting.Json.Decode exposing (decode)
 
 import Json.Decode exposing (..)
 import Proof
+import Types exposing (..)
 
 
-formulaStepDecoder : Decoder Proof.FormulaStep
+createFormulaStepForDecoder text next =
+    let
+        data =
+            Proof.createFormulaStep text
+    in
+    { data | next = next, gui = { showButtons = False, collapsed = False } }
+
+
+formulaStepDecoder : Decoder FormulaStep
 formulaStepDecoder =
-    map2 Proof.createFormulaStepForDecoder
+    map2 createFormulaStepForDecoder
         (field "text" string)
         (maybe <| field "next" (lazy (\_ -> proofDecoder)))
 
@@ -14,21 +23,21 @@ formulaStepDecoder =
 explanationTypeDecoder type_ =
     case type_ of
         "premise" ->
-            succeed Proof.Premise
+            succeed Premise
 
         "rule" ->
-            succeed <| Proof.Rule Nothing
+            succeed <| Rule Nothing
 
         "goal" ->
-            map Proof.Goal
+            map Goal
                 (field "proof" <| maybe <| lazy (\_ -> proofDecoder))
 
         "contradiction" ->
-            map Proof.Contradiction
+            map Contradiction
                 (field "proof" <| maybe <| lazy (\_ -> proofDecoder))
 
         "addUniversal" ->
-            map2 Proof.AddUniversalQuantifier
+            map2 AddUniversalQuantifier
                 (field "freeVariableName" string)
                 (field "proof" <| maybe <| lazy (\_ -> proofDecoder))
 
@@ -36,7 +45,7 @@ explanationTypeDecoder type_ =
             fail ("'" ++ type_ ++ "' is not a correct node type")
 
 
-explDecoder : Decoder Proof.Explanation
+explDecoder : Decoder Explanation
 explDecoder =
     lazy
         (\_ ->
@@ -45,16 +54,16 @@ explDecoder =
         )
 
 
-formulaNodeDecoder : Decoder Proof.Proof
+formulaNodeDecoder : Decoder Proof
 formulaNodeDecoder =
-    map2 Proof.FormulaNode
+    map2 FormulaNode
         (field "expl" <| lazy (\_ -> explDecoder))
         (field "data" <| lazy (\_ -> formulaStepDecoder))
 
 
-casesNodeDecoder : Decoder Proof.Proof
+casesNodeDecoder : Decoder Proof
 casesNodeDecoder =
-    map2 Proof.CasesNode
+    map2 CasesNode
         (field "case1" formulaStepDecoder)
         (field "case2" formulaStepDecoder)
 
@@ -71,7 +80,7 @@ proofTypeDecoder type_ =
             fail ("'" ++ type_ ++ "' is not a correct node type")
 
 
-proofDecoder : Decoder Proof.Proof
+proofDecoder : Decoder Proof
 proofDecoder =
     lazy
         (\_ ->
@@ -80,6 +89,6 @@ proofDecoder =
         )
 
 
-decode : String -> Result String Proof.Proof
+decode : String -> Result String Proof
 decode data =
     decodeString proofDecoder data

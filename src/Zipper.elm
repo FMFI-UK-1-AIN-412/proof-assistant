@@ -27,19 +27,21 @@ module Zipper
 
 import Formula
 import Proof
+import Types exposing (..)
+import Validator
 
 
 type alias Zipper =
-    { proof : Proof.Proof, breadcrumbs : List Breadcrumb }
+    { proof : Proof, breadcrumbs : List Breadcrumb }
 
 
 type Breadcrumb
-    = GoDown Proof.Explanation Proof.FormulaStep
-    | GoCase1 Proof.FormulaStep Proof.FormulaStep
-    | GoCase2 Proof.FormulaStep Proof.FormulaStep
-    | GoContradiction Proof.FormulaStep
-    | GoGoalProof Proof.FormulaStep
-    | GoAddUniversal Proof.FormulaStep String
+    = GoDown Explanation FormulaStep
+    | GoCase1 FormulaStep FormulaStep
+    | GoCase2 FormulaStep FormulaStep
+    | GoContradiction FormulaStep
+    | GoGoalProof FormulaStep
+    | GoAddUniversal FormulaStep String
 
 
 
@@ -49,7 +51,7 @@ type Breadcrumb
 downOrNothing : Zipper -> Maybe Zipper
 downOrNothing zipper =
     case zipper.proof of
-        Proof.FormulaNode exp nextStep ->
+        FormulaNode exp nextStep ->
             Maybe.map
                 (\nextProof ->
                     { zipper
@@ -59,7 +61,7 @@ downOrNothing zipper =
                 )
                 nextStep.next
 
-        Proof.CasesNode _ _ ->
+        CasesNode _ _ ->
             Nothing
 
 
@@ -71,7 +73,7 @@ down zipper =
 enterCase1OrNothing : Zipper -> Maybe Zipper
 enterCase1OrNothing zipper =
     case zipper.proof of
-        Proof.CasesNode case1 case2 ->
+        CasesNode case1 case2 ->
             Maybe.map
                 (\newProof ->
                     { zipper
@@ -81,7 +83,7 @@ enterCase1OrNothing zipper =
                 )
                 case1.next
 
-        Proof.FormulaNode _ _ ->
+        FormulaNode _ _ ->
             Nothing
 
 
@@ -93,7 +95,7 @@ enterCase1 zipper =
 enterCase2OrNothing : Zipper -> Maybe Zipper
 enterCase2OrNothing zipper =
     case zipper.proof of
-        Proof.CasesNode case1 case2 ->
+        CasesNode case1 case2 ->
             Maybe.map
                 (\newProof ->
                     { zipper
@@ -103,7 +105,7 @@ enterCase2OrNothing zipper =
                 )
                 case2.next
 
-        Proof.FormulaNode _ _ ->
+        FormulaNode _ _ ->
             Nothing
 
 
@@ -112,70 +114,70 @@ enterCase2 zipper =
     enterCase2OrNothing zipper |> Maybe.withDefault zipper
 
 
-createSubNodeHelper : Proof.Proof -> Zipper -> Zipper
+createSubNodeHelper : Proof -> Zipper -> Zipper
 createSubNodeHelper node zipper =
     case zipper.proof of
-        Proof.CasesNode _ _ ->
+        CasesNode _ _ ->
             zipper
 
-        Proof.FormulaNode expl formStep ->
+        FormulaNode expl formStep ->
             case expl of
-                Proof.Premise ->
+                Premise ->
                     zipper
 
-                Proof.Rule _ ->
+                Rule _ ->
                     zipper
 
-                Proof.Goal goalNode ->
+                Goal goalNode ->
                     case goalNode of
                         Just _ ->
                             zipper
 
                         Nothing ->
-                            { zipper | proof = Proof.FormulaNode (Proof.Goal <| Just node) formStep }
+                            { zipper | proof = FormulaNode (Goal <| Just node) formStep }
 
-                Proof.Contradiction conNode ->
+                Contradiction conNode ->
                     case conNode of
                         Just _ ->
                             zipper
 
                         Nothing ->
-                            { zipper | proof = Proof.FormulaNode (Proof.Contradiction <| Just node) formStep }
+                            { zipper | proof = FormulaNode (Contradiction <| Just node) formStep }
 
-                Proof.AddUniversalQuantifier str proof ->
+                AddUniversalQuantifier str proof ->
                     case proof of
                         Just _ ->
                             zipper
 
                         Nothing ->
-                            { zipper | proof = Proof.FormulaNode (Proof.AddUniversalQuantifier str <| Just node) formStep }
+                            { zipper | proof = FormulaNode (AddUniversalQuantifier str <| Just node) formStep }
 
 
 createSubFormulaNode : Zipper -> Zipper
 createSubFormulaNode zipper =
-    createSubNodeHelper (Proof.FormulaNode (Proof.Rule Nothing) (Proof.createFormulaStep "")) zipper
+    createSubNodeHelper (FormulaNode (Rule Nothing) (Proof.createFormulaStep "")) zipper
 
 
 createSubCasesNode : Zipper -> Zipper
 createSubCasesNode zipper =
-    createSubNodeHelper (Proof.CasesNode (Proof.createFormulaStep "") (Proof.createFormulaStep "")) zipper
+    createSubNodeHelper (CasesNode (Proof.createFormulaStep "") (Proof.createFormulaStep "")) zipper
 
 
 enterSubOrNothing : Zipper -> Maybe Zipper
 enterSubOrNothing zipper =
     case zipper.proof of
-        Proof.CasesNode _ _ ->
+        CasesNode _ _ ->
             Nothing
 
-        Proof.FormulaNode explanation formulaStep ->
+        FormulaNode explanation formulaStep ->
             case explanation of
-                Proof.Premise ->
+                Premise ->
                     Nothing
 
-                Proof.Rule _ ->
+                Rule _ ->
                     Nothing
 
-                Proof.Goal maybeProof ->
+                Goal maybeProof ->
                     Maybe.map
                         (\nextProof ->
                             let
@@ -186,7 +188,7 @@ enterSubOrNothing zipper =
                         )
                         maybeProof
 
-                Proof.Contradiction maybeProof ->
+                Contradiction maybeProof ->
                     Maybe.map
                         (\nextProof ->
                             let
@@ -197,7 +199,7 @@ enterSubOrNothing zipper =
                         )
                         maybeProof
 
-                Proof.AddUniversalQuantifier str maybeProof ->
+                AddUniversalQuantifier str maybeProof ->
                     Maybe.map
                         (\nextProof ->
                             let
@@ -220,32 +222,32 @@ upOrNothing zipper =
         breadcrumb :: rest ->
             case breadcrumb of
                 GoDown expl formulaStep ->
-                    Just { zipper | proof = Proof.FormulaNode expl { formulaStep | next = Just zipper.proof }, breadcrumbs = rest }
+                    Just { zipper | proof = FormulaNode expl { formulaStep | next = Just zipper.proof }, breadcrumbs = rest }
 
                 GoCase1 step1 step2 ->
-                    Just { zipper | proof = Proof.CasesNode { step1 | next = Just zipper.proof } step2, breadcrumbs = rest }
+                    Just { zipper | proof = CasesNode { step1 | next = Just zipper.proof } step2, breadcrumbs = rest }
 
                 GoCase2 step1 step2 ->
-                    Just { zipper | proof = Proof.CasesNode step1 { step2 | next = Just zipper.proof }, breadcrumbs = rest }
+                    Just { zipper | proof = CasesNode step1 { step2 | next = Just zipper.proof }, breadcrumbs = rest }
 
                 GoContradiction formulaStep ->
                     Just
                         { zipper
-                            | proof = Proof.FormulaNode (Proof.Contradiction <| Just zipper.proof) formulaStep
+                            | proof = FormulaNode (Contradiction <| Just zipper.proof) formulaStep
                             , breadcrumbs = rest
                         }
 
                 GoGoalProof formulaStep ->
                     Just
                         { zipper
-                            | proof = Proof.FormulaNode (Proof.Goal <| Just zipper.proof) formulaStep
+                            | proof = FormulaNode (Goal <| Just zipper.proof) formulaStep
                             , breadcrumbs = rest
                         }
 
                 GoAddUniversal formulaStep str ->
                     Just
                         { zipper
-                            | proof = Proof.FormulaNode (Proof.AddUniversalQuantifier str <| Just zipper.proof) formulaStep
+                            | proof = FormulaNode (AddUniversalQuantifier str <| Just zipper.proof) formulaStep
                             , breadcrumbs = rest
                         }
 
@@ -272,20 +274,20 @@ root zipper =
 -- Edit Zipper
 
 
-create : Proof.FormulaStep -> Zipper
+create : FormulaStep -> Zipper
 create formulaStep =
-    { proof = Proof.FormulaNode (Proof.Rule Nothing) formulaStep, breadcrumbs = [] }
+    { proof = FormulaNode (Rule Nothing) formulaStep, breadcrumbs = [] }
 
 
-changeExplanation : Proof.Explanation -> Zipper -> Zipper
+changeExplanation : Explanation -> Zipper -> Zipper
 changeExplanation explanation zipper =
     { zipper
         | proof =
             case zipper.proof of
-                Proof.FormulaNode _ formStep ->
-                    Proof.FormulaNode explanation formStep
+                FormulaNode _ formStep ->
+                    FormulaNode explanation formStep
 
-                Proof.CasesNode _ _ ->
+                CasesNode _ _ ->
                     zipper.proof
     }
 
@@ -305,7 +307,7 @@ setCollapsed whr value zipper =
     { zipper | proof = Proof.applyFunction whr (Proof.setCollapsed value) zipper.proof }
 
 
-add : Proof.Where -> Proof.FormulaStep -> Zipper -> Zipper
+add : Proof.Where -> FormulaStep -> Zipper -> Zipper
 add whr formulaStep zipper =
     { zipper | proof = Proof.addFormulaStep whr formulaStep zipper.proof }
         |> setButtonsAppearance whr False
@@ -334,51 +336,51 @@ delete zipper =
                     case breadcrumb of
                         GoDown parentExpl parentFormulaStep ->
                             case zipper.proof of
-                                Proof.FormulaNode _ data ->
-                                    Proof.FormulaNode parentExpl { parentFormulaStep | next = data.next }
+                                FormulaNode _ data ->
+                                    FormulaNode parentExpl { parentFormulaStep | next = data.next }
 
-                                Proof.CasesNode _ _ ->
-                                    Proof.FormulaNode parentExpl { parentFormulaStep | next = Nothing }
+                                CasesNode _ _ ->
+                                    FormulaNode parentExpl { parentFormulaStep | next = Nothing }
 
                         GoCase1 case1 case2 ->
                             case zipper.proof of
-                                Proof.FormulaNode _ data ->
-                                    Proof.CasesNode { case1 | next = data.next } case2
+                                FormulaNode _ data ->
+                                    CasesNode { case1 | next = data.next } case2
 
-                                Proof.CasesNode _ _ ->
-                                    Proof.CasesNode { case1 | next = Nothing } case2
+                                CasesNode _ _ ->
+                                    CasesNode { case1 | next = Nothing } case2
 
                         GoCase2 case1 case2 ->
                             case zipper.proof of
-                                Proof.FormulaNode _ data ->
-                                    Proof.CasesNode case1 { case2 | next = data.next }
+                                FormulaNode _ data ->
+                                    CasesNode case1 { case2 | next = data.next }
 
-                                Proof.CasesNode _ _ ->
-                                    Proof.CasesNode case1 { case2 | next = Nothing }
+                                CasesNode _ _ ->
+                                    CasesNode case1 { case2 | next = Nothing }
 
                         GoContradiction parentFormulaStep ->
                             case zipper.proof of
-                                Proof.FormulaNode _ data ->
-                                    Proof.FormulaNode (Proof.Contradiction data.next) parentFormulaStep
+                                FormulaNode _ data ->
+                                    FormulaNode (Contradiction data.next) parentFormulaStep
 
-                                Proof.CasesNode _ _ ->
-                                    Proof.FormulaNode (Proof.Contradiction Nothing) parentFormulaStep
+                                CasesNode _ _ ->
+                                    FormulaNode (Contradiction Nothing) parentFormulaStep
 
                         GoGoalProof parentFormulaStep ->
                             case zipper.proof of
-                                Proof.FormulaNode _ data ->
-                                    Proof.FormulaNode (Proof.Goal data.next) parentFormulaStep
+                                FormulaNode _ data ->
+                                    FormulaNode (Goal data.next) parentFormulaStep
 
-                                Proof.CasesNode _ _ ->
-                                    Proof.FormulaNode (Proof.Goal Nothing) parentFormulaStep
+                                CasesNode _ _ ->
+                                    FormulaNode (Goal Nothing) parentFormulaStep
 
                         GoAddUniversal parentFormulaStep str ->
                             case zipper.proof of
-                                Proof.FormulaNode _ data ->
-                                    Proof.FormulaNode (Proof.AddUniversalQuantifier str data.next) parentFormulaStep
+                                FormulaNode _ data ->
+                                    FormulaNode (AddUniversalQuantifier str data.next) parentFormulaStep
 
-                                Proof.CasesNode _ _ ->
-                                    Proof.FormulaNode (Proof.AddUniversalQuantifier str Nothing) parentFormulaStep
+                                CasesNode _ _ ->
+                                    FormulaNode (AddUniversalQuantifier str Nothing) parentFormulaStep
             in
             { proof = newProof, breadcrumbs = rest }
 
@@ -446,10 +448,10 @@ getMaxValue default maybeZipper =
                 val1 =
                     max default
                         (case zipper.proof of
-                            Proof.FormulaNode _ data ->
+                            FormulaNode _ data ->
                                 data.index
 
-                            Proof.CasesNode case1 case2 ->
+                            CasesNode case1 case2 ->
                                 max case1.index case2.index
                         )
 
@@ -473,25 +475,25 @@ reindex zipper =
     case List.head zipper.breadcrumbs of
         Nothing ->
             case zipper.proof of
-                Proof.FormulaNode expl data ->
-                    { zipper | proof = Proof.FormulaNode expl { data | index = 1 } }
+                FormulaNode expl data ->
+                    { zipper | proof = FormulaNode expl { data | index = 1 } }
 
-                Proof.CasesNode case1 case2 ->
-                    { zipper | proof = Proof.CasesNode { case1 | index = 1 } { case2 | index = 2 } }
+                CasesNode case1 case2 ->
+                    { zipper | proof = CasesNode { case1 | index = 1 } { case2 | index = 2 } }
 
         Just breadcrumb ->
             let
                 getNewZipper newIndex1 =
                     case zipper.proof of
-                        Proof.FormulaNode expl formStep ->
-                            { zipper | proof = Proof.FormulaNode expl { formStep | index = newIndex1 } }
+                        FormulaNode expl formStep ->
+                            { zipper | proof = FormulaNode expl { formStep | index = newIndex1 } }
 
-                        Proof.CasesNode case1 case2 ->
+                        CasesNode case1 case2 ->
                             let
                                 newIndex2 =
                                     (zipper |> enterCase1OrNothing |> getMaxValue newIndex1) + 1
                             in
-                            { zipper | proof = Proof.CasesNode { case1 | index = newIndex1 } { case2 | index = newIndex2 } }
+                            { zipper | proof = CasesNode { case1 | index = newIndex1 } { case2 | index = newIndex2 } }
             in
             case breadcrumb of
                 GoDown _ data ->
@@ -521,48 +523,48 @@ matchAll zipper =
 match : Zipper -> Zipper
 match zipper =
     case zipper.proof of
-        Proof.FormulaNode expl formulaStep ->
+        FormulaNode expl formulaStep ->
             let
                 maybeMatched =
-                    Proof.validator formulaStep (getBranchAbove zipper)
+                    Validator.validator formulaStep (getBranchAbove zipper)
 
                 newExpl =
                     case expl of
-                        Proof.Rule _ ->
-                            Proof.Rule maybeMatched
+                        Rule _ ->
+                            Rule maybeMatched
 
-                        Proof.Premise ->
+                        Premise ->
                             expl
 
-                        Proof.Contradiction _ ->
+                        Contradiction _ ->
                             expl
 
-                        Proof.Goal _ ->
+                        Goal _ ->
                             expl
 
-                        Proof.AddUniversalQuantifier _ _ ->
+                        AddUniversalQuantifier _ _ ->
                             expl
 
                 newProof =
-                    Proof.FormulaNode newExpl formulaStep
+                    FormulaNode newExpl formulaStep
             in
             { zipper | proof = newProof }
 
-        Proof.CasesNode _ _ ->
+        CasesNode _ _ ->
             zipper
 
 
-validateCases : Proof.FormulaStep -> Proof.FormulaStep -> Zipper -> Result String String
+validateCases : FormulaStep -> FormulaStep -> Zipper -> Result String String
 validateCases case1 case2 zipper =
     case ( case1.formula, case2.formula ) of
         ( Ok formula1, Ok formula2 ) ->
-            Proof.validatorCases formula1 formula2 (getBranchAbove zipper)
+            Validator.validatorCases formula1 formula2 (getBranchAbove zipper)
 
         _ ->
             Err "Invalid cases! This is not valid from any formula above"
 
 
-getBranchAbove : Zipper -> List Proof.FormulaStep
+getBranchAbove : Zipper -> List FormulaStep
 getBranchAbove zipper =
     case List.head zipper.breadcrumbs of
         Nothing ->
@@ -597,6 +599,6 @@ generateNewFreeVariable : Zipper -> String
 generateNewFreeVariable zipper =
     let
         freeVars =
-            Proof.getFreeVariables (getBranchAbove zipper)
+            Validator.getFreeVariables (getBranchAbove zipper)
     in
-    Proof.generateNewFreeVariable freeVars
+    Validator.generateNewFreeVariable freeVars

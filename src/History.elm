@@ -14,18 +14,14 @@ module History
 import Zipper
 
 
-type alias Model =
-    { zipper : Zipper.Zipper }
-
-
-type alias History =
-    { current : Model
-    , prev : List Model
-    , next : List Model
+type alias History m =
+    { current : m
+    , prev : List m
+    , next : List m
     }
 
 
-new : Model -> History
+new : m -> History m
 new model =
     { current = model
     , prev = []
@@ -33,22 +29,22 @@ new model =
     }
 
 
-hasNext : History -> Bool
+hasNext : History m -> Bool
 hasNext history =
     not <| List.isEmpty history.next
 
 
-hasPrev : History -> Bool
+hasPrev : History m -> Bool
 hasPrev history =
     not <| List.isEmpty history.prev
 
 
-replace : Model -> History -> History
+replace : m -> History m -> History m
 replace model history =
     { history | current = model }
 
 
-save : Model -> History -> History
+save : m -> History m -> History m
 save model history =
     { history
         | prev = history.current :: history.prev
@@ -57,12 +53,12 @@ save model history =
     }
 
 
-get : History -> Model
+get : History m -> m
 get history =
     history.current
 
 
-next : History -> History
+next : History m -> History m
 next history =
     case history.next of
         [] ->
@@ -76,7 +72,7 @@ next history =
             }
 
 
-prev : History -> History
+prev : History m -> History m
 prev history =
     case history.prev of
         [] ->
