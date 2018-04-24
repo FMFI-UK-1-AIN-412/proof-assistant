@@ -397,7 +397,7 @@ applyAll function zipper =
             function zipper
 
         newZipper2 =
-            case downOrNothing newZipper1 of
+            case enterSubOrNothing newZipper1 of
                 Nothing ->
                     newZipper1
 
@@ -405,7 +405,7 @@ applyAll function zipper =
                     up (applyAll function childrenZipper)
 
         newZipper3 =
-            case enterSubOrNothing newZipper2 of
+            case downOrNothing newZipper2 of
                 Nothing ->
                     newZipper2
 
@@ -496,23 +496,23 @@ reindex zipper =
                             { zipper | proof = CasesNode { case1 | index = newIndex1 } { case2 | index = newIndex2 } }
             in
             case breadcrumb of
-                GoDown _ data ->
+                GoContradiction data ->
                     getNewZipper <| data.index + 1
 
-                GoContradiction data ->
-                    getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
+                GoGoalProof data ->
+                    getNewZipper <| data.index + 1
+
+                GoAddUniversal data _ ->
+                    getNewZipper <| data.index + 1
+
+                GoDown _ data ->
+                    getNewZipper <| (zipper |> up |> enterSubOrNothing |> getMaxValue data.index) + 1
 
                 GoCase1 data _ ->
                     getNewZipper <| data.index + 1
 
                 GoCase2 _ data ->
                     getNewZipper <| (zipper |> up |> enterCase1OrNothing |> getMaxValue data.index) + 1
-
-                GoGoalProof data ->
-                    getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
-
-                GoAddUniversal data _ ->
-                    getNewZipper <| (zipper |> up |> downOrNothing |> getMaxValue data.index) + 1
 
 
 matchAll : Zipper -> Zipper

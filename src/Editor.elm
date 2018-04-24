@@ -295,29 +295,26 @@ render model =
         _ =
             Debug.log "MODEL:" <| zipper
 
-        forwardButton =
-            Button.button [ Button.secondary, Button.onClick HistoryForward ] [ Html.text "Step forward" ]
-
-        backwardButton =
-            Button.button [ Button.secondary, Button.onClick HistoryBack ] [ Html.text "Step back" ]
-
         historyButtons =
-            case ( History.hasNext model.history, History.hasPrev model.history ) of
-                ( True, True ) ->
-                    [ forwardButton, backwardButton, hr ]
-
-                ( False, True ) ->
-                    [ backwardButton, hr ]
-
-                ( True, False ) ->
-                    [ forwardButton, hr ]
-
-                ( False, False ) ->
-                    []
+            ButtonGroup.buttonGroup []
+                [ ButtonGroup.button
+                    [ Button.secondary
+                    , Button.onClick HistoryForward
+                    , Button.disabled <| not <| History.hasNext model.history
+                    ]
+                    [ Html.text "Step forward" ]
+                , ButtonGroup.button
+                    [ Button.secondary
+                    , Button.onClick HistoryBack
+                    , Button.disabled <| not <| History.hasPrev model.history
+                    ]
+                    [ Html.text "Step back" ]
+                ]
     in
     Html.div []
         (historyButtons
-            ++ [ zipper
+            :: Html.hr [] []
+            :: [ zipper
                     |> Zipper.root
                     |> Zipper.reindexAll
                     |> Zipper.matchAll
@@ -509,7 +506,7 @@ renderFormulaNode zipper explanation formulaStep =
                 AddUniversalQuantifier str proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Add universal:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text ("Assume " ++ str ++ " is a new free variable. Prove it. todo") ]
+                            (Html.h4 [] [ localCollapseButton, Html.text ("Assume " ++ str ++ " is a new free variable.") ]
                                 :: subElements proof
                             )
                       ]
