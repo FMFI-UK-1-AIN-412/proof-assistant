@@ -1,12 +1,21 @@
-module Editor exposing (Model, Msg(..), getProof, initialModel, render, setProof, subscriptions, update)
+module Editor
+    exposing
+        ( Model
+        , Msg(..)
+        , getProof
+        , initialModel
+        , render
+        , renderHistoryButtons
+        , setProof
+        , subscriptions
+        , update
+        )
 
 import Bootstrap.Button as Button
 import Bootstrap.ButtonGroup as ButtonGroup
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.InputGroup as InputGroup
-import Bootstrap.Grid as Grid
-import Bootstrap.Grid.Col as Col
 import Exporting.Json.Decode
 import Exporting.Json.Encode
 import Exporting.Ports
@@ -286,6 +295,24 @@ setProof proof model =
 -- Render functions
 
 
+renderHistoryButtons : Model -> Html.Html Msg
+renderHistoryButtons model =
+    ButtonGroup.buttonGroup []
+        [ ButtonGroup.button
+            [ Button.secondary
+            , Button.onClick HistoryForward
+            , Button.disabled <| not <| History.hasNext model.history
+            ]
+            [ Html.text "Step forward" ]
+        , ButtonGroup.button
+            [ Button.secondary
+            , Button.onClick HistoryBack
+            , Button.disabled <| not <| History.hasPrev model.history
+            ]
+            [ Html.text "Step back" ]
+        ]
+
+
 render : Model -> Html.Html Msg
 render model =
     let
@@ -294,35 +321,16 @@ render model =
 
         _ =
             Debug.log "MODEL:" <| zipper
-
-        historyButtons =
-            ButtonGroup.buttonGroup []
-                [ ButtonGroup.button
-                    [ Button.secondary
-                    , Button.onClick HistoryForward
-                    , Button.disabled <| not <| History.hasNext model.history
-                    ]
-                    [ Html.text "Step forward" ]
-                , ButtonGroup.button
-                    [ Button.secondary
-                    , Button.onClick HistoryBack
-                    , Button.disabled <| not <| History.hasPrev model.history
-                    ]
-                    [ Html.text "Step back" ]
-                ]
     in
     Html.div []
-        (historyButtons
-            :: Html.hr [] []
-            :: [ zipper
-                    |> Zipper.root
-                    |> Zipper.reindexAll
-                    |> Zipper.matchAll
-                    |> Zipper.reindexAll
-                    |> Zipper.matchAll
-                    |> renderProof
-               ]
-        )
+        [ zipper
+            |> Zipper.root
+            |> Zipper.reindexAll
+            |> Zipper.matchAll
+            |> Zipper.reindexAll
+            |> Zipper.matchAll
+            |> renderProof
+        ]
 
 
 renderProof : Zipper.Zipper -> Html.Html Msg

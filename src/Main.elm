@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Bootstrap.CDN as CDN
 import Bootstrap.Grid as Grid
+import Bootstrap.Grid.Col as Col
 import Editor
 import Exporting.Json.Decode
 import Exporting.Json.Encode
@@ -42,20 +43,30 @@ saveLoadButtons model =
             Html.a
                 [ Html.Attributes.href <| Exporting.Json.Encode.jsonDataUri <| Exporting.Json.Encode.encode 4 proof
                 , Html.Attributes.downloadAs "data.json"
+                , Html.Attributes.class "btn btn-primary"
                 ]
                 [ Html.text "Save" ]
+
+        loadStateLabel =
+            Html.label
+                [ Html.Attributes.for loadButtonId
+                , Html.Attributes.class "btn btn-primary"
+                ]
+                [ Html.text "Import from JSON"
+                ]
 
         loadStateButton =
             Html.input
                 [ Html.Attributes.type_ "file"
                 , Html.Attributes.id loadButtonId
                 , Html.Attributes.accept "application/json"
+                , Html.Attributes.class "inputfile"
                 , Html.Events.on "change"
                     (Json.Decode.succeed JsonSelected)
                 ]
                 []
     in
-    Html.div [] [ saveStateButton, loadStateButton ]
+    Html.div [] [ saveStateButton, loadStateButton, loadStateLabel ]
 
 
 view : Model -> Html.Html Msg
@@ -66,7 +77,13 @@ view model =
             [ Grid.col []
                 [ Html.h1 [] [ Html.text "Proof assistant" ]
                 , Html.hr [] []
-                , saveLoadButtons model.editor
+                , Grid.row []
+                    [ Grid.col [ Col.sm6 ] [ saveLoadButtons model.editor ]
+                    , Grid.col [ Col.sm6 ]
+                        [ Html.div [ Html.Attributes.class "float-right" ]
+                            [ Editor.renderHistoryButtons model.editor |> Html.map EditorMsg ]
+                        ]
+                    ]
                 , Html.hr [] []
                 , Editor.render model.editor |> Html.map EditorMsg
                 ]

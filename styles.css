@@ -18,3 +18,18 @@
 	font-size: 1.2em;
 	text-align: center;
 }
+
+.inputfile {
+	width: 0.1px;
+	height: 0.1px;
+	opacity: 0;
+	overflow: hidden;
+	position: absolute;
+	z-index: -1;
+}
+.inputfile + label {
+    margin-bottom: 0;
+    margin-left: 6px;
+    display: inline-block;
+	cursor: pointer; 
+}
