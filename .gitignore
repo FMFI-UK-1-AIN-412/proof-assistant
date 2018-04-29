@@ -1,6 +1,5 @@
 node_modules
 elm-stuff
-elm.js
 Auth.elm
 generated-code
 build-artifacts
