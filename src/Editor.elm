@@ -478,27 +478,26 @@ renderFormulaNode zipper explanation formulaStep =
         localCollapseButton =
             collapseButton (not formulaStep.gui.collapsed) Proof.OnNode zipper
 
-        ( inputGroup, subProof, someClass ) =
+        ( inputGroup, subProof ) =
             case explanation of
                 Rule _ ->
-                    ( inptGrp False (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback, [], "" )
+                    ( inptGrp False (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback, [] )
 
                 Premise ->
-                    ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [], "" )
+                    ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [] )
 
                 Goal proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
-                    , [ Html.div []
+                    , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text "Prove the goal" ]
                                 :: subElements proof
                             )
                       ]
-                    , "inner-style"
                     )
 
                 Contradiction proof ->
                     ( inptGrp True Nothing [ buttonDownLocal ] formulaStep editCallback
-                    , [ Html.div []
+                    , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text "Assume the contradicted formula" ]
                                 :: Input.text
                                     [ Input.disabled True
@@ -508,7 +507,6 @@ renderFormulaNode zipper explanation formulaStep =
                                 :: subElements proof
                             )
                       ]
-                    , "inner-style"
                     )
 
                 AddUniversalQuantifier str proof ->
@@ -518,7 +516,6 @@ renderFormulaNode zipper explanation formulaStep =
                                 :: subElements proof
                             )
                       ]
-                    , "inner-style"
                     )
 
         ( nextNodes, isLast ) =
@@ -535,7 +532,7 @@ renderFormulaNode zipper explanation formulaStep =
             else
                 ( emptyNode, Button.outlineInfo )
     in
-    Html.div [ Html.Attributes.class someClass ]
+    Html.div []
         (Form.group []
             [ inputGroup |> InputGroup.view
             , validationNode

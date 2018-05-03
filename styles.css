@@ -4,9 +4,8 @@
 }
 
 .inner-style {
-	border: 1px solid #cfcfcf;
-	padding: 20px 20px 20px 30px;
-	box-shadow: 0 0 5px #cfcfcf;
+	border-left: 5px solid #cfcfcf;
+	padding: 20px 0px 20px 20px;
 	margin-bottom: 20px;
 }
 
