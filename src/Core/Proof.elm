@@ -183,7 +183,7 @@ getStatusAddUniversal : Formula.Formula -> Maybe Proof -> String -> Result Strin
 getStatusAddUniversal formula maybeProof newVariable =
     case maybeProof of
         Nothing ->
-            Err "Universal quantifier was not proven"
+            Err "Prove the generalization in the sub-proof"
 
         Just proof ->
             let
@@ -214,18 +214,23 @@ getStatusAddUniversal formula maybeProof newVariable =
 
                 function branch =
                     List.any identity (List.map equal branch)
+
+                allBranches =
+                    getAllBranches proof
             in
-            if List.all function <| getAllBranches proof then
-                Ok "Universal quantifier was proven"
+            if List.all function <| allBranches then
+                Ok "Generalization was proven to be correct"
+            else if List.length allBranches == 1 then
+                Err "Generalization not yet proven"
             else
-                Err "Universal quantifier not proven in all branches"
+                Err "Generalization not yet proven in all branches"
 
 
 getStatusRule : Maybe Justification -> Result String String
 getStatusRule maybeJustification =
     case maybeJustification of
         Nothing ->
-            Err "Could not match for any rule"
+            Err "Could not match any rule"
 
         Just matched ->
             Ok <| Validator.matcherToStr matched
@@ -235,7 +240,7 @@ getStatusGoal : Formula.Formula -> Maybe Proof -> Result String String
 getStatusGoal formula maybeProof =
     case maybeProof of
         Nothing ->
-            Err "Goal is not in not proven branches"
+            Err "Prove the goal in the sub-proof"
 
         Just proof ->
             let
@@ -249,11 +254,16 @@ getStatusGoal formula maybeProof =
 
                 function branch =
                     List.any identity (List.map equal branch)
+
+                allBranches =
+                    getAllBranches proof
             in
-            if List.all function <| getAllBranches proof then
+            if List.all function <| allBranches then
                 Ok "The goal was proven"
+            else if List.length allBranches == 1 then
+                Err "Goal is not yet proven"
             else
-                Err "Goal is not in all branches"
+                Err "Goal is not yet proven in all branches"
 
 
 getStatusContradiction : List FormulaStep -> FormulaStep -> Maybe Proof -> Result String String

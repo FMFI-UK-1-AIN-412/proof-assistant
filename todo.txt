@@ -1,0 +1,3 @@
+- boxi zmazat/prerobit
+- data(20).json -> zle vygenerovana nova premenna
+- data(21).json -> bug - case1 nieje este dokazany!

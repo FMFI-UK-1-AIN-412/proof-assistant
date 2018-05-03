@@ -160,7 +160,7 @@ myButton onClick buttonStyle text =
 
 buttonAddHelper : Msg -> Html.Html Msg
 buttonAddHelper function =
-    myButton function Button.outlineSuccess "+"
+    myButton function Button.outlineSuccess "+ Single"
 
 
 buttonAdd : Zipper.Zipper -> Html.Html Msg
@@ -170,7 +170,7 @@ buttonAdd zipper =
 
 buttonAddCasesHelper : Msg -> Html.Html Msg
 buttonAddCasesHelper function =
-    myButton function Button.outlineInfo "β"
+    myButton function Button.outlineInfo "+ Cases"
 
 
 buttonDelete : Zipper.Zipper -> Html.Html Msg
@@ -210,7 +210,7 @@ buttonsList zipper explanation includeCasesButton =
                 , radioButton isGoal "Goal" (Goal Nothing)
                 , radioButton isRule "Consequence" (Rule Nothing)
                 , radioButton isContradiction "Contradiction" (Contradiction Nothing)
-                , radioButton isAddUniversal "Add universal quantifier" (AddUniversalQuantifier (Zipper.generateNewFreeVariable zipper) Nothing)
+                , radioButton isAddUniversal "Generalization" (AddUniversalQuantifier (Zipper.generateNewFreeVariable zipper) Nothing)
                 ]
             ]
 
@@ -300,16 +300,16 @@ renderHistoryButtons model =
     ButtonGroup.buttonGroup []
         [ ButtonGroup.button
             [ Button.secondary
-            , Button.onClick HistoryForward
-            , Button.disabled <| not <| History.hasNext model.history
-            ]
-            [ Html.text "Step forward" ]
-        , ButtonGroup.button
-            [ Button.secondary
             , Button.onClick HistoryBack
             , Button.disabled <| not <| History.hasPrev model.history
             ]
-            [ Html.text "Step back" ]
+            [ Html.text "⇦" ]
+        , ButtonGroup.button
+            [ Button.secondary
+            , Button.onClick HistoryForward
+            , Button.disabled <| not <| History.hasNext model.history
+            ]
+            [ Html.text "⇨" ]
         ]
 
 
@@ -489,7 +489,7 @@ renderFormulaNode zipper explanation formulaStep =
                 Goal proof ->
                     ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
                     , [ Html.div []
-                            (Html.h4 [] [ localCollapseButton, Html.text "Proof" ]
+                            (Html.h4 [] [ localCollapseButton, Html.text "Prove the goal" ]
                                 :: subElements proof
                             )
                       ]
@@ -499,7 +499,7 @@ renderFormulaNode zipper explanation formulaStep =
                 Contradiction proof ->
                     ( inptGrp True Nothing [ buttonDownLocal ] formulaStep editCallback
                     , [ Html.div []
-                            (Html.h4 [] [ localCollapseButton, Html.text "Proof by contradiction" ]
+                            (Html.h4 [] [ localCollapseButton, Html.text "Assume the contradicted formula" ]
                                 :: Input.text
                                     [ Input.disabled True
                                     , Input.value <| "-" ++ formulaStep.text
@@ -512,7 +512,7 @@ renderFormulaNode zipper explanation formulaStep =
                     )
 
                 AddUniversalQuantifier str proof ->
-                    ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Add universal:" ] ] formulaStep editCallback
+                    ( inptGrp False Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Generalization:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text ("Assume " ++ str ++ " is a new free variable.") ]
                                 :: subElements proof

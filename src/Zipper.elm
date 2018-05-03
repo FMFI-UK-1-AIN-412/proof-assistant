@@ -561,7 +561,7 @@ validateCases case1 case2 zipper =
             Validator.validatorCases formula1 formula2 (getBranchAbove zipper)
 
         _ ->
-            Err "Invalid cases! This is not valid from any formula above"
+            Err "Invalid cases! Could not parse at least one formula."
 
 
 getBranchAbove : Zipper -> List FormulaStep

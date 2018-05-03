@@ -156,37 +156,37 @@ matcherToStr : Justification -> String
 matcherToStr matched =
     case matched of
         ModusPonens index1 index2 ->
-            "Justification by: Modus Ponens from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Modus Ponens from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         ModusTolens index1 index2 ->
-            "Justification by: Modus Tolens from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Modus Tolens from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         HypotheticalSyllogism index1 index2 ->
-            "Justification by: Hypothetical Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Hypothetical Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Conjuction index1 index2 ->
-            "Justification by: Conjuction from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Conjuction from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         DisjunctiveSyllogism index1 index2 ->
-            "Justification by: Disjunctive Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Disjunctive Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         ConstructiveDilemma index1 index2 ->
-            "Justification by: Constructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Constructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         DestructiveDilemma index1 index2 ->
-            "Justification by: Destructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Destructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Grimaldi1 index1 index2 ->
-            "Justification by: Grimaldi1 from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Grimaldi1 from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Grimaldi2 index1 index2 ->
-            "Justification by: Grimaldi2 from formulas " ++ toString index1 ++ " and " ++ toString index2
+            "Grimaldi2 from formulas " ++ toString index1 ++ " and " ++ toString index2
 
         Addition index ->
-            "Justification by: Addition from formula " ++ toString index
+            "Addition from formula " ++ toString index
 
         Simplification index ->
-            "Justification by: Simplification from formula " ++ toString index
+            "Simplification from formula " ++ toString index
 
         SameFormula index ->
             "This formula already appears on step " ++ toString index
@@ -207,7 +207,7 @@ matcherToStr matched =
             "Existential quantifier added from formula " ++ toString index
 
         Axiom ->
-            "Justification by: Axiom"
+            "This is an axiom"
 
 
 runValidator0 : Matcher.NullaryMatcher -> Justification -> FormulaStep -> Maybe Justification
@@ -352,7 +352,7 @@ validatorCases : Formula.Formula -> Formula.Formula -> List FormulaStep -> Resul
 validatorCases formula1 formula2 branch =
     case branch of
         [] ->
-            Err "Invalid cases! This is not valid from any formula above"
+            Err "Invalid cases! This is not valid from any formula above, cases node must match formula (A|B)"
 
         this :: rest ->
             case this.formula of
