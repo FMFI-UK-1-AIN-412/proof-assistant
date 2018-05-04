@@ -18,7 +18,6 @@ type alias GUI =
 type alias FormulaStep =
     { text : String
     , formula : Result Parser.Error Formula.Formula
-    , next : Maybe Proof
     , index : Int
     , gui : GUI
     }
@@ -33,8 +32,8 @@ type Explanation
 
 
 type Proof
-    = FormulaNode Explanation FormulaStep
-    | CasesNode FormulaStep FormulaStep
+    = FormulaNode Explanation FormulaStep (Maybe Proof)
+    | CasesNode FormulaStep (Maybe Proof) FormulaStep (Maybe Proof)
 
 
 type Justification

@@ -37,7 +37,6 @@ createFormulaStep text =
     { text = text
     , formula = Formula.parse text
     , index = 0
-    , next = Nothing
     , gui = { showButtons = True, collapsed = False }
     }
 
@@ -78,21 +77,47 @@ setCollapsed bool formulaStep =
 applyFunction : Where -> (FormulaStep -> FormulaStep) -> Proof -> Proof
 applyFunction whr function proof =
     case proof of
-        CasesNode case1 case2 ->
+        CasesNode case1 next1 case2 next2 ->
             case whr of
                 OnNode ->
                     Debug.crash "This was not supposed to be called!" proof
 
                 OnCase1 ->
-                    CasesNode (function case1) case2
+                    CasesNode (function case1) next1 case2 next2
 
                 OnCase2 ->
-                    CasesNode case1 (function case2)
+                    CasesNode case1 next1 (function case2) next2
 
-        FormulaNode expl data ->
+        FormulaNode expl data next ->
             case whr of
                 OnNode ->
-                    FormulaNode expl (function data)
+                    FormulaNode expl (function data) next
+
+                OnCase1 ->
+                    Debug.crash "This was not supposed to be called!" proof
+
+                OnCase2 ->
+                    Debug.crash "This was not supposed to be called!" proof
+
+
+setNextProof : Where -> (Maybe Proof -> Maybe Proof) -> Proof -> Proof
+setNextProof whr function proof =
+    case proof of
+        CasesNode case1 next1 case2 next2 ->
+            case whr of
+                OnNode ->
+                    Debug.crash "This was not supposed to be called!" proof
+
+                OnCase1 ->
+                    CasesNode case1 (function next1) case2 next2
+
+                OnCase2 ->
+                    CasesNode case1 next1 case2 (function next2)
+
+        FormulaNode expl data next ->
+            case whr of
+                OnNode ->
+                    FormulaNode expl data (function next)
 
                 OnCase1 ->
                     Debug.crash "This was not supposed to be called!" proof
@@ -104,29 +129,29 @@ applyFunction whr function proof =
 addFormulaStep : Where -> FormulaStep -> Proof -> Proof
 addFormulaStep whr toAdd proof =
     let
-        function original =
-            case original.next of
+        function next =
+            case next of
                 Nothing ->
-                    { original | next = Just <| FormulaNode (Rule Nothing) toAdd }
+                    Just <| FormulaNode (Rule Nothing) toAdd Nothing
 
                 Just nextStep ->
-                    { original | next = Just <| FormulaNode (Rule Nothing) { toAdd | next = Just nextStep } }
+                    Just <| FormulaNode (Rule Nothing) toAdd (Just nextStep)
     in
-    applyFunction whr function proof
+    setNextProof whr function proof
 
 
 addCases : Where -> Proof -> Proof
 addCases whr proof =
     let
-        function data =
-            case data.next of
-                Just _ ->
-                    data
+        function next =
+            case next of
+                Just prf ->
+                    Just prf
 
                 Nothing ->
-                    { data | next = Just <| CasesNode (createFormulaStep "") (createFormulaStep "") }
+                    Just <| CasesNode (createFormulaStep "") Nothing (createFormulaStep "") Nothing
     in
-    applyFunction whr function proof
+    setNextProof whr function proof
 
 
 
@@ -305,16 +330,16 @@ getStatusContradiction branchAbove formulaStep maybeProof =
 getAllBranches : Proof -> List (List FormulaStep)
 getAllBranches proof =
     case proof of
-        FormulaNode _ data ->
-            case data.next of
+        FormulaNode _ data maybeNext ->
+            case maybeNext of
                 Nothing ->
                     [ [ data ] ]
 
                 Just next ->
                     List.map (\lst -> data :: lst) <| getAllBranches next
 
-        CasesNode case1 case2 ->
-            case ( case1.next, case2.next ) of
+        CasesNode case1 maybeNext1 case2 maybeNext2 ->
+            case ( maybeNext1, maybeNext2 ) of
                 ( Nothing, Nothing ) ->
                     [ [ case1 ], [ case2 ] ]
 

@@ -14,7 +14,6 @@ jsonDataUri data =
 jsonFormulaStep : FormulaStep -> List ( String, Value )
 jsonFormulaStep data =
     [ ( "text", string data.text )
-    , ( "next", jsonMaybeProof data.next )
     ]
 
 
@@ -59,17 +58,20 @@ jsonProofList proof =
     let
         ( type_, children ) =
             case proof of
-                FormulaNode explanation data ->
+                FormulaNode explanation data next ->
                     ( "formulaNode"
                     , [ ( "expl", object <| jsonExpl explanation )
                       , ( "data", object <| jsonFormulaStep data )
+                      , ( "next", jsonMaybeProof next )
                       ]
                     )
 
-                CasesNode case1 case2 ->
+                CasesNode case1 next1 case2 next2 ->
                     ( "casesNode"
                     , [ ( "case1", object <| jsonFormulaStep case1 )
+                      , ( "next1", jsonMaybeProof next1 )
                       , ( "case2", object <| jsonFormulaStep case2 )
+                      , ( "next2", jsonMaybeProof next2 )
                       ]
                     )
     in

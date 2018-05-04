@@ -5,19 +5,18 @@ import Proof
 import Types exposing (..)
 
 
-createFormulaStepForDecoder text next =
+createFormulaStepForDecoder text =
     let
         data =
             Proof.createFormulaStep text
     in
-    { data | next = next, gui = { showButtons = False, collapsed = False } }
+    { data | gui = { showButtons = False, collapsed = False } }
 
 
 formulaStepDecoder : Decoder FormulaStep
 formulaStepDecoder =
-    map2 createFormulaStepForDecoder
+    map createFormulaStepForDecoder
         (field "text" string)
-        (maybe <| field "next" (lazy (\_ -> proofDecoder)))
 
 
 explanationTypeDecoder type_ =
@@ -56,16 +55,19 @@ explDecoder =
 
 formulaNodeDecoder : Decoder Proof
 formulaNodeDecoder =
-    map2 FormulaNode
+    map3 FormulaNode
         (field "expl" <| lazy (\_ -> explDecoder))
         (field "data" <| lazy (\_ -> formulaStepDecoder))
+        (maybe <| field "next" (lazy (\_ -> proofDecoder)))
 
 
 casesNodeDecoder : Decoder Proof
 casesNodeDecoder =
-    map2 CasesNode
+    map4 CasesNode
         (field "case1" formulaStepDecoder)
+        (maybe <| field "next1" (lazy (\_ -> proofDecoder)))
         (field "case2" formulaStepDecoder)
+        (maybe <| field "next2" (lazy (\_ -> proofDecoder)))
 
 
 proofTypeDecoder type_ =
