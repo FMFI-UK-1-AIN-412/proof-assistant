@@ -6,6 +6,7 @@ module Proof
         , applyFunction
         , changeFormulaStepText
         , createFormulaStep
+        , getAllBranches
         , getStatus
         , setCollapsed
         , setShowButtons

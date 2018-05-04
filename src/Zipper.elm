@@ -595,10 +595,34 @@ getBranchAbove zipper =
             this ++ (zipper |> up |> getBranchAbove)
 
 
+getFreeVariablesAbove zipper =
+    case List.head zipper.breadcrumbs of
+        Nothing ->
+            []
+
+        Just breadcrumb ->
+            case breadcrumb of
+                GoDown (AddUniversalQuantifier str _) data ->
+                    str :: (zipper |> up |> getFreeVariablesAbove)
+
+                _ ->
+                    zipper |> up |> getFreeVariablesAbove
+
+
 generateNewFreeVariable : Zipper -> String
 generateNewFreeVariable zipper =
     let
+        branchAbove =
+            getBranchAbove zipper
+
+        branchBellow =
+            List.foldl (++) [] (Proof.getAllBranches zipper.proof)
+
+        generatedAbove =
+            getFreeVariablesAbove zipper
+
         freeVars =
-            Validator.getFreeVariables (getBranchAbove zipper)
+            Validator.getFreeVariables (branchAbove ++ branchBellow)
+                ++ generatedAbove
     in
     Validator.generateNewFreeVariable freeVars
