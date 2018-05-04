@@ -257,6 +257,9 @@ getStatusGoal formula maybeProof =
 
                 allBranches =
                     getAllBranches proof
+
+                _ =
+                    Debug.log "wow" <| printBranches allBranches
             in
             if List.all function <| allBranches then
                 Ok "The goal was proven"
@@ -300,38 +303,29 @@ getStatusContradiction branchAbove formulaStep maybeProof =
 
 getAllBranches : Proof -> List (List FormulaStep)
 getAllBranches proof =
-    let
-        others =
-            case proof of
-                FormulaNode _ data ->
-                    case data.next of
-                        Nothing ->
-                            [ [] ]
-
-                        Just next ->
-                            getAllBranches next
-
-                CasesNode case1 case2 ->
-                    case ( case1.next, case2.next ) of
-                        ( Nothing, Nothing ) ->
-                            [ [] ]
-
-                        ( Just next1, Nothing ) ->
-                            getAllBranches next1
-
-                        ( Nothing, Just next2 ) ->
-                            getAllBranches next2
-
-                        ( Just next1, Just next2 ) ->
-                            getAllBranches next1 ++ getAllBranches next2
-    in
     case proof of
         FormulaNode _ data ->
-            List.map (\lst -> data :: lst) others
+            case data.next of
+                Nothing ->
+                    [ [ data ] ]
+
+                Just next ->
+                    List.map (\lst -> data :: lst) <| getAllBranches next
 
         CasesNode case1 case2 ->
-            List.map (\lst -> case1 :: lst) others
-                ++ List.map (\lst -> case2 :: lst) others
+            case ( case1.next, case2.next ) of
+                ( Nothing, Nothing ) ->
+                    [ [ case1 ], [ case2 ] ]
+
+                ( Just next1, Nothing ) ->
+                    [ case2 ] :: List.map (\lst -> case1 :: lst) (getAllBranches next1)
+
+                ( Nothing, Just next2 ) ->
+                    [ case1 ] :: List.map (\lst -> case1 :: lst) (getAllBranches next2)
+
+                ( Just next1, Just next2 ) ->
+                    List.map (\lst -> case1 :: lst) (getAllBranches next1)
+                        ++ List.map (\lst -> case2 :: lst) (getAllBranches next2)
 
 
 
