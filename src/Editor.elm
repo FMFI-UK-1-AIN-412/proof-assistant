@@ -61,7 +61,7 @@ initialModel =
                 { proof = FormulaNode Premise { text = "(a->-b)", formula = Ok (Impl (Atom "a" []) (Neg (Atom "b" []))), index = 1, next = Just (FormulaNode Premise { text = "(a->b)", formula = Ok (Impl (Atom "a" []) (Atom "b" [])), index = 2, next = Just (FormulaNode Premise { text = "(-a->c)", formula = Ok (Impl (Neg (Atom "a" [])) (Atom "c" [])), index = 3, next = Just (FormulaNode (Goal (Just (FormulaNode (Contradiction (Just (FormulaNode (Rule (Just (DoubleNegation 7))) { text = "a", formula = Ok (Atom "a" []), index = 8, next = Just (FormulaNode (Rule (Just (ModusPonens 2 8))) { text = "b", formula = Ok (Atom "b" []), index = 9, next = Just (FormulaNode (Rule (Just (ModusPonens 1 8))) { text = "-b", formula = Ok (Neg (Atom "b" [])), index = 10, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 7, next = Nothing, gui = { showButtons = False, collapsed = False } }))) { text = "-a", formula = Ok (Neg (Atom "a" [])), index = 4, next = Just (FormulaNode (Goal (Just (FormulaNode (Rule (Just (ModusPonens 3 4))) { text = "c", formula = Ok (Atom "c" []), index = 6, next = Nothing, gui = { showButtons = False, collapsed = False } }))) { text = "c", formula = Ok (Atom "c" []), index = 5, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
 
             -- First oreder logic
-            --{ proof = FormulaNode Premise { text = "\\forall x P(x)", formula = Ok (ForAll "x" (Atom "P" [ Var "x" ])), index = 1, next = Just (FormulaNode Premise { text = "\\forall x (P(x) -> Q(x))", formula = Ok (ForAll "x" (Impl (Atom "P" [ Var "x" ]) (Atom "Q" [ Var "x" ]))), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (AddUniversalQuantifier "x0" (Just (FormulaNode (Rule (Just (FirstOrderRemoveUniversalQunatifier 1))) { text = "P(x0)", formula = Ok (Atom "P" [ Var "x0" ]), index = 7, next = Just (FormulaNode (Rule (Just (FirstOrderRemoveUniversalQunatifier 2))) { text = "(P(x0)->Q(x0))", formula = Ok (Impl (Atom "P" [ Var "x0" ]) (Atom "Q" [ Var "x0" ])), index = 8, next = Just (FormulaNode (Rule (Just (ModusPonens 8 7))) { text = "Q(x0)", formula = Ok (Atom "Q" [ Var "x0" ]), index = 9, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "\\forall x Q(x)", formula = Ok (ForAll "x" (Atom "Q" [ Var "x" ])), index = 4, next = Just (FormulaNode (Rule (Just (FirstOrderRemoveUniversalQunatifier 4))) { text = "Q(freeVar)", formula = Ok (Atom "Q" [ Var "freeVar" ]), index = 5, next = Just (FormulaNode (Rule (Just (SameFormula 4))) { text = "\\forall x Q(x)", formula = Ok (ForAll "x" (Atom "Q" [ Var "x" ])), index = 6, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "\\forall x Q(x)", formula = Ok (ForAll "x" (Atom "Q" [ Var "x" ])), index = 3, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
+            --{ proof = FormulaNode Premise { text = "\\forall x P(x)", formula = Ok (ForAll "x" (Atom "P" [ Var "x" ])), index = 1, next = Just (FormulaNode Premise { text = "\\forall x (P(x) -> Q(x))", formula = Ok (ForAll "x" (Impl (Atom "P" [ Var "x" ]) (Atom "Q" [ Var "x" ]))), index = 2, next = Just (FormulaNode (Goal (Just (FormulaNode (Generalization "x0" (Just (FormulaNode (Rule (Just (FirstOrderRemoveUniversalQunatifier 1))) { text = "P(x0)", formula = Ok (Atom "P" [ Var "x0" ]), index = 7, next = Just (FormulaNode (Rule (Just (FirstOrderRemoveUniversalQunatifier 2))) { text = "(P(x0)->Q(x0))", formula = Ok (Impl (Atom "P" [ Var "x0" ]) (Atom "Q" [ Var "x0" ])), index = 8, next = Just (FormulaNode (Rule (Just (ModusPonens 8 7))) { text = "Q(x0)", formula = Ok (Atom "Q" [ Var "x0" ]), index = 9, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "\\forall x Q(x)", formula = Ok (ForAll "x" (Atom "Q" [ Var "x" ])), index = 4, next = Just (FormulaNode (Rule (Just (FirstOrderRemoveUniversalQunatifier 4))) { text = "Q(freeVar)", formula = Ok (Atom "Q" [ Var "freeVar" ]), index = 5, next = Just (FormulaNode (Rule (Just (SameFormula 4))) { text = "\\forall x Q(x)", formula = Ok (ForAll "x" (Atom "Q" [ Var "x" ])), index = 6, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }))) { text = "\\forall x Q(x)", formula = Ok (ForAll "x" (Atom "Q" [ Var "x" ])), index = 3, next = Nothing, gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }), gui = { showButtons = False, collapsed = False } }, breadcrumbs = [] }
             }
     }
 
@@ -196,7 +196,7 @@ buttonsList zipper explanation includeCasesButton =
                 Contradiction _ ->
                     ( False, False, False, True, False )
 
-                AddUniversalQuantifier _ _ ->
+                Generalization _ _ ->
                     ( False, False, False, False, True )
 
         radioButton isActive text explanationType =
@@ -211,7 +211,7 @@ buttonsList zipper explanation includeCasesButton =
                 , radioButton isGoal "Goal" (Goal Nothing)
                 , radioButton isRule "Consequence" (Rule Nothing)
                 , radioButton isContradiction "Contradiction" (Contradiction Nothing)
-                , radioButton isAddUniversal "Generalization" (AddUniversalQuantifier (Zipper.generateNewFreeVariable zipper) Nothing)
+                , radioButton isAddUniversal "Generalization" (Generalization (Zipper.generateNewFreeVariable zipper) Nothing)
                 ]
             ]
 
@@ -484,10 +484,10 @@ renderFormulaNode zipper explanation formulaStep =
                     ( inptGrp (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback, [] )
 
                 Premise ->
-                    ( inptGrp Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [] )
+                    ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [] )
 
                 Goal proof ->
-                    ( inptGrp Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
+                    ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text "Prove the goal" ]
                                 :: subElements proof
@@ -496,7 +496,7 @@ renderFormulaNode zipper explanation formulaStep =
                     )
 
                 Contradiction proof ->
-                    ( inptGrp Nothing [ buttonDownLocal ] formulaStep editCallback
+                    ( inptGrp (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text "Assume the contradicted formula" ]
                                 :: Input.text
@@ -509,8 +509,8 @@ renderFormulaNode zipper explanation formulaStep =
                       ]
                     )
 
-                AddUniversalQuantifier str proof ->
-                    ( inptGrp Nothing [ buttonDownLocal, InputGroup.span [] [ Html.text "Generalization:" ] ] formulaStep editCallback
+                Generalization str proof ->
+                    ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Generalization:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
                             (Html.h4 [] [ localCollapseButton, Html.text ("Assume " ++ str ++ " is a new free variable.") ]
                                 :: subElements proof

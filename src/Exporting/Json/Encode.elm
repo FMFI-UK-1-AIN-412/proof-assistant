@@ -35,8 +35,8 @@ jsonExpl explanation =
                 Contradiction proof ->
                     ( "contradiction", [ ( "proof", jsonMaybeProof proof ) ] )
 
-                AddUniversalQuantifier str proof ->
-                    ( "addUniversal"
+                Generalization str proof ->
+                    ( "generalization"
                     , ( "freeVariableName", string str )
                         :: [ ( "proof", jsonMaybeProof proof ) ]
                     )

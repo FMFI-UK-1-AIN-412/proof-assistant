@@ -144,13 +144,13 @@ createSubNodeHelper node zipper =
                         Nothing ->
                             { zipper | proof = FormulaNode (Contradiction <| Just node) formStep }
 
-                AddUniversalQuantifier str proof ->
+                Generalization str proof ->
                     case proof of
                         Just _ ->
                             zipper
 
                         Nothing ->
-                            { zipper | proof = FormulaNode (AddUniversalQuantifier str <| Just node) formStep }
+                            { zipper | proof = FormulaNode (Generalization str <| Just node) formStep }
 
 
 createSubFormulaNode : Zipper -> Zipper
@@ -199,7 +199,7 @@ enterSubOrNothing zipper =
                         )
                         maybeProof
 
-                AddUniversalQuantifier str maybeProof ->
+                Generalization str maybeProof ->
                     Maybe.map
                         (\nextProof ->
                             let
@@ -247,7 +247,7 @@ upOrNothing zipper =
                 GoAddUniversal formulaStep str ->
                     Just
                         { zipper
-                            | proof = FormulaNode (AddUniversalQuantifier str <| Just zipper.proof) formulaStep
+                            | proof = FormulaNode (Generalization str <| Just zipper.proof) formulaStep
                             , breadcrumbs = rest
                         }
 
@@ -377,10 +377,10 @@ delete zipper =
                         GoAddUniversal parentFormulaStep str ->
                             case zipper.proof of
                                 FormulaNode _ data ->
-                                    FormulaNode (AddUniversalQuantifier str data.next) parentFormulaStep
+                                    FormulaNode (Generalization str data.next) parentFormulaStep
 
                                 CasesNode _ _ ->
-                                    FormulaNode (AddUniversalQuantifier str Nothing) parentFormulaStep
+                                    FormulaNode (Generalization str Nothing) parentFormulaStep
             in
             { proof = newProof, breadcrumbs = rest }
 
@@ -542,7 +542,7 @@ match zipper =
                         Goal _ ->
                             expl
 
-                        AddUniversalQuantifier _ _ ->
+                        Generalization _ _ ->
                             expl
 
                 newProof =
@@ -602,7 +602,7 @@ getFreeVariablesAbove zipper =
 
         Just breadcrumb ->
             case breadcrumb of
-                GoDown (AddUniversalQuantifier str _) data ->
+                GoDown (Generalization str _) data ->
                     str :: (zipper |> up |> getFreeVariablesAbove)
 
                 _ ->

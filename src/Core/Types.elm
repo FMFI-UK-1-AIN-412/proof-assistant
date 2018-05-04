@@ -29,7 +29,7 @@ type Explanation
     | Rule (Maybe Justification)
     | Goal (Maybe Proof)
     | Contradiction (Maybe Proof)
-    | AddUniversalQuantifier String (Maybe Proof)
+    | Generalization String (Maybe Proof)
 
 
 type Proof

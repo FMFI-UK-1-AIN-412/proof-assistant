@@ -36,8 +36,8 @@ explanationTypeDecoder type_ =
             map Contradiction
                 (field "proof" <| maybe <| lazy (\_ -> proofDecoder))
 
-        "addUniversal" ->
-            map2 AddUniversalQuantifier
+        "generalization" ->
+            map2 Generalization
                 (field "freeVariableName" string)
                 (field "proof" <| maybe <| lazy (\_ -> proofDecoder))
 

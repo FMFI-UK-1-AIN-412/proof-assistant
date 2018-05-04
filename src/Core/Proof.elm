@@ -176,7 +176,7 @@ getStatus explanation data branchAbove =
                 Contradiction contradiction ->
                     getStatusContradiction branchAbove data contradiction
 
-                AddUniversalQuantifier newVariable proof ->
+                Generalization newVariable proof ->
                     getStatusAddUniversal formula proof newVariable
 
 
