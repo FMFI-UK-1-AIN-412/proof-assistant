@@ -57,3 +57,4 @@ type Justification
     | FirstOrderRemoveExistentialQunatifier Int
     | FirstOrderAddExistentialQunatifier Int
     | Axiom
+    | Justification1 String Int

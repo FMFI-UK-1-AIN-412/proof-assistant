@@ -13,10 +13,10 @@ module Proof
         , tryParseFormula
         )
 
+import Core.Matcher as Matcher
 import Dict
 import Formula
 import List.Extra
-import Matcher
 import Parser exposing (Parser)
 import Types exposing (..)
 import Validator

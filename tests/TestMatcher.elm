@@ -1,9 +1,9 @@
 module TestMatcher exposing (..)
 
+import Core.Matcher as Matcher
 import Expect exposing (Expectation)
 import Formula
 import Fuzz exposing (Fuzzer, int, list, string)
-import Matcher
 import Test exposing (..)
 
 
@@ -35,6 +35,24 @@ testMatcherRemoveForall isValid fromString toProveString =
 
 testMatcherAddExistential isValid fromString toProveString =
     testMatcher Matcher.matcherAddExistentialQuantifier isValid fromString toProveString
+
+
+testRecursiveMatching : Test
+testRecursiveMatching =
+    describe "Test recursive matching on DeMorgan"
+        [ test "test1" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "--a" "a"
+        , test "test2" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval False "a" "a"
+        , test "test3" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "(a&--b)" "(a&b)"
+        , test "test4" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "(--a&--b)" "(a&b)"
+        , test "test5" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "--(--a&b)" "(a&b)"
+        , test "test6" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval False "--(--a&--b)" "(a&c)"
+        , test "test7" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "--(--a&(b|c))" "(a&(b|c))"
+        , test "test8" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "--(--a&(b|--c))" "(a&(b|c))"
+        , test "test9" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval False "--(--a&(b|--c))" "(a&(-b|c))"
+        , test "test10" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "---a" "-a"
+        , test "test11" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "(--(a&--(-b|--c))->--(a|--c))" "((a&(-b|c))->(a|c))"
+        , test "test12" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "\\forall x (x & --R(x, y))" "\\forall x (x & R(x, y))"
+        ]
 
 
 testRemoveForallMatcher : Test

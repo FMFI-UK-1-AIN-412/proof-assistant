@@ -1,7 +1,7 @@
 module Validator exposing (..)
 
+import Core.Matcher as Matcher
 import Formula
-import Matcher
 import Maybe.Extra as MaybeExtra
 import Set
 import Types exposing (..)
@@ -40,6 +40,7 @@ nullaryValidator step branch =
         , runValidator0 Matcher.matcherAxiomP3 Axiom
         , runValidator0 Matcher.matcherAxiomP4 Axiom
         , runValidator0 Matcher.matcherAxiomQ6 Axiom
+        , runValidator0 Matcher.matcherAxiomVyluecenieTretieho Axiom
         ]
 
 
@@ -57,6 +58,9 @@ unaryValidator step branch =
         , runValidator1 Matcher.matcherDoubleNegationIntroduction DoubleNegationIntroduction
         , runValidator1 Matcher.matcherAddExistentialQuantifier FirstOrderAddExistentialQunatifier
         , runValidator1 Matcher.matcherRemoveUniversalQuantifier FirstOrderRemoveUniversalQunatifier
+        , runValidator1 Matcher.matcherComutative (Justification1 "Commutative")
+        , runValidator1 Matcher.matcherIdempotency (Justification1 "Idempotency")
+        , runValidator1 Matcher.matcherDeMorgan (Justification1 "De Morgan rule")
         ]
 
 
@@ -202,13 +206,13 @@ matcherToStr matched =
             "Implication removed from formula " ++ toString index
 
         ImplicationIntroduction index ->
-            "Implication introducted from formula " ++ toString index
+            "Implication introduction from formula " ++ toString index
 
         DoubleNegationRemoval index ->
             "Double negation removed from formula " ++ toString index
 
         DoubleNegationIntroduction index ->
-            "Double negation introducted from formula " ++ toString index
+            "Double negation introduction from formula " ++ toString index
 
         FirstOrderRemoveUniversalQunatifier index ->
             "Universal quantifier removed from formula " ++ toString index
@@ -217,10 +221,13 @@ matcherToStr matched =
             "Existential quantifier removed from formula " ++ toString index
 
         FirstOrderAddExistentialQunatifier index ->
-            "Existential quantifier added from formula " ++ toString index
+            "Existential quantifier added to formula " ++ toString index
 
         Axiom ->
             "This is an axiom"
+
+        Justification1 str index ->
+            str ++ " from formula " ++ toString index
 
 
 runValidator0 : Matcher.NullaryMatcher -> Justification -> FormulaStep -> Maybe Justification
