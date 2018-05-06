@@ -445,7 +445,7 @@ renderFormulaNode : Zipper.Zipper -> Explanation -> FormulaStep -> List (Html.Ht
 renderFormulaNode zipper explanation formulaStep =
     let
         ( validationStatus, validationNode ) =
-            case Proof.getStatus explanation formulaStep (Zipper.getBranchAbove zipper) of
+            case Proof.getStatus explanation formulaStep (Zipper.getBranchAbove zipper.breadcrumbs) of
                 Err msg ->
                     invalidNode msg
 

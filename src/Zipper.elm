@@ -526,7 +526,7 @@ match zipper =
         FormulaNode expl formulaStep next ->
             let
                 maybeMatched =
-                    Validator.validator formulaStep (getBranchAbove zipper)
+                    Validator.validator formulaStep (getBranchAbove zipper.breadcrumbs)
 
                 newExpl =
                     case expl of
@@ -558,41 +558,36 @@ validateCases : FormulaStep -> FormulaStep -> Zipper -> Result String String
 validateCases case1 case2 zipper =
     case ( case1.formula, case2.formula ) of
         ( Ok formula1, Ok formula2 ) ->
-            Validator.validatorCases formula1 formula2 (getBranchAbove zipper)
+            Validator.validatorCases formula1 formula2 (getBranchAbove zipper.breadcrumbs)
 
         _ ->
             Err "Invalid cases! Could not parse at least one formula."
 
 
-getBranchAbove : Zipper -> List FormulaStep
-getBranchAbove zipper =
-    case List.head zipper.breadcrumbs of
-        Nothing ->
-            []
+getBranchAbove : List Breadcrumb -> List FormulaStep
+getBranchAbove breadcrumbs =
+    let
+        function breadcrumb =
+            case breadcrumb of
+                GoDown _ data ->
+                    Just data
 
-        Just breadcrumb ->
-            let
-                this =
-                    case breadcrumb of
-                        GoDown expl data ->
-                            [ data ]
+                GoCase1 data _ _ ->
+                    Just data
 
-                        GoCase1 data _ _ ->
-                            [ data ]
+                GoCase2 _ _ data ->
+                    Just data
 
-                        GoCase2 _ _ data ->
-                            [ data ]
+                GoContradiction data _ ->
+                    Just <| Proof.changeFormulaStepText ("-" ++ data.text) data
 
-                        GoContradiction data _ ->
-                            [ Proof.changeFormulaStepText ("-" ++ data.text) data ]
+                GoGoalProof _ _ ->
+                    Nothing
 
-                        GoGoalProof data _ ->
-                            []
-
-                        GoAddUniversal data _ _ ->
-                            []
-            in
-            this ++ (zipper |> up |> getBranchAbove)
+                GoAddUniversal _ _ _ ->
+                    Nothing
+    in
+    List.filterMap identity <| List.map function breadcrumbs
 
 
 getFreeVariablesAbove zipper =
@@ -613,7 +608,7 @@ generateNewFreeVariable : Zipper -> String
 generateNewFreeVariable zipper =
     let
         branchAbove =
-            getBranchAbove zipper
+            getBranchAbove zipper.breadcrumbs
 
         branchBellow =
             List.foldl (++) [] (Proof.getAllBranches zipper.proof)

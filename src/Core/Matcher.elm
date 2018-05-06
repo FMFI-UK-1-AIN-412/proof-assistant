@@ -5,21 +5,27 @@ module Matcher
         , UnaryMatcher
         , matcherAddExistentialQuantifier
         , matcherAddition
-        , matcherAxiom1
+        , matcherAxiomP1
+        , matcherAxiomP2
+        , matcherAxiomP3
+        , matcherAxiomP4
+        , matcherAxiomQ6
         , matcherConjunction
         , matcherConstructiveDilemma
         , matcherDestructiveDilemma
         , matcherDisjunctiveSyllogism
-        , matcherDoubleNegation
+        , matcherDoubleNegationIntroduction
+        , matcherDoubleNegationRemoval
         , matcherGrimaldi1
         , matcherGrimaldi2
         , matcherHypotheticalSyllogism
+        , matcherIdentity
+        , matcherImplicationIntroduction
         , matcherImplicationRemoval
         , matcherModusPonens
         , matcherModusTolens
         , matcherRemoveExistentialQuantifier
         , matcherRemoveUniversalQuantifier
-        , matcherSameFormula
         , matcherSimplification
         )
 
@@ -39,8 +45,19 @@ type alias BinaryMatcher =
     Formula.Formula -> Formula.Formula -> Formula.Formula -> Bool
 
 
-matcherAxiom1 : NullaryMatcher
-matcherAxiom1 toProve =
+matcherAxiomP1 : NullaryMatcher
+matcherAxiomP1 toProve =
+    -- (p->p)
+    case toProve of
+        Formula.Impl p1 p2 ->
+            p1 == p2
+
+        _ ->
+            False
+
+
+matcherAxiomP2 : NullaryMatcher
+matcherAxiomP2 toProve =
     -- (p->(q->p))
     case toProve of
         Formula.Impl p1 (Formula.Impl _ p2) ->
@@ -50,14 +67,47 @@ matcherAxiom1 toProve =
             False
 
 
-matcherSameFormula : UnaryMatcher
-matcherSameFormula from toProve =
+matcherAxiomP3 : NullaryMatcher
+matcherAxiomP3 toProve =
+    -- ((p->(q->r)) -> ((p->q)->(p->r)))
+    case toProve of
+        Formula.Impl (Formula.Impl p1 (Formula.Impl q1 r1)) (Formula.Impl (Formula.Impl p2 q2) (Formula.Impl p3 r2)) ->
+            p1 == p2 && p2 == p3 && r1 == r2 && q1 == q2
+
+        _ ->
+            False
+
+
+matcherAxiomP4 : NullaryMatcher
+matcherAxiomP4 toProve =
+    -- ((-p->-r) -> (r->p))
+    case toProve of
+        Formula.Impl (Formula.Impl (Formula.Neg p1) (Formula.Neg r1)) (Formula.Impl r2 p2) ->
+            p1 == p2 && r1 == r2
+
+        _ ->
+            False
+
+
+matcherAxiomQ6 : NullaryMatcher
+matcherAxiomQ6 toProve =
+    -- \forall x (fi -> xi) => (\forall x fi -> \forall x xi)
+    case toProve of
+        Formula.Impl (Formula.ForAll var1 (Formula.Impl fi1 xi1)) (Formula.Impl (Formula.ForAll var2 fi2) (Formula.ForAll var3 xi2)) ->
+            fi1 == fi2 && xi1 == xi2 && var1 == var2 && var2 == var3
+
+        _ ->
+            False
+
+
+matcherIdentity : UnaryMatcher
+matcherIdentity from toProve =
     from == toProve
 
 
-matcherDoubleNegation : UnaryMatcher
-matcherDoubleNegation from toProve =
-    -- (--a) <=> a
+matcherDoubleNegationRemoval : UnaryMatcher
+matcherDoubleNegationRemoval from toProve =
+    -- (--a) => a
     case from of
         Formula.Neg (Formula.Neg a) ->
             toProve == a
@@ -66,9 +116,15 @@ matcherDoubleNegation from toProve =
             False
 
 
+matcherDoubleNegationIntroduction : UnaryMatcher
+matcherDoubleNegationIntroduction from toProve =
+    -- a => --a
+    matcherDoubleNegationRemoval toProve from
+
+
 matcherImplicationRemoval : UnaryMatcher
 matcherImplicationRemoval from toProve =
-    -- (a->b) <=> (-a->b)
+    -- (a->b) => (-a|b)
     case ( from, toProve ) of
         ( Formula.Impl a1 b1, Formula.Disj (Formula.Neg a2) b2 ) ->
             a1 == a2 && b1 == b2
@@ -77,12 +133,19 @@ matcherImplicationRemoval from toProve =
             False
 
 
+matcherImplicationIntroduction : UnaryMatcher
+matcherImplicationIntroduction from toProve =
+    -- (-a|b) => (a->b)
+    matcherImplicationRemoval toProve from
+
+
 matcherAddition : UnaryMatcher
 matcherAddition from toProve =
     -- a => (a|b)
     case toProve of
         Formula.Disj a b ->
-            (from == a) || (from == b)
+            (from == a)
+                || (from == b)
 
         _ ->
             False
@@ -90,10 +153,12 @@ matcherAddition from toProve =
 
 matcherSimplification : UnaryMatcher
 matcherSimplification from toProve =
-    -- (a & b) => (a) | (b)
+    -- (a & b) => a
+    -- (a & b) => b
     case from of
         Formula.Conj a b ->
-            (toProve == a) || (toProve == b)
+            (toProve == a)
+                || (toProve == b)
 
         _ ->
             False
@@ -227,7 +292,7 @@ matcherConjunction from1 from2 toProve =
     -- (a) & (b) => (a & b)
     case toProve of
         Formula.Conj a b ->
-            (from1 == a) && (from2 == b)
+            from1 == a && from2 == b
 
         _ ->
             False
@@ -238,7 +303,7 @@ matcherModusTolens from1 from2 toProve =
     -- (a -> b) & (-b) => (-a)
     case ( from1, from2, toProve ) of
         ( Formula.Impl a1 b1, Formula.Neg b2, Formula.Neg a2 ) ->
-            (b1 == b2) && (a1 == a2)
+            b1 == b2 && a1 == a2
 
         _ ->
             False
@@ -249,7 +314,7 @@ matcherModusPonens from1 from2 toProve =
     -- (a -> b) & (a) => (b)
     case from1 of
         Formula.Impl a b ->
-            (a == from2) && (b == toProve)
+            a == from2 && b == toProve
 
         _ ->
             False
@@ -260,7 +325,7 @@ matcherHypotheticalSyllogism from1 from2 toProve =
     -- (a -> b) & (b -> c) => (a -> c)
     case ( from1, from2, toProve ) of
         ( Formula.Impl a1 b1, Formula.Impl b2 c2, Formula.Impl a3 c3 ) ->
-            (a1 == a3) && (b1 == b2) && (c2 == c3)
+            a1 == a3 && b1 == b2 && c2 == c3
 
         _ ->
             False
@@ -269,9 +334,11 @@ matcherHypotheticalSyllogism from1 from2 toProve =
 matcherDisjunctiveSyllogism : BinaryMatcher
 matcherDisjunctiveSyllogism from1 from2 toProve =
     -- (p|q) & (-p) => q
+    -- (p|q) & (-q) => p
     case ( from1, from2, toProve ) of
-        ( Formula.Disj p1 q1, Formula.Neg p2, q2 ) ->
-            (p1 == p2) && (q1 == q2)
+        ( Formula.Disj disj1 disj2, Formula.Neg neg, ans ) ->
+            (disj1 == neg && disj2 == ans)
+                || (disj2 == neg && disj1 == ans)
 
         _ ->
             False
@@ -280,9 +347,15 @@ matcherDisjunctiveSyllogism from1 from2 toProve =
 matcherConstructiveDilemma : BinaryMatcher
 matcherConstructiveDilemma from1 from2 toProve =
     -- ((p->q)&(r->s)) & (p|r) => (q|s)
+    -- ((p->q)&(r->s)) & (p|r) => (s|q)
+    -- ((p->q)&(r->s)) & (r|p) => (q|s)
+    -- ((p->q)&(r->s)) & (r|p) => (s|q)
     case ( from1, from2, toProve ) of
-        ( Formula.Conj (Formula.Impl p1 q1) (Formula.Impl r1 s1), Formula.Disj p2 r2, Formula.Disj q3 s3 ) ->
-            p1 == p2 && q1 == q3 && r1 == r2 && s1 == s3
+        ( Formula.Conj (Formula.Impl p q) (Formula.Impl r s), Formula.Disj or1 or2, Formula.Disj ans1 ans2 ) ->
+            (p == or1 && r == or2 && q == ans1 && s == ans2)
+                || (p == or1 && r == or2 && q == ans2 && s == ans1)
+                || (p == or2 && r == or1 && q == ans1 && s == ans2)
+                || (p == or1 && r == or2 && q == ans2 && s == ans1)
 
         _ ->
             False
@@ -291,9 +364,15 @@ matcherConstructiveDilemma from1 from2 toProve =
 matcherDestructiveDilemma : BinaryMatcher
 matcherDestructiveDilemma from1 from2 toProve =
     -- ((p->q)&(r->s)) & (-q|-s) =>  (-p|-r)
+    -- ((p->q)&(r->s)) & (-q|-s) =>  (-r|-p)
+    -- ((p->q)&(r->s)) & (-s|-q) =>  (-p|-r)
+    -- ((p->q)&(r->s)) & (-s|-q) =>  (-r|-p)
     case ( from1, from2, toProve ) of
-        ( Formula.Conj (Formula.Impl p1 q1) (Formula.Impl r1 s1), Formula.Disj (Formula.Neg q2) (Formula.Neg s2), Formula.Disj (Formula.Neg p3) (Formula.Neg r3) ) ->
-            p1 == p3 && q1 == q2 && s1 == s2 && r1 == r3
+        ( Formula.Conj (Formula.Impl p q) (Formula.Impl r s), Formula.Disj (Formula.Neg or1) (Formula.Neg or2), Formula.Disj (Formula.Neg ans1) (Formula.Neg ans2) ) ->
+            (q == or1 && s == or2 && p == ans1 && r == ans2)
+                || (q == or1 && s == or2 && p == ans2 && r == ans1)
+                || (q == or2 && s == or1 && p == ans1 && r == ans2)
+                || (q == or2 && s == or1 && p == ans2 && r == ans1)
 
         _ ->
             False
@@ -302,9 +381,9 @@ matcherDestructiveDilemma from1 from2 toProve =
 matcherGrimaldi1 : BinaryMatcher
 matcherGrimaldi1 from1 from2 toProve =
     -- (-p->q) & (-p->-q) => p
-    case ( from1, from2, toProve ) of
-        ( Formula.Impl (Formula.Neg p1) q1, Formula.Impl (Formula.Neg p2) (Formula.Neg q2), p3 ) ->
-            p1 == p2 && p2 == p3 && q1 == q2
+    case ( from1, from2 ) of
+        ( Formula.Impl (Formula.Neg p1) q1, Formula.Impl (Formula.Neg p2) (Formula.Neg q2) ) ->
+            p1 == p2 && p2 == toProve && q1 == q2
 
         _ ->
             False
@@ -313,9 +392,11 @@ matcherGrimaldi1 from1 from2 toProve =
 matcherGrimaldi2 : BinaryMatcher
 matcherGrimaldi2 from1 from2 toProve =
     -- (p->r) & (q->r) => ((p|q)->r)
+    -- (p->r) & (q->r) => ((q|p)->r)
     case ( from1, from2, toProve ) of
-        ( Formula.Impl p1 r1, Formula.Impl q1 r2, Formula.Impl (Formula.Disj p3 q3) r3 ) ->
-            p1 == p3 && r1 == r2 && r2 == r3 && q1 == q3
+        ( Formula.Impl p1 r1, Formula.Impl q1 r2, Formula.Impl (Formula.Disj or1 or2) r3 ) ->
+            (r1 == r2 && r2 == r3 && p1 == or1 && q1 == or2)
+                || (r1 == r2 && r2 == r3 && p1 == or2 && q1 == or1)
 
         _ ->
             False

@@ -43,10 +43,12 @@ type Justification
     | Conjuction Int Int
     | DisjunctiveSyllogism Int Int
     | Addition Int
-    | SameFormula Int
+    | Identity Int
     | Simplification Int
     | ImplicationRemoval Int
-    | DoubleNegation Int
+    | ImplicationIntroduction Int
+    | DoubleNegationRemoval Int
+    | DoubleNegationIntroduction Int
     | ConstructiveDilemma Int Int
     | DestructiveDilemma Int Int
     | Grimaldi1 Int Int

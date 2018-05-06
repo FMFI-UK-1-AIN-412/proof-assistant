@@ -35,7 +35,12 @@ nullaryValidator : Validator
 nullaryValidator step branch =
     matchAnyFunctions0
         step
-        [ runValidator0 Matcher.matcherAxiom1 Axiom ]
+        [ runValidator0 Matcher.matcherAxiomP1 Axiom
+        , runValidator0 Matcher.matcherAxiomP2 Axiom
+        , runValidator0 Matcher.matcherAxiomP3 Axiom
+        , runValidator0 Matcher.matcherAxiomP4 Axiom
+        , runValidator0 Matcher.matcherAxiomQ6 Axiom
+        ]
 
 
 unaryValidator : Validator
@@ -45,9 +50,11 @@ unaryValidator step branch =
         branch
         [ runValidator1 Matcher.matcherAddition Addition
         , runValidator1 Matcher.matcherSimplification Simplification
-        , runValidator1 Matcher.matcherSameFormula SameFormula
+        , runValidator1 Matcher.matcherIdentity Identity
         , runValidator1 Matcher.matcherImplicationRemoval ImplicationRemoval
-        , runValidator1 Matcher.matcherDoubleNegation DoubleNegation
+        , runValidator1 Matcher.matcherImplicationIntroduction ImplicationIntroduction
+        , runValidator1 Matcher.matcherDoubleNegationRemoval DoubleNegationRemoval
+        , runValidator1 Matcher.matcherDoubleNegationIntroduction DoubleNegationIntroduction
         , runValidator1 Matcher.matcherAddExistentialQuantifier FirstOrderAddExistentialQunatifier
         , runValidator1 Matcher.matcherRemoveUniversalQuantifier FirstOrderRemoveUniversalQunatifier
         ]
@@ -188,14 +195,20 @@ matcherToStr matched =
         Simplification index ->
             "Simplification from formula " ++ toString index
 
-        SameFormula index ->
+        Identity index ->
             "This formula already appears on step " ++ toString index
 
         ImplicationRemoval index ->
             "Implication removed from formula " ++ toString index
 
-        DoubleNegation index ->
+        ImplicationIntroduction index ->
+            "Implication introducted from formula " ++ toString index
+
+        DoubleNegationRemoval index ->
             "Double negation removed from formula " ++ toString index
+
+        DoubleNegationIntroduction index ->
+            "Double negation introducted from formula " ++ toString index
 
         FirstOrderRemoveUniversalQunatifier index ->
             "Universal quantifier removed from formula " ++ toString index
