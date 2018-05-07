@@ -10,7 +10,6 @@ module Core.Matcher
         , matcherAxiomP3
         , matcherAxiomP4
         , matcherAxiomQ6
-        , matcherAxiomVyluecenieTretieho
         , matcherComutative
         , matcherConjunction
         , matcherConstructiveDilemma
@@ -28,6 +27,7 @@ module Core.Matcher
         , matcherImplicationRemoval
         , matcherModusPonens
         , matcherModusTolens
+        , matcherOnlyTwoOptions
         , matcherRemoveExistentialQuantifier
         , matcherRemoveUniversalQuantifier
         , matcherSimplification
@@ -145,8 +145,8 @@ matcherWrapper function from toProve =
             False
 
 
-matcherAxiomVyluecenieTretieho : NullaryMatcher
-matcherAxiomVyluecenieTretieho toProve =
+matcherOnlyTwoOptions : NullaryMatcher
+matcherOnlyTwoOptions toProve =
     -- (a|-a)
     -- (-a|a)
     case toProve of
@@ -265,6 +265,7 @@ matcherImplicationIntroduction from toProve =
 matcherAddition : UnaryMatcher
 matcherAddition from toProve =
     -- a => (a|b)
+    -- todo
     case toProve of
         Formula.Disj a b ->
             (from == a)
@@ -275,52 +276,64 @@ matcherAddition from toProve =
 
 
 matcherIdempotency : UnaryMatcher
-matcherIdempotency from toProve =
+matcherIdempotency a b =
     -- (a|a) => a
-    case from of
-        Formula.Disj a1 a2 ->
-            a1 == a2 && a2 == toProve
+    let
+        function from toProve =
+            case from of
+                Formula.Disj a1 a2 ->
+                    Just [ ( a1, a2 ), ( a2, toProve ) ]
 
-        _ ->
-            False
+                _ ->
+                    Nothing
+    in
+    matcherWrapper function a b
 
 
 matcherComutative : UnaryMatcher
-matcherComutative from toProve =
+matcherComutative a b =
     -- (a&b) => (b&a)
     -- (a|b) => (b|a)
-    case ( from, toProve ) of
-        ( Formula.Conj a1 b1, Formula.Conj b2 a2 ) ->
-            a1 == a2 && b1 == b2
+    let
+        function from toProve =
+            case ( from, toProve ) of
+                ( Formula.Conj a1 b1, Formula.Conj b2 a2 ) ->
+                    Just [ ( a1, a2 ), ( b1, b2 ) ]
 
-        ( Formula.Disj a1 b1, Formula.Disj b2 a2 ) ->
-            a1 == a2 && b1 == b2
+                ( Formula.Disj a1 b1, Formula.Disj b2 a2 ) ->
+                    Just [ ( a1, a2 ), ( b1, b2 ) ]
 
-        _ ->
-            False
+                _ ->
+                    Nothing
+    in
+    matcherWrapper function a b
 
 
 matcherDeMorgan : UnaryMatcher
-matcherDeMorgan from toProve =
+matcherDeMorgan a b =
     -- -(p&q) => (-p|-q)
     -- -(p|q) => (-p&-q)
     -- (-p&-q) => -(p|q)
     -- (-p|-q) => -(p&q)
-    case ( from, toProve ) of
-        ( Formula.Neg (Formula.Conj p1 q1), Formula.Disj (Formula.Neg p2) (Formula.Neg q2) ) ->
-            p1 == p2 && q1 == q2
+    let
+        function from toProve =
+            case ( from, toProve ) of
+                ( Formula.Neg (Formula.Conj p1 q1), Formula.Disj (Formula.Neg p2) (Formula.Neg q2) ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ) ]
 
-        ( Formula.Neg (Formula.Disj p1 q1), Formula.Conj (Formula.Neg p2) (Formula.Neg q2) ) ->
-            p1 == p2 && q1 == q2
+                ( Formula.Neg (Formula.Disj p1 q1), Formula.Conj (Formula.Neg p2) (Formula.Neg q2) ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ) ]
 
-        ( Formula.Conj (Formula.Neg p1) (Formula.Neg q1), Formula.Neg (Formula.Disj p2 q2) ) ->
-            p1 == p2 && q1 == q2
+                ( Formula.Conj (Formula.Neg p1) (Formula.Neg q1), Formula.Neg (Formula.Disj p2 q2) ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ) ]
 
-        ( Formula.Disj (Formula.Neg p1) (Formula.Neg q1), Formula.Neg (Formula.Conj p2 q2) ) ->
-            p1 == p2 && q1 == q2
+                ( Formula.Disj (Formula.Neg p1) (Formula.Neg q1), Formula.Neg (Formula.Conj p2 q2) ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ) ]
 
-        _ ->
-            False
+                _ ->
+                    Nothing
+    in
+    matcherWrapper function a b
 
 
 matcherSimplification : UnaryMatcher

@@ -35,12 +35,12 @@ nullaryValidator : Validator
 nullaryValidator step branch =
     matchAnyFunctions0
         step
-        [ runValidator0 Matcher.matcherAxiomP1 Axiom
-        , runValidator0 Matcher.matcherAxiomP2 Axiom
-        , runValidator0 Matcher.matcherAxiomP3 Axiom
-        , runValidator0 Matcher.matcherAxiomP4 Axiom
-        , runValidator0 Matcher.matcherAxiomQ6 Axiom
-        , runValidator0 Matcher.matcherAxiomVyluecenieTretieho Axiom
+        [ runValidator0 Matcher.matcherAxiomP1 (Axiom "φ → φ")
+        , runValidator0 Matcher.matcherAxiomP2 (Axiom "φ → (ψ → φ)")
+        , runValidator0 Matcher.matcherAxiomP3 (Axiom "(φ → (ψ → ξ)) → ((φ → ψ) → (φ → ξ))")
+        , runValidator0 Matcher.matcherAxiomP4 (Axiom "(¬φ → ¬ψ) → (ψ → φ)")
+        , runValidator0 Matcher.matcherAxiomQ6 (Axiom "∀x(φ → ψ) → (∀x(φ) → ∀x(ψ))")
+        , runValidator0 Matcher.matcherOnlyTwoOptions (Justification0 "Tautology")
         ]
 
 
@@ -49,18 +49,35 @@ unaryValidator step branch =
     matchAnyFunctions1
         step
         branch
-        [ runValidator1 Matcher.matcherAddition Addition
-        , runValidator1 Matcher.matcherSimplification Simplification
-        , runValidator1 Matcher.matcherIdentity Identity
-        , runValidator1 Matcher.matcherImplicationRemoval ImplicationRemoval
-        , runValidator1 Matcher.matcherImplicationIntroduction ImplicationIntroduction
-        , runValidator1 Matcher.matcherDoubleNegationRemoval DoubleNegationRemoval
-        , runValidator1 Matcher.matcherDoubleNegationIntroduction DoubleNegationIntroduction
-        , runValidator1 Matcher.matcherAddExistentialQuantifier FirstOrderAddExistentialQunatifier
-        , runValidator1 Matcher.matcherRemoveUniversalQuantifier FirstOrderRemoveUniversalQunatifier
+        [ runValidator1 Matcher.matcherAddition (Justification1 "Addition")
+        , runValidator1 Matcher.matcherSimplification (Justification1 "Simplification")
+        , runValidator1 Matcher.matcherIdentity (Justification1 "Identity")
+        , runValidator1 Matcher.matcherImplicationRemoval (Justification1 "Implication removed")
+        , runValidator1 Matcher.matcherImplicationIntroduction (Justification1 "Implication introduction")
+        , runValidator1 Matcher.matcherDoubleNegationRemoval (Justification1 "Double negation removed")
+        , runValidator1 Matcher.matcherDoubleNegationIntroduction (Justification1 "Double negation introduction")
+        , runValidator1 Matcher.matcherAddExistentialQuantifier (Justification1 "Existential quantifier added")
+        , runValidator1 Matcher.matcherRemoveUniversalQuantifier (Justification1 "Universal quantifier removed")
         , runValidator1 Matcher.matcherComutative (Justification1 "Commutative")
         , runValidator1 Matcher.matcherIdempotency (Justification1 "Idempotency")
         , runValidator1 Matcher.matcherDeMorgan (Justification1 "De Morgan rule")
+        ]
+
+
+binaryValidator : Validator
+binaryValidator step branch =
+    matchAnyFunctions2
+        step
+        (cartesian branch branch)
+        [ runValidator2 Matcher.matcherModusPonens (Justification2 "Modus Ponens")
+        , runValidator2 Matcher.matcherModusTolens (Justification2 "Modus Tolens")
+        , runValidator2 Matcher.matcherHypotheticalSyllogism (Justification2 "Hypothetical Syllogism")
+        , runValidator2 Matcher.matcherConjunction (Justification2 "Conjuction")
+        , runValidator2 Matcher.matcherDisjunctiveSyllogism (Justification2 "Disjunctive Syllogism")
+        , runValidator2 Matcher.matcherConstructiveDilemma (Justification2 "Constructive Dilemma")
+        , runValidator2 Matcher.matcherDestructiveDilemma (Justification2 "Destructive Dilemma")
+        , runValidator2 Matcher.matcherGrimaldi1 (Justification2 "Grimaldi1")
+        , runValidator2 Matcher.matcherGrimaldi2 (Justification2 "Grimaldi2")
         ]
 
 
@@ -107,7 +124,7 @@ speciallFirstOrderLogicValidator step branch =
                     case head.formula of
                         Ok formula2 ->
                             if Matcher.matcherRemoveExistentialQuantifier formula2 formula (getFreeVariables branch) then
-                                Just <| FirstOrderRemoveExistentialQunatifier head.index
+                                Just <| Justification1 "Existential quantifier removed" head.index
                             else
                                 function formula tail
 
@@ -137,97 +154,55 @@ matcherRemoveExistentialQuantifier toProve allCombinations functions =
                     matchAnyFunctions1 toProve allCombinations rest
 
 
-binaryValidator : Validator
-binaryValidator step branch =
-    matchAnyFunctions2
-        step
-        (cartesian branch branch)
-        [ runValidator2 Matcher.matcherModusPonens ModusPonens
-        , runValidator2 Matcher.matcherModusTolens ModusTolens
-        , runValidator2 Matcher.matcherHypotheticalSyllogism HypotheticalSyllogism
-        , runValidator2 Matcher.matcherConjunction Conjuction
-        , runValidator2 Matcher.matcherDisjunctiveSyllogism DisjunctiveSyllogism
-        , runValidator2 Matcher.matcherConstructiveDilemma ConstructiveDilemma
-        , runValidator2 Matcher.matcherDestructiveDilemma DestructiveDilemma
-        , runValidator2 Matcher.matcherGrimaldi1 Grimaldi1
-        , runValidator2 Matcher.matcherGrimaldi2 Grimaldi2
-        ]
-
-
 cartesian : List a -> List b -> List ( a, b )
 cartesian xs ys =
     List.concatMap (\x -> List.map (\y -> ( x, y )) ys) xs
 
 
 
--- Showing matched or error messages
+-- Cases validator
+
+
+validatorCases : Formula.Formula -> Formula.Formula -> List FormulaStep -> Result String String
+validatorCases formula1 formula2 branch =
+    case branch of
+        [] ->
+            Err "Invalid cases! This is not valid from any formula above, cases node must match formula (A|B)"
+
+        this :: rest ->
+            case this.formula of
+                Ok (Formula.Disj a b) ->
+                    if (formula1 == a && formula2 == b) || (formula1 == b && formula2 == a) then
+                        Ok <| "This is derived from formula " ++ toString this.index
+                    else
+                        validatorCases formula1 formula2 rest
+
+                _ ->
+                    validatorCases formula1 formula2 rest
+
+
+
+-- Justification to string
 
 
 matcherToStr : Justification -> String
 matcherToStr matched =
     case matched of
-        ModusPonens index1 index2 ->
-            "Modus Ponens from formulas " ++ toString index1 ++ " and " ++ toString index2
+        Axiom str ->
+            "Created by substitution to axiom " ++ str
 
-        ModusTolens index1 index2 ->
-            "Modus Tolens from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        HypotheticalSyllogism index1 index2 ->
-            "Hypothetical Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        Conjuction index1 index2 ->
-            "Conjuction from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        DisjunctiveSyllogism index1 index2 ->
-            "Disjunctive Syllogism from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        ConstructiveDilemma index1 index2 ->
-            "Constructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        DestructiveDilemma index1 index2 ->
-            "Destructive Dilemma from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        Grimaldi1 index1 index2 ->
-            "Grimaldi1 from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        Grimaldi2 index1 index2 ->
-            "Grimaldi2 from formulas " ++ toString index1 ++ " and " ++ toString index2
-
-        Addition index ->
-            "Addition from formula " ++ toString index
-
-        Simplification index ->
-            "Simplification from formula " ++ toString index
-
-        Identity index ->
-            "This formula already appears on step " ++ toString index
-
-        ImplicationRemoval index ->
-            "Implication removed from formula " ++ toString index
-
-        ImplicationIntroduction index ->
-            "Implication introduction from formula " ++ toString index
-
-        DoubleNegationRemoval index ->
-            "Double negation removed from formula " ++ toString index
-
-        DoubleNegationIntroduction index ->
-            "Double negation introduction from formula " ++ toString index
-
-        FirstOrderRemoveUniversalQunatifier index ->
-            "Universal quantifier removed from formula " ++ toString index
-
-        FirstOrderRemoveExistentialQunatifier index ->
-            "Existential quantifier removed from formula " ++ toString index
-
-        FirstOrderAddExistentialQunatifier index ->
-            "Existential quantifier added to formula " ++ toString index
-
-        Axiom ->
-            "This is an axiom"
+        Justification0 str ->
+            "This is a " ++ str
 
         Justification1 str index ->
             str ++ " from formula " ++ toString index
+
+        Justification2 str index1 index2 ->
+            str ++ " from formulas " ++ toString index1 ++ " and " ++ toString index2
+
+
+
+-- Helpers
 
 
 runValidator0 : Matcher.NullaryMatcher -> Justification -> FormulaStep -> Maybe Justification
@@ -362,25 +337,3 @@ helper2 func from1 from2 toProve answer =
 
         _ ->
             Nothing
-
-
-
--- Cases validator
-
-
-validatorCases : Formula.Formula -> Formula.Formula -> List FormulaStep -> Result String String
-validatorCases formula1 formula2 branch =
-    case branch of
-        [] ->
-            Err "Invalid cases! This is not valid from any formula above, cases node must match formula (A|B)"
-
-        this :: rest ->
-            case this.formula of
-                Ok (Formula.Disj a b) ->
-                    if (formula1 == a && formula2 == b) || (formula1 == b && formula2 == a) then
-                        Ok <| "This is valid from formula " ++ toString this.index
-                    else
-                        validatorCases formula1 formula2 rest
-
-                _ ->
-                    validatorCases formula1 formula2 rest

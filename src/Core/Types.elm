@@ -1,11 +1,4 @@
-module Types
-    exposing
-        ( Explanation(..)
-        , FormulaStep
-        , GUI
-        , Justification(..)
-        , Proof(..)
-        )
+module Types exposing (Explanation(..), FormulaStep, GUI, Justification(..), Proof(..))
 
 import Formula
 import Parser
@@ -37,24 +30,7 @@ type Proof
 
 
 type Justification
-    = ModusPonens Int Int
-    | ModusTolens Int Int
-    | HypotheticalSyllogism Int Int
-    | Conjuction Int Int
-    | DisjunctiveSyllogism Int Int
-    | Addition Int
-    | Identity Int
-    | Simplification Int
-    | ImplicationRemoval Int
-    | ImplicationIntroduction Int
-    | DoubleNegationRemoval Int
-    | DoubleNegationIntroduction Int
-    | ConstructiveDilemma Int Int
-    | DestructiveDilemma Int Int
-    | Grimaldi1 Int Int
-    | Grimaldi2 Int Int
-    | FirstOrderRemoveUniversalQunatifier Int
-    | FirstOrderRemoveExistentialQunatifier Int
-    | FirstOrderAddExistentialQunatifier Int
-    | Axiom
+    = Axiom String
+    | Justification0 String
     | Justification1 String Int
+    | Justification2 String Int Int

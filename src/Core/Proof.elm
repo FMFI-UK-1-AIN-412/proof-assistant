@@ -205,6 +205,16 @@ getStatus explanation data branchAbove =
                     getStatusAddUniversal formula proof newVariable
 
 
+provenText : String -> List Bool -> Result String String
+provenText str list =
+    if List.all identity list then
+        Ok <| str ++ " is proven"
+    else if not <| List.any identity list then
+        Err <| str ++ " is not proven yet"
+    else
+        Err <| str ++ " is only proven in " ++ toString (List.length <| List.filter identity list) ++ " out of " ++ toString (List.length list) ++ " branches"
+
+
 getStatusAddUniversal : Formula.Formula -> Maybe Proof -> String -> Result String String
 getStatusAddUniversal formula maybeProof newVariable =
     case maybeProof of
@@ -244,12 +254,7 @@ getStatusAddUniversal formula maybeProof newVariable =
                 allBranches =
                     getAllBranches proof
             in
-            if List.all function <| allBranches then
-                Ok "Generalization was proven to be correct"
-            else if List.length allBranches == 1 then
-                Err "Generalization not yet proven"
-            else
-                Err "Generalization not yet proven in all branches"
+            provenText "Generalization" <| List.map function allBranches
 
 
 getStatusRule : Maybe Justification -> Result String String
@@ -283,16 +288,8 @@ getStatusGoal formula maybeProof =
 
                 allBranches =
                     getAllBranches proof
-
-                _ =
-                    Debug.log "wow" <| printBranches allBranches
             in
-            if List.all function <| allBranches then
-                Ok "The goal was proven"
-            else if List.length allBranches == 1 then
-                Err "Goal is not yet proven"
-            else
-                Err "Goal is not yet proven in all branches"
+            provenText "The goal" <| List.map function allBranches
 
 
 getStatusContradiction : List FormulaStep -> FormulaStep -> Maybe Proof -> Result String String
@@ -321,10 +318,7 @@ getStatusContradiction branchAbove formulaStep maybeProof =
                 function branch =
                     List.any (\( x, xs ) -> iterate x xs) (splited branch)
             in
-            if List.all function allBranches then
-                Ok "Contradiction is valid"
-            else
-                Err "Contradiction not found"
+            provenText "Contradiction" <| List.map function allBranches
 
 
 getAllBranches : Proof -> List (List FormulaStep)
