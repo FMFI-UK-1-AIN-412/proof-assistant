@@ -97,17 +97,16 @@ generateNewFreeVariable freeVariables =
 
 getFreeVariables branch =
     let
-        freeVariablesInFormulas =
-            List.map
-                (\s ->
-                    case s.formula of
-                        Ok formula ->
-                            Formula.freeFormula formula
+        function data =
+            case data.formula of
+                Ok formula ->
+                    Formula.freeFormula formula
 
-                        Err _ ->
-                            Set.empty
-                )
-                branch
+                Err _ ->
+                    Set.empty
+
+        freeVariablesInFormulas =
+            List.map function branch
     in
     Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
 

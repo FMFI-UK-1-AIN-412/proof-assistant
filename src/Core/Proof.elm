@@ -7,6 +7,7 @@ module Proof
         , changeFormulaStepText
         , createFormulaStep
         , getAllBranches
+        , getHelpTextAddUniversal
         , getStatus
         , setCollapsed
         , setShowButtons
@@ -17,7 +18,7 @@ import Core.Matcher as Matcher
 import Dict
 import Formula
 import List.Extra
-import Parser exposing (Parser)
+import Parser
 import Types exposing (..)
 import Validator
 
@@ -215,46 +216,66 @@ provenText str list =
         Err <| str ++ " is only proven in " ++ toString (List.length <| List.filter identity list) ++ " out of " ++ toString (List.length list) ++ " branches"
 
 
+getHelpTextAddUniversal : Result Parser.Error Formula.Formula -> String -> String
+getHelpTextAddUniversal maybeFormula const =
+    case maybeFormula of
+        Ok (Formula.ForAll var formula) ->
+            case Formula.substitute (Dict.fromList [ ( var, Formula.Var const ) ]) formula of
+                Ok f ->
+                    "Show that " ++ Formula.strFormula f ++ " is correct."
+
+                Err _ ->
+                    ""
+
+        _ ->
+            ""
+
+
 getStatusAddUniversal : Formula.Formula -> Maybe Proof -> String -> Result String String
 getStatusAddUniversal formula maybeProof newVariable =
-    case maybeProof of
-        Nothing ->
-            Err "Prove the generalization in the sub-proof"
+    case formula of
+        Formula.ForAll _ _ ->
+            case maybeProof of
+                Nothing ->
+                    Err "Prove the generalization in the sub-proof"
 
-        Just proof ->
-            let
-                toBeMatched =
-                    case formula of
-                        Formula.ForAll premenna f ->
-                            let
-                                sub =
-                                    Dict.fromList [ ( premenna, Formula.Var newVariable ) ]
-                            in
-                            case Formula.substitute sub f of
-                                Ok formula ->
-                                    Just <| formula
+                Just proof ->
+                    let
+                        toBeMatched =
+                            case formula of
+                                Formula.ForAll premenna f ->
+                                    let
+                                        sub =
+                                            Dict.fromList [ ( premenna, Formula.Var newVariable ) ]
+                                    in
+                                    case Formula.substitute sub f of
+                                        Ok formula ->
+                                            Just <| formula
 
-                                Err _ ->
+                                        Err _ ->
+                                            Nothing
+
+                                _ ->
                                     Nothing
 
-                        _ ->
-                            Nothing
+                        equal this =
+                            case this.formula of
+                                Ok thisFormula ->
+                                    toBeMatched == Just thisFormula
 
-                equal this =
-                    case this.formula of
-                        Ok thisFormula ->
-                            toBeMatched == Just thisFormula
+                                Err _ ->
+                                    False
 
-                        Err _ ->
-                            False
+                        function branch =
+                            List.any identity (List.map equal branch)
 
-                function branch =
-                    List.any identity (List.map equal branch)
+                        allBranches =
+                            getAllBranches proof
+                    in
+                    provenText "Generalization" <| List.map function allBranches
 
-                allBranches =
-                    getAllBranches proof
-            in
-            provenText "Generalization" <| List.map function allBranches
+        _ ->
+            Err "Generalization must have the ∀x(φ) format"
 
 
 getStatusRule : Maybe Justification -> Result String String

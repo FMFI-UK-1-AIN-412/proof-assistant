@@ -493,9 +493,16 @@ renderFormulaNode zipper explanation formulaStep =
                     )
 
                 Generalization str proof ->
+                    let
+                        prefix =
+                            "Assume " ++ str ++ " is a new free variable. "
+
+                        sufix =
+                            Proof.getHelpTextAddUniversal formulaStep.formula str
+                    in
                     ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Generalization:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text ("Assume " ++ str ++ " is a new free variable.") ]
+                            (Html.h4 [] [ localCollapseButton, Html.text (prefix ++ sufix) ]
                                 :: subElements proof
                             )
                       ]
