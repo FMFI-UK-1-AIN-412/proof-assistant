@@ -506,13 +506,28 @@ renderFormulaNode zipper explanation formulaStep =
                         prefix =
                             "Assume " ++ str ++ " is a new free variable. "
 
-                        sufix =
-                            Proof.getHelpTextAddUniversal formulaStep.formula str
+                        goals =
+                            case Proof.getHelpTextAddUniversal formulaStep.formula str of
+                                Err _ ->
+                                    []
+
+                                Ok goal ->
+                                    [ (InputGroup.config <|
+                                        InputGroup.text <|
+                                            [ Input.disabled True
+                                            , Input.value goal
+                                            ]
+                                      )
+                                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Goal:" ] ]
+                                        |> InputGroup.view
+                                    , Html.hr [] []
+                                    ]
                     in
                     ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Generalization:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text (prefix ++ sufix) ]
-                                :: subElements proof
+                            (Html.h4 [] [ localCollapseButton, Html.text prefix ]
+                                :: goals
+                                ++ subElements proof
                             )
                       ]
                     )

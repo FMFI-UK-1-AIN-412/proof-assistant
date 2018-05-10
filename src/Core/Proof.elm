@@ -216,19 +216,19 @@ provenText str list =
         Err <| str ++ " is only proven in " ++ toString (List.length <| List.filter identity list) ++ " out of " ++ toString (List.length list) ++ " branches"
 
 
-getHelpTextAddUniversal : Result Parser.Error Formula.Formula -> String -> String
+getHelpTextAddUniversal : Result Parser.Error Formula.Formula -> String -> Result String String
 getHelpTextAddUniversal maybeFormula const =
     case maybeFormula of
         Ok (Formula.ForAll var formula) ->
             case Formula.substitute (Dict.fromList [ ( var, Formula.Var const ) ]) formula of
                 Ok f ->
-                    "Show that " ++ Formula.strFormula f ++ " is correct."
+                    Ok <| Formula.strFormula f
 
                 Err _ ->
-                    ""
+                    Err ""
 
         _ ->
-            ""
+            Err ""
 
 
 getStatusAddUniversal : Formula.Formula -> Maybe Proof -> String -> Result String String

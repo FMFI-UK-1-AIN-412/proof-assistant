@@ -1,6 +1,5 @@
 UI:
 --> texty ako Prove the goal/... maju byt mensie, staci tam napisat Proof
---> generalization, text by mal byt ako negacia (tj v formule mu povedat co ma vlastne dokazat)
 --> goal, (pri implikacii predpokladaj premisu)
 
 
