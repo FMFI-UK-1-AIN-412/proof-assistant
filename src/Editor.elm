@@ -402,9 +402,9 @@ renderCases zipper case1 next1 case2 next2 =
                     collapseButton (not selectedCase.gui.collapsed) whr zipper
             in
             if selectedCase.gui.collapsed then
-                [ Html.h4 [] [ localCollapseButton, Html.text text ] ]
+                [ Html.p [] [ localCollapseButton, Html.text text ] ]
             else
-                Html.h4 [] [ localCollapseButton, Html.text text ]
+                Html.p [] [ localCollapseButton, Html.text text ]
                     :: Html.div []
                         [ Form.group []
                             [ inptGrp (Just inputType) [ downButton ] selectedCase editCallback
@@ -479,10 +479,29 @@ renderFormulaNode zipper explanation formulaStep =
                     ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Premise:" ] ] formulaStep editCallback, [] )
 
                 Goal proof ->
+                    let
+                        assumptions =
+                            case Proof.getImplicationAntecedent formulaStep of
+                                Nothing ->
+                                    []
+
+                                Just assumption ->
+                                    [ (InputGroup.config <|
+                                        InputGroup.text <|
+                                            [ Input.disabled True
+                                            , Input.value assumption.text
+                                            ]
+                                      )
+                                        |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Assumption:" ] ]
+                                        |> InputGroup.view
+                                    , Html.hr [] []
+                                    ]
+                    in
                     ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Goal:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text "Prove the goal" ]
-                                :: subElements proof
+                            (Html.p [] [ localCollapseButton, Html.text "Proof" ]
+                                :: assumptions
+                                ++ subElements proof
                             )
                       ]
                     )
@@ -490,7 +509,7 @@ renderFormulaNode zipper explanation formulaStep =
                 Contradiction proof ->
                     ( inptGrp (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text "Assume the contradicted formula" ]
+                            (Html.p [] [ localCollapseButton, Html.text "Proof" ]
                                 :: Input.text
                                     [ Input.disabled True
                                     , Input.value <| "-" ++ formulaStep.text
@@ -503,16 +522,14 @@ renderFormulaNode zipper explanation formulaStep =
 
                 Generalization str proof ->
                     let
-                        prefix =
-                            "Assume " ++ str ++ " is a new free variable. "
-
                         goals =
                             case Proof.getHelpTextAddUniversal formulaStep.formula str of
                                 Err _ ->
                                     []
 
                                 Ok goal ->
-                                    [ (InputGroup.config <|
+                                    [ Html.p [] [ Html.text <| "Assume " ++ str ++ " is a new free variable. " ]
+                                    , (InputGroup.config <|
                                         InputGroup.text <|
                                             [ Input.disabled True
                                             , Input.value goal
@@ -525,7 +542,7 @@ renderFormulaNode zipper explanation formulaStep =
                     in
                     ( inptGrp (Just validationStatus) [ buttonDownLocal, InputGroup.span [] [ Html.text "Generalization:" ] ] formulaStep editCallback
                     , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.h4 [] [ localCollapseButton, Html.text prefix ]
+                            (Html.p [] [ localCollapseButton, Html.text "Proof" ]
                                 :: goals
                                 ++ subElements proof
                             )

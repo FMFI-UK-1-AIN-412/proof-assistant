@@ -8,6 +8,7 @@ module Proof
         , createFormulaStep
         , getAllBranches
         , getHelpTextAddUniversal
+        , getImplicationAntecedent
         , getStatus
         , setCollapsed
         , setShowButtons
@@ -367,6 +368,21 @@ getAllBranches proof =
                 ( Just next1, Just next2 ) ->
                     List.map (\lst -> case1 :: lst) (getAllBranches next1)
                         ++ List.map (\lst -> case2 :: lst) (getAllBranches next2)
+
+
+getImplicationAntecedent : FormulaStep -> Maybe FormulaStep
+getImplicationAntecedent data =
+    case data.formula of
+        Ok (Formula.Impl a b) ->
+            let
+                newData =
+                    createFormulaStep (Formula.strFormula a)
+            in
+            -- Todo: this is not intuitive but whatever.
+            Just { newData | index = data.index }
+
+        _ ->
+            Nothing
 
 
 

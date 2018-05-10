@@ -582,9 +582,8 @@ getBranchAbove breadcrumbs =
                 GoContradiction data _ ->
                     Just <| Proof.changeFormulaStepText ("-" ++ data.text) data
 
-                GoGoalProof _ _ ->
-                    -- todo: Ak (A->B) pridaj predpoklad. A + uprav rendering, ze predpokladajme A
-                    Nothing
+                GoGoalProof data _ ->
+                    Proof.getImplicationAntecedent data
 
                 GoAddUniversal _ _ _ ->
                     Nothing
