@@ -39,7 +39,7 @@ testMatcherAddExistential isValid fromString toProveString =
 
 testRecursiveMatching : Test
 testRecursiveMatching =
-    describe "Test recursive matching on DeMorgan"
+    describe "Test recursive matching on"
         [ test "test1" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "--a" "a"
         , test "test2" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval False "a" "a"
         , test "test3" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "(a&--b)" "(a&b)"
@@ -52,6 +52,14 @@ testRecursiveMatching =
         , test "test10" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "---a" "-a"
         , test "test11" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "(--(a&--(-b|--c))->--(a|--c))" "((a&(-b|c))->(a|c))"
         , test "test12" <| \_ -> testMatcher Matcher.matcherDoubleNegationRemoval True "\\forall x (x & --R(x, y))" "\\forall x (x & R(x, y))"
+        , test "test13" <| \_ -> testMatcher Matcher.matcherDistributive True "(p|(q&r))" "((p|q)&(p|r))"
+        , test "test14" <| \_ -> testMatcher Matcher.matcherDistributive True "((p&q)|r)" "((p|r)&(q|r))"
+        , test "test15" <| \_ -> testMatcher Matcher.matcherDistributive True "((p|q)&(p|r))" "(p|(q&r))"
+        , test "test16" <| \_ -> testMatcher Matcher.matcherDistributive True "((p|r)&(q|r))" "((p&q)|r)"
+        , test "test17" <| \_ -> testMatcher Matcher.matcherDistributive True "((p|q)&r)" "((p&r)|(q&r))"
+        , test "test18" <| \_ -> testMatcher Matcher.matcherDistributive True "(p&(q|r))" "((p&q)|(p&r))"
+        , test "test19" <| \_ -> testMatcher Matcher.matcherDistributive True "((p&r)|(q&r))" "((p|q)&r)"
+        , test "test20" <| \_ -> testMatcher Matcher.matcherDistributive True "((p&q)|(p&r))" "(p&(q|r))"
         ]
 
 

@@ -63,6 +63,8 @@ unaryValidator step branch =
         , runValidator1 Matcher.matcherComutative (Justification1 "Commutative")
         , runValidator1 Matcher.matcherIdempotency (Justification1 "Idempotency")
         , runValidator1 Matcher.matcherDeMorgan (Justification1 "De Morgan rule")
+        , runValidator1 Matcher.matcherAssociativity (Justification1 "Associativity")
+        , runValidator1 Matcher.matcherDistributive (Justification1 "Distributivity")
         ]
 
 

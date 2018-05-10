@@ -5,6 +5,7 @@ module Core.Matcher
         , UnaryMatcher
         , matcherAddExistentialQuantifier
         , matcherAddition
+        , matcherAssociativity
         , matcherAxiomP1
         , matcherAxiomP2
         , matcherAxiomP3
@@ -16,6 +17,7 @@ module Core.Matcher
         , matcherDeMorgan
         , matcherDestructiveDilemma
         , matcherDisjunctiveSyllogism
+        , matcherDistributive
         , matcherDoubleNegationIntroduction
         , matcherDoubleNegationRemoval
         , matcherGrimaldiCases
@@ -297,6 +299,68 @@ matcherAddition from toProve =
 
         _ ->
             False
+
+
+matcherAssociativity : UnaryMatcher
+matcherAssociativity from toProve =
+    -- (a|(b|c)) <=> ((a|b)|c)
+    -- (a&(b&c)) <=> ((a&b)&c)
+    let
+        function from toProve =
+            case ( from, toProve ) of
+                ( Formula.Disj a1 (Formula.Disj b1 c1), Formula.Disj (Formula.Disj a2 b2) c2 ) ->
+                    Just [ ( a1, a2 ), ( b1, b2 ), ( c1, c2 ) ]
+
+                ( Formula.Disj (Formula.Disj a2 b2) c2, Formula.Disj a1 (Formula.Disj b1 c1) ) ->
+                    Just [ ( a1, a2 ), ( b1, b2 ), ( c1, c2 ) ]
+
+                ( Formula.Conj a1 (Formula.Conj b1 c1), Formula.Conj (Formula.Conj a2 b2) c2 ) ->
+                    Just [ ( a1, a2 ), ( b1, b2 ), ( c1, c2 ) ]
+
+                ( Formula.Conj (Formula.Conj a2 b2) c2, Formula.Conj a1 (Formula.Conj b1 c1) ) ->
+                    Just [ ( a1, a2 ), ( b1, b2 ), ( c1, c2 ) ]
+
+                _ ->
+                    Nothing
+    in
+    matcherWrapper function from toProve
+
+
+matcherDistributive : UnaryMatcher
+matcherDistributive from toProve =
+    -- (p∨(q∧r)) ↔ ((p∨q)∧(p∨r))
+    -- (p∧(q∨r)) ↔ ((p∧q)∨(p∧r))
+    let
+        function from toProve =
+            case ( from, toProve ) of
+                ( Formula.Disj p1 (Formula.Conj q1 r1), Formula.Conj (Formula.Disj p2 q2) (Formula.Disj p3 r2) ) ->
+                    Just [ ( p1, p2 ), ( p2, p3 ), ( q1, q2 ), ( r1, r2 ) ]
+
+                ( Formula.Disj (Formula.Conj p1 q1) r1, Formula.Conj (Formula.Disj p2 r2) (Formula.Disj q2 r3) ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ), ( r1, r2 ), ( r2, r3 ) ]
+
+                ( Formula.Conj (Formula.Disj p2 q2) (Formula.Disj p3 r2), Formula.Disj p1 (Formula.Conj q1 r1) ) ->
+                    Just [ ( p1, p2 ), ( p2, p3 ), ( q1, q2 ), ( r1, r2 ) ]
+
+                ( Formula.Conj (Formula.Disj p2 r2) (Formula.Disj q2 r3), Formula.Disj (Formula.Conj p1 q1) r1 ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ), ( r1, r2 ), ( r2, r3 ) ]
+
+                ( Formula.Conj p1 (Formula.Disj q1 r1), Formula.Disj (Formula.Conj p2 q2) (Formula.Conj p3 r2) ) ->
+                    Just [ ( p1, p2 ), ( p2, p3 ), ( q1, q2 ), ( r1, r2 ) ]
+
+                ( Formula.Conj (Formula.Disj p1 q1) r1, Formula.Disj (Formula.Conj p2 r2) (Formula.Conj q2 r3) ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ), ( r1, r2 ), ( r2, r3 ) ]
+
+                ( Formula.Disj (Formula.Conj p2 q2) (Formula.Conj p3 r2), Formula.Conj p1 (Formula.Disj q1 r1) ) ->
+                    Just [ ( p1, p2 ), ( p2, p3 ), ( q1, q2 ), ( r1, r2 ) ]
+
+                ( Formula.Disj (Formula.Conj p2 r2) (Formula.Conj q2 r3), Formula.Conj (Formula.Disj p1 q1) r1 ) ->
+                    Just [ ( p1, p2 ), ( q1, q2 ), ( r1, r2 ), ( r2, r3 ) ]
+
+                _ ->
+                    Nothing
+    in
+    matcherWrapper function from toProve
 
 
 matcherIdempotency : UnaryMatcher

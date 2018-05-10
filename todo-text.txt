@@ -5,12 +5,6 @@ uplny -> complete
 ako cela validaicia/uzatvaranie funguje dokopy. O(n^2)
 
 
-
-
-motivation & goal -> streda -> 12:30? dohodnut sa
-
 -------
 
-implementacia -> kludne subsections
-evaluacia -> ukazat priklad zaujimaveho dokazu, otestovat na par ludoch [napisat email yoyovi]
-
+evaluacia -> ukazat priklad zaujimaveho dokazu
