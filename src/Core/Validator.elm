@@ -53,7 +53,9 @@ unaryValidator step branch =
         , runValidator1 Matcher.matcherSimplification (Justification1 "Simplification")
         , runValidator1 Matcher.matcherIdentity (Justification1 "Identity")
         , runValidator1 Matcher.matcherImplicationRemoval (Justification1 "Implication removed")
-        , runValidator1 Matcher.matcherImplicationIntroduction (Justification1 "Implication introduction")
+        , runValidator1 Matcher.matcherImplicationIntroduction (Justification1 "Implication introduction (1)")
+        , runValidator1 Matcher.matcherImplicationIntroduction2 (Justification1 "Implication introduction (2)")
+        , runValidator1 Matcher.matcherImplicationIntroduction3 (Justification1 "Implication introduction (3)")
         , runValidator1 Matcher.matcherDoubleNegationRemoval (Justification1 "Double negation removed")
         , runValidator1 Matcher.matcherDoubleNegationIntroduction (Justification1 "Double negation introduction")
         , runValidator1 Matcher.matcherAddExistentialQuantifier (Justification1 "Existential quantifier added")
@@ -76,8 +78,8 @@ binaryValidator step branch =
         , runValidator2 Matcher.matcherDisjunctiveSyllogism (Justification2 "Disjunctive Syllogism")
         , runValidator2 Matcher.matcherConstructiveDilemma (Justification2 "Constructive Dilemma")
         , runValidator2 Matcher.matcherDestructiveDilemma (Justification2 "Destructive Dilemma")
-        , runValidator2 Matcher.matcherGrimaldi1 (Justification2 "Grimaldi1")
-        , runValidator2 Matcher.matcherGrimaldi2 (Justification2 "Grimaldi2")
+        , runValidator2 Matcher.matcherGrimaldiContradiction (Justification2 "Contradiction")
+        , runValidator2 Matcher.matcherGrimaldiCases (Justification2 "Cases")
         ]
 
 

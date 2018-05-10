@@ -18,12 +18,14 @@ module Core.Matcher
         , matcherDisjunctiveSyllogism
         , matcherDoubleNegationIntroduction
         , matcherDoubleNegationRemoval
-        , matcherGrimaldi1
-        , matcherGrimaldi2
+        , matcherGrimaldiCases
+        , matcherGrimaldiContradiction
         , matcherHypotheticalSyllogism
         , matcherIdempotency
         , matcherIdentity
         , matcherImplicationIntroduction
+        , matcherImplicationIntroduction2
+        , matcherImplicationIntroduction3
         , matcherImplicationRemoval
         , matcherModusPonens
         , matcherModusTolens
@@ -260,6 +262,28 @@ matcherImplicationIntroduction : UnaryMatcher
 matcherImplicationIntroduction from toProve =
     -- (-a|b) => (a->b)
     matcherImplicationRemoval toProve from
+
+
+matcherImplicationIntroduction2 : UnaryMatcher
+matcherImplicationIntroduction2 from toProve =
+    -- (Q) => (P->Q)
+    case toProve of
+        Formula.Impl _ q ->
+            from == q
+
+        _ ->
+            False
+
+
+matcherImplicationIntroduction3 : UnaryMatcher
+matcherImplicationIntroduction3 from toProve =
+    -- (-P) => (P->Q)
+    case ( from, toProve ) of
+        ( Formula.Neg p1, Formula.Impl p2 _ ) ->
+            p1 == p2
+
+        _ ->
+            False
 
 
 matcherAddition : UnaryMatcher
@@ -563,8 +587,8 @@ matcherDestructiveDilemma from1 from2 toProve =
             False
 
 
-matcherGrimaldi1 : BinaryMatcher
-matcherGrimaldi1 from1 from2 toProve =
+matcherGrimaldiContradiction : BinaryMatcher
+matcherGrimaldiContradiction from1 from2 toProve =
     -- (-p->q) & (-p->-q) => p
     case ( from1, from2 ) of
         ( Formula.Impl (Formula.Neg p1) q1, Formula.Impl (Formula.Neg p2) (Formula.Neg q2) ) ->
@@ -574,8 +598,8 @@ matcherGrimaldi1 from1 from2 toProve =
             False
 
 
-matcherGrimaldi2 : BinaryMatcher
-matcherGrimaldi2 from1 from2 toProve =
+matcherGrimaldiCases : BinaryMatcher
+matcherGrimaldiCases from1 from2 toProve =
     -- (p->r) & (q->r) => ((p|q)->r)
     -- (p->r) & (q->r) => ((q|p)->r)
     case ( from1, from2, toProve ) of

@@ -11,6 +11,7 @@ module Editor
         , update
         )
 
+import Bootstrap.Alert as Alert
 import Bootstrap.Button as Button
 import Bootstrap.ButtonGroup as ButtonGroup
 import Bootstrap.Form as Form
@@ -223,9 +224,9 @@ buttonDown buttonType callback =
 collapseButton : Bool -> Proof.Where -> Zipper.Zipper -> Html.Html Msg
 collapseButton value whr zipper =
     if value then
-        myButton (ZipperSetCollpased whr zipper value) Button.outlineInfo "🡅"
+        myButton (ZipperSetCollpased whr zipper value) Button.outlineInfo "▽"
     else
-        myButton (ZipperSetCollpased whr zipper value) Button.info "🡇"
+        myButton (ZipperSetCollpased whr zipper value) Button.info "▷"
 
 
 
@@ -287,9 +288,9 @@ setProof proof model =
 renderEverythingProven : Zipper.Zipper -> Html.Html Msg
 renderEverythingProven zipper =
     if Zipper.isEverythingProven zipper then
-        Html.div [] [ Html.text "Everything is proven." ]
+        Alert.simpleSuccess [] [ Html.text "Everything is proven." ]
     else
-        Html.div [] [ Html.text "Something is not correct yet." ]
+        Alert.simpleDanger [] [ Html.text "Something is not correct yet." ]
 
 
 renderHistoryButtons : Model -> Html.Html Msg
@@ -507,15 +508,24 @@ renderFormulaNode zipper explanation formulaStep =
                     )
 
                 Contradiction proof ->
-                    ( inptGrp (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback
-                    , [ Html.div [ Html.Attributes.class "inner-style" ]
-                            (Html.p [] [ localCollapseButton, Html.text "Proof" ]
-                                :: Input.text
+                    let
+                        assumptions =
+                            [ (InputGroup.config <|
+                                InputGroup.text <|
                                     [ Input.disabled True
                                     , Input.value <| "-" ++ formulaStep.text
                                     ]
-                                :: hr
-                                :: subElements proof
+                              )
+                                |> InputGroup.predecessors [ InputGroup.span [] [ Html.text "Assumption:" ] ]
+                                |> InputGroup.view
+                            , Html.hr [] []
+                            ]
+                    in
+                    ( inptGrp (Just validationStatus) [ buttonDownLocal ] formulaStep editCallback
+                    , [ Html.div [ Html.Attributes.class "inner-style" ]
+                            (Html.p [] [ localCollapseButton, Html.text "Proof" ]
+                                :: assumptions
+                                ++ subElements proof
                             )
                       ]
                     )
@@ -528,7 +538,7 @@ renderFormulaNode zipper explanation formulaStep =
                                     []
 
                                 Ok goal ->
-                                    [ Html.p [] [ Html.text <| "Assume " ++ str ++ " is a new free variable. " ]
+                                    [ Html.p [] [ Html.text <| "Take any/arbitrary " ++ str ++ " and prove: " ]
                                     , (InputGroup.config <|
                                         InputGroup.text <|
                                             [ Input.disabled True
