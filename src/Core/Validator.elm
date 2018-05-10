@@ -108,7 +108,8 @@ getFreeVariables branch =
         freeVariablesInFormulas =
             List.map function branch
     in
-    Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
+    -- todo: toto nefunguje
+    Debug.log "YOOOY::" <| Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
 
 
 speciallFirstOrderLogicValidator : Validator

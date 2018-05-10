@@ -1,0 +1,19 @@
+UI:
+--> texty ako Prove the goal/... maju byt mensie, staci tam napisat Proof
+--> generalization, text by mal byt ako negacia (tj v formule mu povedat co ma vlastne dokazat)
+--> goal, (pri implikacii predpokladaj premisu)
+
+
+------------------------
+
+rearange
+
+
+komutativnost
+
+
+3. Asociatívnosť ( p ∨ ( q ∨ r)) ↔ (( p ∨ q) ∨ r)
+( p ∧ ( q ∧ r)) ↔ (( p ∧ q) ∧ r)
+
+4. Distributívne zákony ( p ∨ ( q ∧ r)) ↔ (( p ∨ q) ∧ ( p ∨ r))
+( p ∧ ( q ∨ r)) ↔ (( p ∧ q) ∨ ( p ∧ r))

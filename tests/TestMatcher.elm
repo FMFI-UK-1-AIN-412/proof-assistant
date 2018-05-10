@@ -104,4 +104,5 @@ testRemoveExistentialMatcher =
     describe "Test Remove \\Exists Matcher "
         [ test "test1" <| \_ -> testMatcherRemoveExistential True "\\exists x P(x)" "P(t)" []
         , test "test2" <| \_ -> testMatcherRemoveExistential False "\\exists x P(x)" "P(t)" [ "t" ]
+        , test "test3" <| \_ -> testMatcherRemoveExistential False "\\exists m (ma (Juro, m) & mys(m))" "(ma(Juro, jerry) & mys(jerry))" [ "jerry" ]
         ]

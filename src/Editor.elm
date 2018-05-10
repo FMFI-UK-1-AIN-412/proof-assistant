@@ -255,7 +255,12 @@ invalidNode text =
 
 getZipper : Model -> Zipper.Zipper
 getZipper model =
-    (History.get model.history).zipper |> Zipper.root
+    (History.get model.history).zipper
+        |> Zipper.root
+        |> Zipper.reindexAll
+        |> Zipper.matchAll
+        |> Zipper.reindexAll
+        |> Zipper.matchAll
 
 
 getProof : Model -> Proof
@@ -277,6 +282,14 @@ setProof proof model =
 
 
 -- Render functions
+
+
+renderEverythingProven : Zipper.Zipper -> Html.Html Msg
+renderEverythingProven zipper =
+    if Zipper.isEverythingProven zipper then
+        Html.div [] [ Html.text "Everything is proven." ]
+    else
+        Html.div [] [ Html.text "Something is not correct yet." ]
 
 
 renderHistoryButtons : Model -> Html.Html Msg
@@ -307,13 +320,9 @@ render model =
             Debug.log "MODEL:" <| zipper
     in
     Html.div []
-        [ zipper
-            |> Zipper.root
-            |> Zipper.reindexAll
-            |> Zipper.matchAll
-            |> Zipper.reindexAll
-            |> Zipper.matchAll
-            |> renderProof
+        [ renderEverythingProven zipper
+        , Html.hr [] []
+        , zipper |> renderProof
         ]
 
 

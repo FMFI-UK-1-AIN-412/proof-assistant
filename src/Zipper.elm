@@ -16,6 +16,7 @@ module Zipper
         , enterSub
         , generateNewFreeVariable
         , getBranchAbove
+        , isEverythingProven
         , matchAll
         , reindexAll
         , root
@@ -582,6 +583,7 @@ getBranchAbove breadcrumbs =
                     Just <| Proof.changeFormulaStepText ("-" ++ data.text) data
 
                 GoGoalProof _ _ ->
+                    -- todo: Ak (A->B) pridaj predpoklad. A + uprav rendering, ze predpokladajme A
                     Nothing
 
                 GoAddUniversal _ _ _ ->
@@ -621,3 +623,39 @@ generateNewFreeVariable zipper =
                 ++ generatedAbove
     in
     Validator.generateNewFreeVariable freeVars
+
+
+isEverythingProven : Zipper -> Bool
+isEverythingProven zipper =
+    let
+        this =
+            case zipper.proof of
+                Types.FormulaNode expl data _ ->
+                    case Proof.getStatus expl data (getBranchAbove zipper.breadcrumbs) of
+                        Ok _ ->
+                            True
+
+                        Err _ ->
+                            False
+
+                Types.CasesNode case1 _ case2 _ ->
+                    case validateCases case1 case2 zipper of
+                        Ok _ ->
+                            True
+
+                        Err _ ->
+                            False
+
+        chck func =
+            case func zipper of
+                Nothing ->
+                    True
+
+                Just childrenZipper ->
+                    isEverythingProven childrenZipper
+
+        children =
+            List.map chck [ enterSubOrNothing, downOrNothing, enterCase1OrNothing, enterCase2OrNothing ]
+    in
+    -- See, I warned you.
+    List.all identity (this :: children)
