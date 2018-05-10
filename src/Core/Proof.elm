@@ -197,11 +197,11 @@ getStatus explanation data branchAbove =
                 Rule maybeJustification ->
                     getStatusRule maybeJustification
 
-                Goal maybeProof ->
-                    getStatusGoal formula maybeProof
+                Goal proof ->
+                    getStatusGoal branchAbove formula proof
 
-                Contradiction contradiction ->
-                    getStatusContradiction branchAbove data contradiction
+                Contradiction proof ->
+                    getStatusContradiction branchAbove formula proof
 
                 Generalization newVariable proof ->
                     getStatusAddUniversal formula proof newVariable
@@ -289,58 +289,64 @@ getStatusRule maybeJustification =
             Ok <| Validator.matcherToStr matched
 
 
-getStatusGoal : Formula.Formula -> Maybe Proof -> Result String String
-getStatusGoal formula maybeProof =
+getStatusGC : List FormulaStep -> Formula.Formula -> Proof -> List Bool
+getStatusGC branchAbove formula proof =
+    let
+        parsedBranchAbove =
+            List.filterMap (.formula >> Result.toMaybe) branchAbove
+
+        -- Direct Proof
+        isDirectProof : List Formula.Formula -> Bool
+        isDirectProof branch =
+            List.any identity (List.map ((==) formula) branch)
+
+        -- By contradiction
+        isNegation : Formula.Formula -> Formula.Formula -> Bool
+        isNegation first second =
+            Formula.Neg first == second || first == Formula.Neg second
+
+        isFormulaInContradiction : Formula.Formula -> List Formula.Formula -> Bool
+        isFormulaInContradiction elem branch =
+            List.any identity (List.map (isNegation elem) branch)
+
+        branchForContradiction : List Formula.Formula -> List Formula.Formula
+        branchForContradiction branch =
+            parsedBranchAbove ++ [ Formula.Neg formula ] ++ branch
+
+        isContradictionProof : List Formula.Formula -> Bool
+        isContradictionProof branch =
+            List.any (\( x, xs ) -> isFormulaInContradiction x xs) (List.Extra.select <| branchForContradiction branch)
+
+        -- Proof
+        isValidOnBranch : List FormulaStep -> Bool
+        isValidOnBranch branch =
+            let
+                parsedFormulas =
+                    List.filterMap (.formula >> Result.toMaybe) branch
+            in
+            isDirectProof parsedFormulas || isContradictionProof parsedFormulas
+    in
+    List.map isValidOnBranch <| getAllBranches proof
+
+
+getStatusGoal : List FormulaStep -> Formula.Formula -> Maybe Proof -> Result String String
+getStatusGoal branchAbove formula maybeProof =
     case maybeProof of
         Nothing ->
             Err "Prove the goal in the sub-proof"
 
         Just proof ->
-            let
-                equal this =
-                    case this.formula of
-                        Ok thisFormula ->
-                            formula == thisFormula
-
-                        Err _ ->
-                            False
-
-                function branch =
-                    List.any identity (List.map equal branch)
-
-                allBranches =
-                    getAllBranches proof
-            in
-            provenText "The goal" <| List.map function allBranches
+            provenText "The goal" <| getStatusGC branchAbove formula proof
 
 
-getStatusContradiction : List FormulaStep -> FormulaStep -> Maybe Proof -> Result String String
-getStatusContradiction branchAbove formulaStep maybeProof =
+getStatusContradiction : List FormulaStep -> Formula.Formula -> Maybe Proof -> Result String String
+getStatusContradiction branchAbove formula maybeProof =
     case maybeProof of
         Nothing ->
             Err "Contradiction not found"
 
         Just proof ->
-            let
-                zneguj data =
-                    changeFormulaStepText ("-" ++ data.text) data
-
-                allBranches =
-                    List.map (\brach -> branchAbove ++ [ zneguj formulaStep ] ++ brach) (getAllBranches proof)
-
-                equal first second =
-                    Formula.Neg first == second || first == Formula.Neg second
-
-                iterate elem lst =
-                    List.any identity (List.map (equal elem) lst)
-
-                splited branch =
-                    List.Extra.select <| List.filterMap (.formula >> Result.toMaybe) branch
-
-                function branch =
-                    List.any (\( x, xs ) -> iterate x xs) (splited branch)
-            in
-            provenText "Contradiction" <| List.map function allBranches
+            provenText "Contradiction" <| getStatusGC branchAbove formula proof
 
 
 getAllBranches : Proof -> List (List FormulaStep)
