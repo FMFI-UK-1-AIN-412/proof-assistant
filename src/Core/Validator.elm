@@ -108,22 +108,24 @@ getFreeVariables branch =
         freeVariablesInFormulas =
             List.map function branch
     in
-    -- todo: toto nefunguje
-    Debug.log "YOOOY::" <| Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
+    Set.toList <| List.foldr Set.union Set.empty freeVariablesInFormulas
 
 
 speciallFirstOrderLogicValidator : Validator
 speciallFirstOrderLogicValidator step branch =
     let
-        function formula branch =
-            case branch of
+        freeVariables =
+            getFreeVariables branch
+
+        function formula others =
+            case others of
                 [] ->
                     Nothing
 
                 head :: tail ->
                     case head.formula of
                         Ok formula2 ->
-                            if Matcher.matcherRemoveExistentialQuantifier formula2 formula (getFreeVariables branch) then
+                            if Matcher.matcherRemoveExistentialQuantifier formula2 formula freeVariables then
                                 Just <| Justification1 "Existential quantifier removed" head.index
                             else
                                 function formula tail
