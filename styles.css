@@ -32,3 +32,8 @@
     display: inline-block;
 	cursor: pointer; 
 }
+
+.new-free-variable {
+	display: inline !important;
+	width: 100px !important;
+}

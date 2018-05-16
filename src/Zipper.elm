@@ -10,6 +10,7 @@ module Zipper
         , delete
         , down
         , downOrNothing
+        , editGeneralizationText
         , editValue
         , enterCase1
         , enterCase2
@@ -24,6 +25,7 @@ module Zipper
         , setCollapsed
         , up
         , validateCases
+        , validateNewFreeVariable
         )
 
 import Formula
@@ -591,7 +593,17 @@ getBranchAbove breadcrumbs =
     List.filterMap identity <| List.map function breadcrumbs
 
 
-getFreeVariablesAbove zipper =
+validateNewFreeVariable : String -> Zipper -> Result String String
+validateNewFreeVariable var zipper =
+    if var == "" then
+        Err "Variable cannot be empty"
+    else if List.member var <| getFreeVariables zipper then
+        Err "This is not a free variable"
+    else
+        Ok ""
+
+
+getGeneratedVariablesAbove zipper =
     case List.head zipper.breadcrumbs of
         Nothing ->
             []
@@ -599,14 +611,14 @@ getFreeVariablesAbove zipper =
         Just breadcrumb ->
             case breadcrumb of
                 GoDown (Generalization str _) data ->
-                    str :: (zipper |> up |> getFreeVariablesAbove)
+                    str :: (zipper |> up |> getGeneratedVariablesAbove)
 
                 _ ->
-                    zipper |> up |> getFreeVariablesAbove
+                    zipper |> up |> getGeneratedVariablesAbove
 
 
-generateNewFreeVariable : Zipper -> String
-generateNewFreeVariable zipper =
+getFreeVariables : Zipper -> List String
+getFreeVariables zipper =
     let
         branchAbove =
             getBranchAbove zipper.breadcrumbs
@@ -615,13 +627,15 @@ generateNewFreeVariable zipper =
             List.foldl (++) [] (Proof.getAllBranches zipper.proof)
 
         generatedAbove =
-            getFreeVariablesAbove zipper
-
-        freeVars =
-            Validator.getFreeVariables (branchAbove ++ branchBellow)
-                ++ generatedAbove
+            getGeneratedVariablesAbove zipper
     in
-    Validator.generateNewFreeVariable freeVars
+    Validator.getFreeVariables (branchAbove ++ branchBellow)
+        ++ generatedAbove
+
+
+generateNewFreeVariable : Zipper -> String
+generateNewFreeVariable zipper =
+    Validator.generateNewFreeVariable <| getFreeVariables zipper
 
 
 isEverythingProven : Zipper -> Bool
@@ -632,7 +646,17 @@ isEverythingProven zipper =
                 Types.FormulaNode expl data _ ->
                     case Proof.getStatus expl data (getBranchAbove zipper.breadcrumbs) of
                         Ok _ ->
-                            True
+                            case expl of
+                                Generalization variable _ ->
+                                    case validateNewFreeVariable variable zipper of
+                                        Ok _ ->
+                                            True
+
+                                        Err _ ->
+                                            False
+
+                                _ ->
+                                    True
 
                         Err _ ->
                             False
@@ -658,3 +682,13 @@ isEverythingProven zipper =
     in
     -- See, I warned you.
     List.all identity (this :: children)
+
+
+editGeneralizationText : String -> Zipper -> Zipper
+editGeneralizationText str zipper =
+    case zipper.proof of
+        Types.FormulaNode (Types.Generalization _ subproof) data maybeNextProof ->
+            { zipper | proof = Types.FormulaNode (Types.Generalization str subproof) data maybeNextProof }
+
+        _ ->
+            zipper

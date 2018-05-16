@@ -64,6 +64,7 @@ type Msg
     | ZipperSetCollpased Proof.Where Zipper.Zipper Bool
     | ZipperCreateSubFormulaNode Zipper.Zipper
     | ZipperCreateSubCasesNode Zipper.Zipper
+    | ZipperEditGeneralization Zipper.Zipper String
     | HistoryBack
     | HistoryForward
 
@@ -105,6 +106,9 @@ update msg model =
 
                 ZipperCreateSubCasesNode zipper ->
                     changeZipper True <| Zipper.createSubCasesNode zipper
+
+                ZipperEditGeneralization zipper str ->
+                    changeZipper False <| Zipper.editGeneralizationText str zipper
 
                 HistoryBack ->
                     ( History.prev model.history, Cmd.none )
@@ -538,7 +542,26 @@ renderFormulaNode zipper explanation formulaStep =
                                     []
 
                                 Ok goal ->
-                                    [ Html.p [] [ Html.text <| "Take any/arbitrary " ++ str ++ " and prove: " ]
+                                    let
+                                        ( validationStatusFree, validationStatusNode ) =
+                                            case Zipper.validateNewFreeVariable str zipper of
+                                                Ok _ ->
+                                                    ( Input.success, emptyNode )
+
+                                                Err msg ->
+                                                    invalidNode msg
+                                    in
+                                    [ Html.p []
+                                        [ Html.text "Take any/arbitrary "
+                                        , Input.text
+                                            [ Input.value str
+                                            , validationStatusFree
+                                            , Input.attrs [ Html.Attributes.class "new-free-variable" ]
+                                            , Input.onInput <| ZipperEditGeneralization zipper
+                                            ]
+                                        , Html.text " and prove: "
+                                        , validationStatusNode
+                                        ]
                                     , (InputGroup.config <|
                                         InputGroup.text <|
                                             [ Input.disabled True
