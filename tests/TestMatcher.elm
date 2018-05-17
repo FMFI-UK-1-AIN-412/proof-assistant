@@ -60,6 +60,10 @@ testRecursiveMatching =
         , test "test18" <| \_ -> testMatcher Matcher.matcherDistributive True "(p&(q|r))" "((p&q)|(p&r))"
         , test "test19" <| \_ -> testMatcher Matcher.matcherDistributive True "((p&r)|(q&r))" "((p|q)&r)"
         , test "test20" <| \_ -> testMatcher Matcher.matcherDistributive True "((p&q)|(p&r))" "(p&(q|r))"
+        , test "test21" <| \_ -> testMatcher Matcher.matcherDeMorganFirstOrder True "- \\forall x P(x)" "\\exists x -P(x)"
+        , test "test22" <| \_ -> testMatcher Matcher.matcherDeMorganFirstOrder True "\\exists x -P(x)" "- \\forall x P(x)"
+        , test "test23" <| \_ -> testMatcher Matcher.matcherDeMorganFirstOrder True "- \\exists x Q(x)" "\\forall x -Q(x)"
+        , test "test24" <| \_ -> testMatcher Matcher.matcherDeMorganFirstOrder True "\\forall x -Q(x)" "- \\exists x Q(x)"
         ]
 
 

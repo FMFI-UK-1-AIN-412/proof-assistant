@@ -15,6 +15,7 @@ module Core.Matcher
         , matcherConjunction
         , matcherConstructiveDilemma
         , matcherDeMorgan
+        , matcherDeMorganFirstOrder
         , matcherDestructiveDilemma
         , matcherDisjunctiveSyllogism
         , matcherDistributive
@@ -422,6 +423,29 @@ matcherDeMorgan a b =
                     Nothing
     in
     matcherWrapper function a b
+
+
+matcherDeMorganFirstOrder : UnaryMatcher
+matcherDeMorganFirstOrder from toProve =
+    -- -\A P(x) => \E -P(x)
+    -- -\E P(x) => \A -P(x)
+    -- \E -P(x) => -\A P(x)
+    -- \A -P(x) => -\E P(x)
+    case ( from, toProve ) of
+        ( Formula.Neg (Formula.ForAll s1 f1), Formula.Exists s2 (Formula.Neg f2) ) ->
+            f1 == f2 && s1 == s2
+
+        ( Formula.Neg (Formula.Exists s1 f1), Formula.ForAll s2 (Formula.Neg f2) ) ->
+            f1 == f2 && s1 == s2
+
+        ( Formula.Exists s2 (Formula.Neg f2), Formula.Neg (Formula.ForAll s1 f1) ) ->
+            f1 == f2 && s1 == s2
+
+        ( Formula.ForAll s2 (Formula.Neg f2), Formula.Neg (Formula.Exists s1 f1) ) ->
+            f1 == f2 && s1 == s2
+
+        _ ->
+            False
 
 
 matcherSimplification : UnaryMatcher

@@ -52,7 +52,7 @@ saveLoadButtons model =
                 [ Html.Attributes.for loadButtonId
                 , Html.Attributes.class "btn btn-primary"
                 ]
-                [ Html.text "Import from JSON"
+                [ Html.text "Import"
                 ]
 
         loadStateButton =
