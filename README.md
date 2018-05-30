@@ -1,6 +1,8 @@
 Proof assistant
 ======
 
+The proof assistant is available at https://fmfi-uk-1-ain-412.github.io/proof-assistant/
+
 ## Installation
 
 ```bash
