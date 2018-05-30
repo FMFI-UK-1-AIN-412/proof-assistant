@@ -6,10 +6,13 @@ module Core.Matcher
         , matcherAddExistentialQuantifier
         , matcherAddition
         , matcherAssociativity
-        , matcherAxiomP1
-        , matcherAxiomP2
-        , matcherAxiomP3
-        , matcherAxiomP4
+        , matcherAxiomA1
+        , matcherAxiomA2
+        , matcherAxiomA3
+        , matcherAxiomA4
+        , matcherAxiomA5
+        , matcherAxiomA6
+        , matcherAxiomA7
         , matcherAxiomQ6
         , matcherComutative
         , matcherConjunction
@@ -165,19 +168,8 @@ matcherOnlyTwoOptions toProve =
             False
 
 
-matcherAxiomP1 : NullaryMatcher
-matcherAxiomP1 toProve =
-    -- (p->p)
-    case toProve of
-        Formula.Impl p1 p2 ->
-            p1 == p2
-
-        _ ->
-            False
-
-
-matcherAxiomP2 : NullaryMatcher
-matcherAxiomP2 toProve =
+matcherAxiomA1 : NullaryMatcher
+matcherAxiomA1 toProve =
     -- (p->(q->p))
     case toProve of
         Formula.Impl p1 (Formula.Impl _ p2) ->
@@ -187,8 +179,8 @@ matcherAxiomP2 toProve =
             False
 
 
-matcherAxiomP3 : NullaryMatcher
-matcherAxiomP3 toProve =
+matcherAxiomA2 : NullaryMatcher
+matcherAxiomA2 toProve =
     -- ((p->(q->r)) -> ((p->q)->(p->r)))
     case toProve of
         Formula.Impl (Formula.Impl p1 (Formula.Impl q1 r1)) (Formula.Impl (Formula.Impl p2 q2) (Formula.Impl p3 r2)) ->
@@ -198,12 +190,58 @@ matcherAxiomP3 toProve =
             False
 
 
-matcherAxiomP4 : NullaryMatcher
-matcherAxiomP4 toProve =
-    -- ((-p->-r) -> (r->p))
+matcherAxiomA3 : NullaryMatcher
+matcherAxiomA3 toProve =
+    --  ((-p -> -r) -> ((-p -> r) -> p))
     case toProve of
-        Formula.Impl (Formula.Impl (Formula.Neg p1) (Formula.Neg r1)) (Formula.Impl r2 p2) ->
+        Formula.Impl (Formula.Impl (Formula.Neg p1) (Formula.Neg r1)) (Formula.Impl (Formula.Impl (Formula.Neg p2) r2) p3) ->
+            p1 == p2 && p2 == p3 && r1 == r2
+
+        _ ->
+            False
+
+
+matcherAxiomA4 : NullaryMatcher
+matcherAxiomA4 toProve =
+    -- ((p&r) -> p)
+    -- ((p&r) -> r)
+    case toProve of
+        Formula.Impl (Formula.Conj p r) ans ->
+            p == ans || r == ans
+
+        _ ->
+            False
+
+
+matcherAxiomA5 : NullaryMatcher
+matcherAxiomA5 toProve =
+    -- (a-> (b -> (a&b)))
+    case toProve of
+        Formula.Impl p1 (Formula.Impl r1 (Formula.Conj p2 r2)) ->
             p1 == p2 && r1 == r2
+
+        _ ->
+            False
+
+
+matcherAxiomA6 : NullaryMatcher
+matcherAxiomA6 toProve =
+    -- (p -> (p|q))
+    -- (p -> (q|p))
+    case toProve of
+        Formula.Impl ans (Formula.Disj p r) ->
+            ans == p || ans == r
+
+        _ ->
+            False
+
+
+matcherAxiomA7 : NullaryMatcher
+matcherAxiomA7 toProve =
+    -- (a->c) -> ((b->c) -> ((a|b)->c))
+    case toProve of
+        Formula.Impl (Formula.Impl a1 c1) (Formula.Impl (Formula.Impl b1 c2) (Formula.Impl (Formula.Disj a2 b2) c3)) ->
+            a1 == a2 || b1 == b2 || c1 == c2 || c2 == c3
 
         _ ->
             False

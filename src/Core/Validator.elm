@@ -35,10 +35,13 @@ nullaryValidator : Validator
 nullaryValidator step branch =
     matchAnyFunctions0
         step
-        [ runValidator0 Matcher.matcherAxiomP1 (Axiom "φ → φ")
-        , runValidator0 Matcher.matcherAxiomP2 (Axiom "φ → (ψ → φ)")
-        , runValidator0 Matcher.matcherAxiomP3 (Axiom "(φ → (ψ → ξ)) → ((φ → ψ) → (φ → ξ))")
-        , runValidator0 Matcher.matcherAxiomP4 (Axiom "(¬φ → ¬ψ) → (ψ → φ)")
+        [ runValidator0 Matcher.matcherAxiomA1 (Axiom "φ → (ψ → φ)")
+        , runValidator0 Matcher.matcherAxiomA2 (Axiom "(φ → (ψ → ξ)) → ((φ → ψ) → (φ → ξ))")
+        , runValidator0 Matcher.matcherAxiomA3 (Axiom "(¬φ → ¬ψ) → ((¬φ → ψ) → φ))")
+        , runValidator0 Matcher.matcherAxiomA4 (Axiom "(ϕ ∧ ψ) → ϕ")
+        , runValidator0 Matcher.matcherAxiomA5 (Axiom "ϕ → (ψ → (ϕ ∧ ψ))")
+        , runValidator0 Matcher.matcherAxiomA6 (Axiom "ϕ → (ϕ ∨ ψ)")
+        , runValidator0 Matcher.matcherAxiomA7 (Axiom " (ϕ → ξ) → ((ψ → ξ) → ((ϕ ∨ ψ) → ξ))")
         , runValidator0 Matcher.matcherAxiomQ6 (Axiom "∀x(φ → ψ) → (∀x(φ) → ∀x(ψ))")
         , runValidator0 Matcher.matcherOnlyTwoOptions (Justification0 "Tautology")
         ]
