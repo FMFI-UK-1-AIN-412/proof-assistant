@@ -44,7 +44,7 @@ userGuide visibility =
             [ Alert.h4 [] [ Html.text "User guide" ]
             , Html.text "An introductory user guide with examples is available at "
             , Html.a
-                [ Html.Attributes.href "https://github.com/FMFI-UK-1-AIN-412/proof-assistant/docs/USER_GUIDE.md" ]
+                [ Html.Attributes.href "https://github.com/FMFI-UK-1-AIN-412/proof-assistant/blob/master/docs/USER_GUIDE.md" ]
                 [ Html.text "GitHub" ]
             , Html.text "."
             ]
