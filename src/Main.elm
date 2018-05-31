@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Bootstrap.Alert as Alert
 import Bootstrap.CDN as CDN
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
@@ -17,20 +18,37 @@ type Msg
     = EditorMsg Editor.Msg
     | JsonSelected
     | LoadFromJson String
+    | UserGuideVisibility Alert.Visibility
 
 
 type alias Model =
-    { editor : Editor.Model }
+    { editor : Editor.Model, userGuide : Alert.Visibility }
 
 
 initialModel : Model
 initialModel =
-    { editor = Editor.initialModel }
+    { editor = Editor.initialModel, userGuide = Alert.shown }
 
 
 loadButtonId : String
 loadButtonId =
     "HEEY-ZOLI"
+
+
+userGuide : Alert.Visibility -> Html.Html Msg
+userGuide visibility =
+    Alert.config
+        |> Alert.info
+        |> Alert.dismissable UserGuideVisibility
+        |> Alert.children
+            [ Alert.h4 [] [ Html.text "User guide" ]
+            , Html.text "An introductory user guide with examples is available at "
+            , Html.a
+                [ Html.Attributes.href "https://github.com/FMFI-UK-1-AIN-412/proof-assistant/docs/USER_GUIDE.md" ]
+                [ Html.text "GitHub" ]
+            , Html.text "."
+            ]
+        |> Alert.view visibility
 
 
 saveLoadButtons : Editor.Model -> Html.Html Msg
@@ -76,6 +94,7 @@ view model =
         , Grid.row []
             [ Grid.col []
                 [ Html.h1 [] [ Html.text "Proof assistant" ]
+                , userGuide model.userGuide
                 , Html.hr [] []
                 , Grid.row []
                     [ Grid.col [ Col.sm6 ] [ saveLoadButtons model.editor ]
@@ -111,6 +130,9 @@ update msg model =
 
                 Err e ->
                     Debug.log (toString e) ( model, Cmd.none )
+
+        UserGuideVisibility visibility ->
+            ( { model | userGuide = visibility }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
