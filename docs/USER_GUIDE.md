@@ -2,7 +2,7 @@
 
 This guide shows the capabilities along with the user interface of the proof assistant. Section 1 informs how to enter formulas to the assistant. Section 2 shows example assignments with solutions. Section 3 describes the implemented rules known to the assistant.
 
-## Section 1
+## Section 1: Syntax of formulas
 To enter a set of formulas to the proof assistant, enter each formalized formula to a separate line. The assistant has one unary operator `-` (negation) and three binary operators `&` (and), `|` (or), `->` (implication). Each formula with a binary operator must be inside parentheses. So instead of `a & b` one must write `(a & b)`.
 
 First order formulas can be written as `\forall x P(x)` or `\exists x P(x)` notice the space between `x` and `P`.
@@ -24,7 +24,7 @@ p->q
 
 ---
 
-## Section 2
+## Section 2: Examples
 These four examples present the capabilities of the proof assistent.
 
 ### Example 1
@@ -58,6 +58,7 @@ Solution:
 
 ### Example 4
 Assignment: 
+
 ![Exercise 4](imgs/exercise4.png)
 
 Solution:
@@ -65,7 +66,7 @@ Solution:
 
 ---
 
-## Section 3
+## Section 3: Supported rules
 
 The proof assistant is based on a hybrid formal system mixing Hilbert calculus and Sequent calculus. That means the following axioms and modus ponens are implemented and the proof assistant can identify them.
 
