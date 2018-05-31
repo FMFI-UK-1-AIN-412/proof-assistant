@@ -1,13 +1,13 @@
 # User guide for the proof assistant
 
-This guide shows the power of the proof assistant. Section 1 shows information how to enter formulas to the assistant.  Section 2 shows example assignments with solutions. Section 3 describes the implemented rules known to the assistant.
+This guide shows the capabilities along with the user interface of the proof assistant. Section 1 informs how to enter formulas to the assistant. Section 2 shows example assignments with solutions. Section 3 describes the implemented rules known to the assistant.
 
 ## Section 1
 To enter a set of formulas to the proof assistant, enter each formalized formula to a separate line. The assistant has one unary operator `-` (negation) and three binary operators `&` (and), `|` (or), `->` (implication). Each formula with a binary operator must be inside parentheses. So instead of `a & b` one must write `(a & b)`.
 
 First order formulas can be written as `\forall x P(x)` or `\exists x P(x)` notice the space between `x` and `P`.
 
-Examples of a good formulas:
+Examples of good formulas:
 ```
 p
 (p->q)
@@ -19,7 +19,7 @@ Examples of bad formulas:
 ```
 p->q
 ((p|q)&-r
-\forall xP(x)            <--- Notice: This formula can be parsed but means for all "xP" in formula "x"
+\forall xP(x)         <--- Notice: This formula can be parsed but it means for all "xP" in formula "x"
 ```
 
 ---
@@ -78,5 +78,3 @@ To simplify the use of the proof assistant we implement additional sound rules o
 The proof assistants also knows the following rules derived from equivalences
 
 ![Axioms](imgs/rule2.png)
-
-
