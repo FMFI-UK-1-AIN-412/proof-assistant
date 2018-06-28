@@ -29,8 +29,8 @@ import Http
 import Json.Decode
 import Json.Encode
 import Parser exposing (..)
-import Proof
-import Types exposing (..)
+import Core.Proof as Proof
+import Core.Types exposing (..)
 import Zipper
 
 

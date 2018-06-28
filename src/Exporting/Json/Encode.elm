@@ -2,8 +2,8 @@ module Exporting.Json.Encode exposing (encode, jsonDataUri)
 
 import Http
 import Json.Encode exposing (..)
-import Proof
-import Types exposing (..)
+import Core.Proof as Proof
+import Core.Types exposing (..)
 
 
 jsonDataUri : String -> String

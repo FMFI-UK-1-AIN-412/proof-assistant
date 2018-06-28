@@ -1,4 +1,4 @@
-module Proof
+module Core.Proof
     exposing
         ( Where(..)
         , addCases
@@ -20,8 +20,8 @@ import Dict
 import Formula
 import List.Extra
 import Parser
-import Types exposing (..)
-import Validator
+import Core.Types exposing (..)
+import Core.Validator as Validator
 
 
 type Where

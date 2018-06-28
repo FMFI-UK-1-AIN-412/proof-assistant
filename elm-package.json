@@ -3,7 +3,9 @@
     "summary": "Like GitHub, but for Elm stuff.",
     "repository": "https://github.com/ZoltanOnody/proof-assistant.git",
     "license": "BSD-3-Clause",
-    "source-directories": ["."],
+    "source-directories": [
+	"src"
+    ],
     "exposed-modules": [],
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
