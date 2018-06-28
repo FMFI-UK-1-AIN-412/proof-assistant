@@ -29,9 +29,9 @@ module Zipper
         )
 
 import Formula
-import Proof
-import Types exposing (..)
-import Validator
+import Core.Proof as Proof
+import Core.Types as Types exposing (..)
+import Core.Validator as Validator
 
 
 type alias Zipper =

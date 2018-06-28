@@ -1,8 +1,8 @@
 module Exporting.Json.Decode exposing (decode)
 
 import Json.Decode exposing (..)
-import Proof
-import Types exposing (..)
+import Core.Proof as Proof
+import Core.Types exposing (..)
 
 
 createFormulaStepForDecoder text =

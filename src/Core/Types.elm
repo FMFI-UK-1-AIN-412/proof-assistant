@@ -1,4 +1,10 @@
-module Types exposing (Explanation(..), FormulaStep, GUI, Justification(..), Proof(..))
+module Core.Types
+    exposing
+    ( Explanation(..)
+    , FormulaStep
+    , GUI
+    , Justification(..)
+    , Proof(..))
 
 import Formula
 import Parser

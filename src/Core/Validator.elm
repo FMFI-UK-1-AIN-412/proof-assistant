@@ -1,10 +1,10 @@
-module Validator exposing (..)
+module Core.Validator exposing (..)
 
 import Core.Matcher as Matcher
 import Formula
 import Maybe.Extra as MaybeExtra
 import Set
-import Types exposing (..)
+import Core.Types exposing (..)
 
 
 type alias Validator =
